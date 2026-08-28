@@ -1,0 +1,54 @@
+%% Betting flow — MagicBlock leveraged-prediction (Hyperliquid PriceAccount + MagicBlock ER)
+%% Render: https://mermaid.live/edit#pako:... or open docs/betting-flow.html
+flowchart TD
+    A[User: Connect Phantom\nWallet Adapter] --> B{Wallet connected?}
+    B -- No --> A
+    B -- Yes --> C[Get test funds?\nFaucet: devnet USDC\n/api/devnet-faucet]
+
+    C --> D[Create Gasless Session\n1h allowance $1-1000\ncreateSessionV2 base tx\n+ delegate UserPositions\n+ eSPL vault deposit+delegate\n+ ApproveChecked on ER]
+    D --> E{Session ready?\nsessionStore validUntil\ntoken.delegate==sessionSigner}
+    E -- No --> D
+    E -- Yes --> F[Pick Asset\nBTC/ETH/SOL/HYPE\nAAPL/NVDA/TSLA/COIN\nGOLD/SILVER/BRENTOIL\nEUR/JPY\nHyperliquid allMids\nmain + xyz dex]
+
+    F --> G[Live Price Display\nWS wss://api.hyperliquid-testnet.xyz/ws\nallMids + allMids dex:xyz\nstrip xyz: prefix\nstale >5s = connecting]
+    F --> H[Pick Direction + Stake\nUP / DOWN\n$1-1000  presets 5/10/25\nsessionAllowance >= stake\npool solvency check]
+
+    H --> I{Checks: staleness 5s?\nPriceAccount.price !=0?\nWrongPriceFeed?\nSolvency pool>=open*5+10%?\nmax_open_exposure?\nnonce==next_nonce?\nactive<8?}
+    I -- Fail --> J[Blocked: Price feed stale\n/ InsufficientLiquidity\n/ RiskLimitExceeded]
+    J --> H
+    I -- Pass --> K[open_position\nsessionSigner signs ER tx\nfeePayer = sessionSigner\nprice = PriceAccount price*100 (1e6->1e8)\nslippage rawPrice±0.05%\ntransfer collateral\nuserToken -> poolToken\npush CompactPosition\nmarket.active+1\nemit PositionCreated]
+
+    K --> L[Schedule Settlement\nMagicBlock Scheduler\nScheduleTask\ntask_id=hash(market,user,nonce,salt)\ninterval 1000ms x25\ncrank_signer PDA\nmarket PDA signs]
+
+    L --> M[10s Countdown\nPriceArena entry line\nYourPlays live-countdown\nEstimated PnL = collateral*1000*Δ/entry\nisAhead / chasing]
+
+    M --> N{ now < expires?}
+    N -- Yes --> O[settle_position NO-OP\ncrank retries every 1s]
+    O --> M
+    N -- No --> P{ now >= refund_at?\nrefund = expires+10}
+
+    P -- Yes --> Q[Refunded\npayout = collateral\noutcome Refunded]
+    P -- No --> R[Try settle price\npriceAccount.timestamp in [expires, refund)\n& age<=5s?]
+    R -- None / stale / outside --> O
+    R -- Some settle_price --> S[calculate_settlement\nraw=coll*1000*Δ/entry\nif raw>=0: gross=min(raw,5*coll)\n fee=10% gross\n user=coll+gross-fee\nelse loss=min(|raw|,coll)\n user=coll-loss]
+
+    S --> T{Outcome?}
+    T -- gross>0 --> U[Won\npayout = coll+gross-fee\nplus 1.9x max]
+    T -- loss>0 --> V[Lost\npayout = coll-loss\nfloor 0]
+    T -- tie --> W[Breakeven\npayout = coll]
+    U --> X[Market Transfer\npool -> userToken\nor fallback escrow\nif userToken closed]
+    V --> X
+    W --> X
+    Q --> X
+
+    X --> Y[Cleanup\nswap_remove(position)\nmarket.open_collateral -=coll\nactive -=1\nemit PositionClosed]
+
+    Y --> Z[YourPlays shows Won/Lost\nPriceArena burst\nFallback claim if escrow\nBuying power updated]
+
+    Z --> H
+
+    style A fill:#fff,stroke:#17181c
+    style K fill:#00a862,stroke:#fff,color:#fff
+    style L fill:#17181c,stroke:#fff,color:#fff
+    style X fill:#00a862,stroke:#fff,color:#fff
+    style Q fill:#b45309,stroke:#fff,color:#fff

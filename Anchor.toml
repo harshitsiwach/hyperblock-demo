@@ -1,0 +1,19 @@
+[toolchain]
+anchor_version = "1.0.2"
+
+[features]
+resolution = true
+skip-lint = false
+
+[programs.localnet]
+leveraged_prediction = "CPUwSRL2h3mh27GutZ3k6hcHt4swrV1NcQAUuLQUbQYX"
+
+[programs.devnet]
+leveraged_prediction = "CPUwSRL2h3mh27GutZ3k6hcHt4swrV1NcQAUuLQUbQYX"
+
+[registry]
+url = "https://api.apr.dev"
+
+[provider]
+cluster = "localnet"
+wallet = "~/.config/solana/id.json"

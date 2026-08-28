@@ -1,0 +1,14 @@
+node_modules
+.next
+out
+dist
+target
+.devnet
+.DS_Store
+*.log
+.env.local
+.env
+oracle/oracle-keypair.json
+oracle/.env
+oracle-reference/oracle-keypair.json
+oracle-reference/.env
