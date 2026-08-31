@@ -4,9 +4,9 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { SUPPORTED_ASSETS } from "@/app/components/asset-selector";
 import { AssetIcon } from "@/app/components/asset-icon";
-import { useHyperliquidPrices } from "@/app/hooks/use-hyperliquid-prices";
-import { useMockTrading } from "@/app/hooks/use-mock-trading";
-import { claimMockFunds, canClaimMock, getLastClaimAt, MOCK_CLAIM_COOLDOWN_MS, getStreak, getBestStreak } from "@/app/lib/mock/storage";
+import { HYPERLIQUID_MAINNET_WS, useHyperliquidPrices } from "@/app/hooks/use-hyperliquid-prices";
+import { useRealTrading } from "@/app/hooks/use-real-trading";
+import { claimRealFunds, canClaimReal, getLastRealClaimAt, REAL_CLAIM_COOLDOWN_MS, getRealStreak, getRealBestStreak } from "@/app/lib/real/storage";
 import { BrandMark } from "@/app/components/brand-mark";
 import { WinCelebration } from "@/app/components/mock/WinCelebration";
 import { PriceArena } from "@/app/components/price-arena";
@@ -22,14 +22,14 @@ function formatUsd(n: number) {
   return `$${n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
 
-export function MockArena() {
+export function RealArena() {
   const router = useRouter();
   const [selectedMarketId, setSelectedMarketId] = useState<number>(() => {
     const valid = SUPPORTED_ASSETS.map((a) => a.marketId);
     if (typeof window !== "undefined") {
       const q = Number.parseInt(new URLSearchParams(window.location.search).get("market") ?? "9", 10);
       if (valid.includes(q)) return q;
-      const saved = Number.parseInt(localStorage.getItem("hyperblock:mock:market") ?? "9", 10);
+      const saved = Number.parseInt(localStorage.getItem("hyperblock:real:market") ?? "9", 10);
       if (valid.includes(saved)) return saved;
     }
     return 9; // default GOLD for commodities focus
@@ -37,9 +37,10 @@ export function MockArena() {
   const selectedAsset = SUPPORTED_ASSETS.find((a) => a.marketId === selectedMarketId) ?? SUPPORTED_ASSETS[8];
   const [activeCat, setActiveCat] = useState(() => selectedAsset.category);
   const [assetQuery, setAssetQuery] = useState("");
-  // keep category in sync when asset changes (e.g. via URL)
   useEffect(() => { setActiveCat(selectedAsset.category); }, [selectedAsset.category]);
-  const mock = useMockTrading(selectedMarketId);
+  const mock = useRealTrading(selectedMarketId);
+  // Real world prices — MAINNET Hyperliquid, graph driven from WS (reuse design, demo untouched)
+  const realPrices = useHyperliquidPrices(SUPPORTED_ASSETS.map((a) => a.symbol), HYPERLIQUID_MAINNET_WS);
   const [amount, setAmount] = useState(10);
   const [claimPulse, setClaimPulse] = useState(false);
   const [betFlash, setBetFlash] = useState<"up" | "down" | null>(null);
@@ -48,12 +49,12 @@ export function MockArena() {
   const [displayBalance, setDisplayBalance] = useState(mock.balance);
   const [balanceBump, setBalanceBump] = useState(false);
   const prevBalanceRef = useRef(mock.balance);
-  const [streak, setStreak] = useState(() => getStreak());
-  const [bestStreak, setBestStreak] = useState(() => getBestStreak());
+  const [streak, setStreak] = useState(() => getRealStreak());
+  const [bestStreak, setBestStreak] = useState(() => getRealBestStreak());
 
   // persist market
   useEffect(() => {
-    localStorage.setItem("hyperblock:mock:market", String(selectedMarketId));
+    localStorage.setItem("hyperblock:real:market", String(selectedMarketId));
     const url = new URL(window.location.href);
     url.searchParams.set("market", String(selectedMarketId));
     window.history.replaceState(null, "", url.toString());
@@ -61,12 +62,12 @@ export function MockArena() {
 
   // streak dots — calm, not loud, sync with storage events
   useEffect(() => {
-    const upd = () => { setStreak(getStreak()); setBestStreak(getBestStreak()); };
+    const upd = () => { setStreak(getRealStreak()); setBestStreak(getRealBestStreak()); };
     const onStreak = () => upd();
-    window.addEventListener("mock-streak", onStreak as any);
-    window.addEventListener("mock-balance-change", onStreak as any);
+    window.addEventListener("real-streak", onStreak as any);
+    window.addEventListener("real-balance-change", onStreak as any);
     const iv = setInterval(upd, 1000);
-    return () => { window.removeEventListener("mock-streak", onStreak as any); window.removeEventListener("mock-balance-change", onStreak as any); clearInterval(iv); };
+    return () => { window.removeEventListener("real-streak", onStreak as any); window.removeEventListener("real-balance-change", onStreak as any); clearInterval(iv); };
   }, []);
 
   // per-second price history for selected asset — 120 to cover 30s past + 15s future + 10s settlement without clipping entry lines
@@ -80,15 +81,15 @@ export function MockArena() {
     });
   }, [mock.currentPrice]);
 
-  const canClaim = canClaimMock();
-  const lastClaim = getLastClaimAt();
-  const cooldownSec = lastClaim ? Math.max(0, Math.ceil((MOCK_CLAIM_COOLDOWN_MS - (Date.now() - lastClaim)) / 1000)) : 0;
+  const canClaim = canClaimReal();
+  const lastClaim = getLastRealClaimAt();
+  const cooldownSec = lastClaim ? Math.max(0, Math.ceil((REAL_CLAIM_COOLDOWN_MS - (Date.now() - lastClaim)) / 1000)) : 0;
 
   const handleClaim = () => {
-    const res = claimMockFunds(10_000);
+    const res = claimRealFunds(10_000);
     if (res.claimed) {
       setClaimPulse(true);
-      setToast(`+${formatUsd(10_000)} demo added — have fun!`);
+      setToast(`+${formatUsd(10_000)} real added — live mainnet!`);
       setTimeout(() => setClaimPulse(false), 900);
       setTimeout(() => setToast(null), 2500);
       try { navigator.vibrate?.([20, 30, 20]); } catch {}
@@ -259,13 +260,13 @@ export function MockArena() {
         <div className="mock-top-inner">
           <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
             <BrandMark />
-            <span className="mock-demo-badge"><i /> Demo Mode</span>
-            <ModeToggle mode="demo" />
-            <span style={{ fontSize: 11, color: "var(--mut)", fontWeight: 700, display: "none" }} className="hide-mobile">· No wallet needed</span>
+            <span className="mock-demo-badge"><i /> Real · Mainnet</span>
+            <ModeToggle mode="real" />
+            <span style={{ fontSize: 11, color: "var(--mut)", fontWeight: 700, display: "none" }} className="hide-mobile">· Mainnet WS live</span>
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
             <div className={`mock-balance ${balanceBump ? "is-bump" : ""}`}>
-              <span style={{ fontSize: 11, color: "var(--mut)", fontWeight: 700 }}>Demo</span>
+              <span style={{ fontSize: 11, color: "var(--mut)", fontWeight: 700 }}>Real</span>
               <b className="num">{formatUsd(displayBalance)}</b>
               <span style={{ width: 1, height: 18, background: "var(--hair)" }} />
               <span style={{ fontSize: 11, color: "var(--mut)" }}>{activeCount}/{8} live</span>
@@ -305,7 +306,7 @@ export function MockArena() {
             </div>
           </div>
 
-          {/* Live graph — @bklit/live-line-chart (shadcn) — big smooth, every second ticks, real Hyperliquid */}
+          {/* Live graph — @bklit/live-line-chart — real mainnet, WS-driven */}
           <div style={{ padding: "12px 14px 14px" }}>
             <LiveHyperliquidChart
               data={hlHistory.map((h) => ({ time: h.t / 1000, value: h.p }))}
@@ -314,13 +315,12 @@ export function MockArena() {
               height={520}
               window={45}
             />
-            <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, color: "var(--mut)", marginTop: 10, fontWeight: 600, padding: "0 2px" }}>
-              <span>Hyperliquid · {selectedAsset.symbol} · 1s ticks · {hlHistory.length}s · live-line-chart</span>
-              <span>{mock.activePlays.length > 0 ? `watching ${mock.activePlays.length} · entry line` : "live"}</span>
-            </div>
-            {/* Keep Pixi hero as fallback/overlay for entry lines & celebrating — hidden if you want pure shadcn */}
             <div style={{ height: 520, display: "none" }}>
               <PriceArena snapshot={mockSnapshot} plays={mock.plays as any} now={Date.now()} celebratingIds={celebrate ? new Set([celebrate.id]) : undefined} />
+            </div>
+            <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, color: "var(--mut)", marginTop: 10, fontWeight: 600, padding: "0 2px" }}>
+              <span>Hyperliquid · {selectedAsset.symbol} · 1s ticks · {hlHistory.length}s · smooth · drag to inspect</span>
+              <span>{mock.activePlays.length > 0 ? `watching ${mock.activePlays.length} · entry line` : "↪ drag chart → Return to live"}</span>
             </div>
             {hlHistory.length > 1 && (
               <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, color: "var(--mut)", marginTop: 8, padding: "8px 10px", background: "var(--bg)", borderRadius: 10, border: "1px solid var(--hair)" }}>

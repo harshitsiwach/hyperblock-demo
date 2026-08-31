@@ -33,8 +33,14 @@ export function AssetSelector({
   const [activeCategory, setActiveCategory] = useState<AssetCategory>(
     selectedAsset?.category ?? "crypto",
   );
+  const [query, setQuery] = useState("");
 
-  const visibleAssets = SUPPORTED_ASSETS.filter((a) => a.category === activeCategory);
+  const visibleAssets = SUPPORTED_ASSETS.filter((a) => {
+    if (a.category !== activeCategory) return false;
+    if (!query.trim()) return true;
+    const q = query.trim().toLowerCase();
+    return a.symbol.toLowerCase().includes(q) || a.name.toLowerCase().includes(q) || a.label.toLowerCase().includes(q);
+  });
 
   return (
     <div className="asset-selector-container">
@@ -54,6 +60,39 @@ export function AssetSelector({
           </button>
         ))}
       </div>
+
+      {/* Search — assets (125) */}
+      <div style={{ position: "relative", marginTop: 2 }}>
+        <input
+          type="search"
+          placeholder={`Search ${activeCategory} — ${SUPPORTED_ASSETS.filter((a) => a.category === activeCategory).length} symbols…`}
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          aria-label="Search assets"
+          style={{
+            width: "100%",
+            padding: "10px 36px 10px 12px",
+            borderRadius: 10,
+            border: "1px solid var(--hair)",
+            background: "var(--card)",
+            fontSize: 13,
+            fontWeight: 500,
+            outline: "none",
+          }}
+        />
+        <span style={{ position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)", color: "var(--mut)", fontSize: 12 }}>⌕</span>
+        {query && (
+          <button
+            onClick={() => setQuery("")}
+            aria-label="Clear search"
+            style={{ position: "absolute", right: 28, top: "50%", transform: "translateY(-50%)", color: "var(--mut)", fontSize: 12, padding: 4 }}
+            type="button"
+          >
+            ✕
+          </button>
+        )}
+      </div>
+      <div style={{ fontSize: 10, color: "var(--mut)", marginTop: 6 }}>{visibleAssets.length} of {SUPPORTED_ASSETS.filter((a) => a.category === activeCategory).length} · {query ? `"${query}"` : "all"}</div>
 
       {/* Beautiful asset list with icons */}
       <div className="asset-list" role="tablist" aria-label="Select asset">

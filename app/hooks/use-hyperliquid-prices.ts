@@ -9,13 +9,16 @@ export interface HyperliquidPrice {
   updatedAt: number;
 }
 
-const WS_URL = "wss://api.hyperliquid-testnet.xyz/ws";
+export const HYPERLIQUID_TESTNET_WS = "wss://api.hyperliquid-testnet.xyz/ws";
+export const HYPERLIQUID_MAINNET_WS = "wss://api.hyperliquid.xyz/ws";
+const WS_URL = HYPERLIQUID_MAINNET_WS; // DEMO now uses REAL mainnet prices for convincing showcase (graph driven from WS)
 
 /**
  * Subscribes to Hyperliquid WS for both main DEX (crypto) and builder DEX "xyz"
  * (stocks, commodities, forex). Strips the "xyz:" prefix from builder DEX symbols.
+ * @param wsUrl - override — defaults to MAINNET (real) for both demo+real; testnet still available via HYPERLIQUID_TESTNET_WS.
  */
-export function useHyperliquidPrices(symbols: string[]): Map<string, HyperliquidPrice> {
+export function useHyperliquidPrices(symbols: string[], wsUrl: string = WS_URL): Map<string, HyperliquidPrice> {
   const [prices, setPrices] = useState<Map<string, HyperliquidPrice>>(new Map());
   const cacheRef = useRef<Map<string, HyperliquidPrice>>(new Map());
 
@@ -43,7 +46,7 @@ export function useHyperliquidPrices(symbols: string[]): Map<string, Hyperliquid
 
     const connect = () => {
       if (closed) return;
-      ws = new WebSocket(WS_URL);
+      ws = new WebSocket(wsUrl);
       ws.onopen = () => {
         backoff = 1000;
         // Subscribe to main DEX (crypto assets)
@@ -70,7 +73,7 @@ export function useHyperliquidPrices(symbols: string[]): Map<string, Hyperliquid
       closed = true;
       ws?.close();
     };
-  }, [symbols.join(",")]);
+  }, [symbols.join(","), wsUrl]);
 
   return prices;
 }

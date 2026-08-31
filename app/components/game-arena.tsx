@@ -6,6 +6,7 @@ import { CommandDeck } from "@/app/components/command-deck";
 import { BrandMark } from "@/app/components/brand-mark";
 import { FaucetToast } from "@/app/components/faucet-toast";
 import { PriceArena } from "@/app/components/price-arena";
+import { LiveHyperliquidChart } from "@/app/components/live-hyperliquid-chart";
 import { YourPlays } from "@/app/components/your-plays";
 import { SessionGate } from "@/app/components/session-gate";
 import { SessionIndicator } from "@/app/components/session-indicator";
@@ -18,6 +19,7 @@ import { useGameSession } from "@/app/hooks/use-game-session";
 import { usePlayTransaction } from "@/app/hooks/use-play-transaction";
 import { useDevnetFaucet } from "@/app/hooks/use-devnet-faucet";
 import { usePersistentPositions } from "@/app/hooks/use-persistent-positions";
+import { WalletButton } from "@/app/components/wallet-button";
 import type { Direction } from "@/app/lib/domain";
 
 function compactAddress(address: string): string {
@@ -28,7 +30,7 @@ export function GameArena() {
   const router = useRouter();
   const wallet = useGameWallet();
   const [selectedMarketId, setSelectedMarketId] = useState<number>(() => {
-    const validIds = Array.from({ length: 13 }, (_, i) => i + 1);
+    const validIds = SUPPORTED_ASSETS.map((m) => m.marketId);
     if (typeof window !== "undefined") {
       const v = Number.parseInt(new URLSearchParams(window.location.search).get("market") ?? "1", 10);
       if (validIds.includes(v)) return v;
@@ -178,10 +180,6 @@ export function GameArena() {
       ? wallet.connecting ? "Connecting…" : "Connect wallet"
       : "Wallet not found";
 
-  const windowOpen = snapshot.priceHistory[0]?.price;
-  const change = windowOpen !== undefined ? snapshot.currentPrice - windowOpen : null;
-  const changePct = windowOpen ? Math.abs(((snapshot.currentPrice - windowOpen) / windowOpen) * 100) : 0;
-
   return (
     <main className="app-shell" data-mode={snapshot.mode}>
       <header className="topbar">
@@ -224,10 +222,7 @@ export function GameArena() {
             <span>Buying power</span>
             <strong className="num">{snapshot.walletBalanceUsd === null ? "—" : `$${snapshot.walletBalanceUsd.toFixed(2)}`}</strong>
           </div>
-          <button className="wallet" onClick={() => void wallet.connect()} disabled={wallet.connecting} type="button">
-            <span className={`dot ${wallet.address ? "is-connected" : ""}`} />
-            <span className="wallet-label">{walletLabel}</span>
-          </button>
+          <WalletButton showStats snapshot={snapshot} />
         </div>
       </header>
 
@@ -266,52 +261,23 @@ export function GameArena() {
                 {hlCurrent ? `Hyperliquid · live · ${((Date.now() - hlCurrent.updatedAt) / 1000).toFixed(1)}s` : "snapshot"}
               </span>
             </h1>
-            {hlHistory.length > 1 ? (
-              <span className={`chg num ${hlHistory[hlHistory.length - 1].p >= hlHistory[0].p ? "positive" : "negative"}`}>
-                {hlHistory[hlHistory.length - 1].p >= hlHistory[0].p ? "▲" : "▼"} $
-                {Math.abs(hlHistory[hlHistory.length - 1].p - hlHistory[0].p).toFixed(2)} (
-                {(((hlHistory[hlHistory.length - 1].p - hlHistory[0].p) / hlHistory[0].p) * 100).toFixed(3)}%) · last {hlHistory.length}s · per-second
-              </span>
-            ) : change !== null ? (
-              <span className={`chg num ${change >= 0 ? "positive" : "negative"}`}>
-                {change >= 0 ? "▲" : "▼"} ${Math.abs(change).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ({changePct.toFixed(3)}%) · last 40s
-              </span>
-            ) : (
-              <span className="chg">10-second plays · 1000× sensitivity · Hyperliquid per-second</span>
-            )}
+            <span className="chg" style={{ color: "var(--mut)", fontWeight: 600 }}>10-second plays · 1000× · Hyperliquid per-second</span>
           </section>
           <div style={{ fontSize: 11, color: "var(--mut)", marginTop: 4 }}>
             Click any asset above → live 1s chart at <code>/assets/{selectedAsset?.symbol ?? "GOLD"}</code> · {selectedAsset?.label ?? ""} · {hlCurrent ? `${hlHistory.length} ticks` : "connecting…"}
           </div>
-          <PriceArena
-            snapshot={snapshot}
+          {/* Primary: @bklit/live-line-chart — hyperliquid live, WS-driven, smooth */}
+          <LiveHyperliquidChart
+            data={hlHistory.length ? hlHistory.map((h) => ({ time: h.t / 1000, value: h.p })) : snapshot.priceHistory.map((p) => ({ time: p.timestamp / 1000, value: p.price }))}
+            value={hlCurrent?.price ?? snapshot.currentPrice}
             plays={plays}
-            now={now}
-            celebratingIds={persistent.celebratingIds}
+            height={520}
+            window={45}
           />
-          {hlHistory.length > 2 && (
-            <div style={{ marginTop: 8, border: "1px solid var(--hair)", borderRadius: 12, padding: 8, background: "var(--card)" }}>
-              <div style={{ fontSize: 11, fontWeight: 700, color: "var(--mut)", marginBottom: 6 }}>Hyperliquid per-second — {selectedAsset?.symbol} ({hlHistory.length}s)</div>
-              <svg viewBox="0 0 400 60" style={{ width: "100%", height: 60, display: "block" }}>
-                {(() => {
-                  const min = Math.min(...hlHistory.map((x) => x.p));
-                  const max = Math.max(...hlHistory.map((x) => x.p));
-                  const range = max - min || 1;
-                  const path = hlHistory
-                    .map((pt, i) => {
-                      const x = (i / (hlHistory.length - 1)) * 400;
-                      const y = 60 - ((pt.p - min) / range) * 56 - 2;
-                      return `${i === 0 ? "M" : "L"} ${x.toFixed(1)} ${y.toFixed(1)}`;
-                    })
-                    .join(" ");
-                  return <path d={path} fill="none" stroke="var(--ink)" strokeWidth="1.6" strokeLinejoin="round" />;
-                })()}
-              </svg>
-              <div style={{ display: "flex", justifyContent: "space-between", fontSize: 10, color: "var(--mut)", marginTop: 4 }}>
-                <span>-{hlHistory.length}s</span><span>now · 1s interval</span>
-              </div>
-            </div>
-          )}
+          {/* Fallback Pixi hero for entry lines & settlement — hidden */}
+          <div style={{ display: "none" }}>
+            <PriceArena snapshot={snapshot} plays={plays} now={now} celebratingIds={persistent.celebratingIds} />
+          </div>
         </div>
 
         <aside className="rail">

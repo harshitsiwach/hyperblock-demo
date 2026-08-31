@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { BrandMark } from "@/app/components/brand-mark";
 import { RouteNav } from "@/app/components/route-nav";
 import { SessionIndicator } from "@/app/components/session-indicator";
@@ -18,6 +19,12 @@ export function LeaderboardPage() {
   const wallet = useGameWallet();
   const session = useGameSession();
   const leaderboard = useLeaderboard(wallet.address);
+  const [search, setSearch] = useState("");
+  const filteredEntries = leaderboard.entries.filter((e) => {
+    if (!search.trim()) return true;
+    const q = search.trim().toLowerCase();
+    return e.user.toLowerCase().includes(q);
+  });
   const userStats = leaderboard.userStats;
   const currentWallet = wallet.address;
   const isLoading = leaderboard.status === "loading";
@@ -151,12 +158,26 @@ export function LeaderboardPage() {
         </section>
 
         <section className="leaderboard-card" aria-labelledby="rankings-title">
-          <div className="leaderboard-section-heading">
+          <div className="leaderboard-section-heading" style={{ flexWrap: "wrap", gap: 12 }}>
             <div>
               <h2 id="rankings-title">Rankings</h2>
-              <p>Ranked by settled performance.</p>
+              <p>Ranked by settled performance. {filteredEntries.length !== leaderboard.entries.length && `${filteredEntries.length} of ${leaderboard.entries.length}`}</p>
             </div>
-            <span className="leaderboard-period">All time</span>
+            <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+              <div style={{ position: "relative" }}>
+                <input
+                  type="search"
+                  placeholder="Search trader…"
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  aria-label="Search leaderboard traders"
+                  style={{ width: 200, padding: "8px 32px 8px 10px", borderRadius: 10, border: "1px solid var(--hair)", background: "var(--card)", fontSize: 13 }}
+                />
+                <span style={{ position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)", color: "var(--mut)", fontSize: 12 }}>⌕</span>
+                {search && <button onClick={() => setSearch("")} aria-label="Clear" style={{ position: "absolute", right: 26, top: "50%", transform: "translateY(-50%)", fontSize: 12 }} type="button">✕</button>}
+              </div>
+              <span className="leaderboard-period">All time</span>
+            </div>
           </div>
           <div className="leaderboard-table-wrap">
             <table>
@@ -171,7 +192,7 @@ export function LeaderboardPage() {
                 </tr>
               </thead>
               <tbody>
-                {leaderboard.entries.map((entry) => (
+                {filteredEntries.map((entry) => (
                   <tr
                     className={entry.user === currentWallet ? "is-current" : undefined}
                     key={entry.user}
@@ -191,7 +212,7 @@ export function LeaderboardPage() {
                 ))}
               </tbody>
             </table>
-            {leaderboard.entries.length === 0 ? (
+            {filteredEntries.length === 0 ? (
               <div className="leaderboard-empty-state">
                 <strong>
                   {isLoading ? "Loading rankings…" : "No indexed trades yet"}

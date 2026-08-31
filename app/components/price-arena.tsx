@@ -10,6 +10,7 @@ import {
   type ChartViewport,
 } from "@/app/lib/chart-geometry";
 import { winProfitUsd } from "@/app/lib/position-presentation";
+import { estimateProfit } from "@/app/lib/domain";
 
 interface PriceArenaProps {
   snapshot: MarketSnapshot;
@@ -94,7 +95,7 @@ export function PriceArena({
     let mounted = true;
     let cleanup = () => undefined;
 
-    void import("pixi.js").then(async ({ Application, Graphics }) => {
+    void import("pixi.js").then(async ({ Application, Graphics, Container, Text }) => {
       if (!mounted) return;
       const app = new Application();
       await app.init({
@@ -110,7 +111,9 @@ export function PriceArena({
       }
       container.replaceChildren(app.canvas);
       const graphics = new Graphics();
+      const pillLayer = new Container();
       app.stage.addChild(graphics);
+      app.stage.addChild(pillLayer);
 
       let dragging = false;
       let dragStart = { x: 0, y: 0 };
@@ -178,6 +181,7 @@ export function PriceArena({
         );
 
         graphics.clear();
+        pillLayer.removeChildren();
 
         // time gridlines
         const timeTickXs = TIME_TICK_OFFSETS.map((offset) =>
@@ -228,21 +232,39 @@ export function PriceArena({
           path.push({ x: currentX, y: currentY });
         }
         if (path.length > 1) {
-          // soft fill under the line
-          graphics.moveTo(path[0].x, path[0].y);
-          for (let index = 1; index < path.length; index += 1) graphics.lineTo(path[index].x, path[index].y);
+          // smooth bezier for BIG accurate hero — every second tick flows with price
+          const drawSmooth = (stroke = false) => {
+            graphics.moveTo(path[0].x, path[0].y);
+            for (let i = 1; i < path.length; i++) {
+              const p0 = path[i - 1];
+              const p1 = path[i];
+              const cx = (p0.x + p1.x) / 2;
+              graphics.bezierCurveTo(cx, p0.y, cx, p1.y, p1.x, p1.y);
+            }
+            if (stroke) graphics.stroke({ color: theme.ink, alpha: 1, width: 3, join: "round", cap: "round" });
+          };
+          // soft fill under the smooth line
+          drawSmooth(false);
           graphics.lineTo(path[path.length - 1].x, geometry.plotBottom)
             .lineTo(path[0].x, geometry.plotBottom)
             .closePath()
-            .fill({ color: theme.ink, alpha: 0.05 });
-          graphics.moveTo(path[0].x, path[0].y);
-          for (let index = 1; index < path.length; index += 1) graphics.lineTo(path[index].x, path[index].y);
-          graphics.stroke({ color: theme.ink, alpha: 1, width: 2, join: "round", cap: "round" });
+            .fill({ color: theme.ink, alpha: 0.07 });
+          // stroke smooth line
+          drawSmooth(true);
+          // per-second tick dots — bigger, accurate, moving with price
+          for (let i = 0; i < path.length; i++) {
+            const pt = path[i];
+            if (pt.x < geometry.plotLeft || pt.x > geometry.plotRight) continue;
+            const isLast = i === path.length - 1;
+            graphics.circle(pt.x, pt.y, isLast ? 3.2 : 2.1).fill({ color: theme.ink, alpha: isLast ? 1 : 0.28 });
+            if (isLast) graphics.circle(pt.x, pt.y, 9).fill({ color: theme.ink, alpha: 0.09 });
+          }
         }
 
         // Entry lines persist through settlement while they remain in the visible time window.
         for (const play of currentPlays) {
           const settlingState = ["settling", "refunding"].includes(play.status);
+          const isActive = play.status === "active" || settlingState;
           const celebrating = currentCelebrations?.has(play.id) ?? false;
           const color =
             play.status === "lost"
@@ -255,13 +277,56 @@ export function PriceArena({
                     ? theme.up
                     : theme.down;
           const playY = geometry.y(play.entryPrice, view);
-          graphics.moveTo(geometry.x(play.openedAt, view), playY)
-            .lineTo(geometry.x(play.expiresAt, view), playY)
-            .stroke({
-              color,
-              alpha: settlingState ? 0.5 : 0.85,
-              width: play.status === "lost" || celebrating ? 3 : 2,
+          const startX = geometry.x(play.openedAt, view);
+          const endX = geometry.x(play.expiresAt, view);
+          const nowX = geometry.x(wallNow, view);
+          // Track background (hair) for active plays — subtle reference
+          if (isActive) {
+            graphics.moveTo(startX, playY).lineTo(endX, playY).stroke({ color: theme.hair, alpha: 0.9, width: 6 });
+          }
+          // Draining fill follows now: openedAt → now (ahead tint), now → expires (muted)
+          if (isActive && wallNow >= play.openedAt && wallNow < play.expiresAt) {
+            const clampNowX = Math.max(startX, Math.min(endX, nowX));
+            // filled progress portion — gentle, not loud
+            const liveProfit = play.liveProfitUsd ?? estimateProfit(play.collateralUsd, play.entryPrice, displayPrice, play.direction);
+            const ahead = liveProfit > 0;
+            graphics.moveTo(startX, playY).lineTo(clampNowX, playY).stroke({ color: ahead ? theme.up : liveProfit < -play.collateralUsd * 0.5 ? theme.down : theme.ink, alpha: ahead ? 0.28 : 0.18, width: 6 });
+            // main entry line on top
+            graphics.moveTo(startX, playY).lineTo(endX, playY).stroke({ color, alpha: settlingState ? 0.5 : 0.85, width: play.status === "lost" || celebrating ? 3 : 2 });
+            // live pill — calm ink pill with estimate, heartbeat last 3s
+            const isFinal = wallNow >= play.expiresAt - 3000;
+            const pillW = 72;
+            const pillH = 20;
+            const pillX = clampNowX;
+            const pillY = playY - 18;
+            // clamp pill inside plot
+            const clampedPillX = Math.max(geometry.plotLeft + pillW / 2, Math.min(geometry.plotRight - pillW / 2, pillX));
+            const pulse = isFinal ? 1 + Math.sin(frameAt * 0.012) * 0.04 : 1;
+            const pw = pillW * pulse;
+            const ph = pillH * pulse;
+            // pill background
+            graphics.roundRect(clampedPillX - pw / 2, pillY - ph / 2, pw, ph, 10).fill({ color: 0xffffff, alpha: 0.96 });
+            graphics.roundRect(clampedPillX - pw / 2, pillY - ph / 2, pw, ph, 10).stroke({ color: theme.hair, alpha: 0.9, width: 1 });
+            // pill text — calm ink, colored profit sign only
+            const profitText = `${liveProfit >= 0 ? "+" : ""}$${liveProfit.toFixed(2)}`;
+            const txt = new Text({
+              text: profitText,
+              style: {
+                fontFamily: "Figtree, system-ui, sans-serif",
+                fontSize: 11,
+                fontWeight: "700",
+                fill: liveProfit > 0 ? theme.up : liveProfit < 0 ? theme.down : theme.ink,
+                align: "center",
+              },
             });
+            txt.anchor.set(0.5);
+            txt.x = clampedPillX;
+            txt.y = pillY + 0.5;
+            txt.scale.set(pulse);
+            pillLayer.addChild(txt);
+          } else {
+            graphics.moveTo(startX, playY).lineTo(endX, playY).stroke({ color, alpha: settlingState ? 0.5 : 0.85, width: play.status === "lost" || celebrating ? 3 : 2 });
+          }
           const resultX = geometry.x(play.expiresAt, view);
           graphics.circle(resultX, playY, 7).stroke({ color, alpha: 0.9, width: 2 });
           graphics.circle(resultX, playY, 2.5).fill({ color, alpha: 1 });

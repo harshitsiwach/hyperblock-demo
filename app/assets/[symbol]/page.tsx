@@ -1,29 +1,14 @@
 import { HyperliquidLiveChart } from "./chart";
 import Link from "next/link";
+import { MARKETS } from "@/app/lib/markets";
 
 export async function generateStaticParams() {
-  return [
-    { symbol: "BTC" }, { symbol: "ETH" }, { symbol: "SOL" }, { symbol: "HYPE" },
-    { symbol: "AAPL" }, { symbol: "NVDA" }, { symbol: "TSLA" }, { symbol: "COIN" },
-    { symbol: "GOLD" }, { symbol: "SILVER" }, { symbol: "BRENTOIL" }, { symbol: "EUR" }, { symbol: "JPY" },
-  ];
+  return MARKETS.map((m) => ({ symbol: m.symbol }));
 }
 
-const META: Record<string, { label: string; dex: string; unit: string }> = {
-  BTC: { label: "BTC / USD", dex: "main", unit: "USD" },
-  ETH: { label: "ETH / USD", dex: "main", unit: "USD" },
-  SOL: { label: "SOL / USD", dex: "main", unit: "USD" },
-  HYPE: { label: "HYPE / USD", dex: "main", unit: "USD" },
-  AAPL: { label: "AAPL / USD", dex: "xyz", unit: "USD" },
-  NVDA: { label: "NVDA / USD", dex: "xyz", unit: "USD" },
-  TSLA: { label: "TSLA / USD", dex: "xyz", unit: "USD" },
-  COIN: { label: "COIN / USD", dex: "xyz", unit: "USD" },
-  GOLD: { label: "Gold (XAU) / USD", dex: "xyz", unit: "USD" },
-  SILVER: { label: "Silver (XAG) / USD", dex: "xyz", unit: "USD" },
-  BRENTOIL: { label: "Brent Oil / USD", dex: "xyz", unit: "USD" },
-  EUR: { label: "EUR / USD", dex: "xyz", unit: "USD" },
-  JPY: { label: "JPY / USD", dex: "xyz", unit: "USD" },
-};
+const META: Record<string, { label: string; dex: string; unit: string }> = Object.fromEntries(
+  MARKETS.map((m) => [m.symbol, { label: m.label, dex: m.dex, unit: "USD" }]),
+) as Record<string, { label: string; dex: string; unit: string }>;
 
 export default async function AssetDetailPage({ params }: { params: Promise<{ symbol: string }> }) {
   const { symbol } = await params;

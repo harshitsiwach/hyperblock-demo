@@ -23,3 +23,17 @@
 11. **Frontend kept single-market DESIGN.md hero but added asset grid (instructions.md:6.1 vs DESIGN.md:14)** — `app/components/asset-selector.tsx:1` grid with live Hyperliquid WS display (`app/hooks/use-hyperliquid-prices.ts:1`), `app/components/game-arena.tsx:1` tabs switch `marketId` via `useGameSnapshot(wallet, marketId)` (`app/hooks/use-game-snapshot.ts:53`). Display prices direct from Hyperliquid WS; settlement still on-chain via PriceAccount. Quote header shows `Hyperliquid · Live` label (`app/lib/live/read-snapshot.ts:134`).
 
 12. **No `unwrap()` (instructions.md:8.6)** — All math uses `checked_*` (`math.rs:1`, `instructions/mod.rs:229`).
+
+13. **Removed `SmoothChart.tsx` SVG dual-chart (vs `MockArena.tsx:204` + `game-arena.tsx:292`)** — Pixi `PriceArena` hero is single renderer for all assets (monochrome `var(--ink)` per `DESIGN.md:42`, entry lines time-bound `x(openedAt)→x(expiresAt)` `price-arena.tsx:258`). Svg `index-based x=i/(n-1)` hid wall-clock and entry timing. Deleted 190-line orphan; both `/` mock and `/assets/[symbol]` detail + `/trade` now share wall-clock 45s window (`chart-geometry.ts:3`) — verifies monochrome + history as truth.
+
+14. **Fixed `validIds 13→26` `game-arena.tsx:31` via `SUPPORTED_ASSETS.map(m=>m.marketId)` (`app/lib/markets.ts:12` single source)** — prior cap hid DOGE/AVAX/ARB/AAVE + 12 xyz assets (AAPL…DXY). Now all 26 MARKETS selectable; matches `oracle-reference/config.json` 26 assets.
+
+15. **Honest payouts 4.5× profit / 5.5× payout (`app/lib/domain.ts:81` 5× capped before 10% fee) kept for both mock + Trade** — `MockArena.tsx:96` `amount*5*0.9` equals engine `app/lib/mock/engine.ts:64` + program `math.rs:157`. Ticket now shows `Win up to +$X profit → $Y return` not misleading 1.9×. `DESIGN.md:29` 1.9× was pre-leverage story; corrected to leverage model.
+
+16. **Addictive on both mock + Trade (user-approved)** — `WinCelebration` haptics 880Hz+vibrate + `price-arena.tsx:269` 14 particles on `celebratingId` now enabled for Trade via `persistent.celebratingIds` (`game-arena.tsx:286`) as well as MockArena, contrary to `DESIGN.md:207` calm-only. Streak `storage.ts:69` still mock-only.
+
+17. **Extended `generateStaticParams` `app/assets/[symbol]/page.tsx:4` 13→26** — added DOGE/AVAX/ARB/AAVE/MSFT/GOOGL/AMZN/META/COPPER/PLATINUM/PALLADIUM/SP500/DXY so all `MARKETS` have SSG.
+
+18. **Extended `hlHistory 90→120` `MockArena.tsx:54` + detail already 120 `chart.tsx:19`** — covers 30s past + 15s future + 10s settlement without clipping entry lines at `CHART_PAST_MS 30s` edge.
+
+19. **Mock balance countUp 420ms + `is-bump` + `mock-capped` pulse + MEGA WIN `capped 5×` flash + streak `×N 🔥`/`NEW BEST` + near-miss `0.01%` (`MockArena.tsx:138-172`, `app/hooks/use-mock-trading.ts:86`)** — addictive loop; honest `maxProfit $`/`maxReturn $` ticket, `Win up to +$X` now `maxProfit` not payout confusion.

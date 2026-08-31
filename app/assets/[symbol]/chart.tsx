@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useHyperliquidPrices } from "@/app/hooks/use-hyperliquid-prices";
 import { PriceArena } from "@/app/components/price-arena";
+import { LiveHyperliquidChart } from "@/app/components/live-hyperliquid-chart";
 import { AssetIcon } from "@/app/components/asset-icon";
 import { getMarketBySymbol } from "@/app/lib/markets";
 import type { MarketSnapshot } from "@/app/lib/domain";
@@ -60,11 +61,6 @@ export function HyperliquidLiveChart({ symbol, label }: { symbol: string; label:
   }, [current, history, label, market]);
 
   const stale = !current || Date.now() - current.updatedAt > 5000;
-  const last = history[history.length - 1]?.price ?? current?.price ?? 0;
-  const first = history[0]?.price ?? last;
-  const delta = last - first;
-  const pct = first ? (delta / first) * 100 : 0;
-  const isUp = delta >= 0;
 
   return (
     <div className="hl-detail-v2">
@@ -83,13 +79,10 @@ export function HyperliquidLiveChart({ symbol, label }: { symbol: string; label:
           </div>
         </div>
         <div className="hl-v2-pricebox">
-          <div className={`hl-v2-price num ${delta >= 0 ? "is-up" : "is-down"}`}>
+          <div className="hl-v2-price num" style={{ color: "var(--ink)" }}>
             {current ? `$${current.price.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : "—"}
-            <span className={`hl-v2-arrow ${delta >= 0 ? "up" : "down"}`}>{delta >= 0 ? "▲" : "▼"}</span>
           </div>
-          <div className={`hl-v2-change num ${isUp ? "positive" : "negative"}`}>
-            {history.length > 1 ? `${isUp ? "+" : ""}${delta.toFixed(2)} (${isUp ? "+" : ""}${pct.toFixed(2)}%)` : "waiting for ticks…"}
-          </div>
+          <div style={{ fontSize: 11, color: "var(--mut)", fontWeight: 700, marginTop: 2 }}>{history.length} ticks · smooth</div>
         </div>
       </div>
 
@@ -106,8 +99,13 @@ export function HyperliquidLiveChart({ symbol, label }: { symbol: string; label:
             )}
           </span>
         </div>
-        <div style={{ height: 320 }}>
+        <div style={{ display: "none" }}>
           <PriceArena snapshot={mockSnapshot} plays={[]} now={nowTick} />
+        </div>
+        <LiveHyperliquidChart data={history.map((h) => ({ time: h.timestamp / 1000, value: h.price }))} value={history[history.length - 1]?.price ?? current?.price ?? 0} height={540} window={45} />
+        <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, color: "var(--mut)", marginTop: 10, fontWeight: 600 }}>
+          <span>Every second · live-line-chart · {history.length} ticks · moves with price</span>
+          <span>{history.length > 1 ? `H $${Math.max(...history.map((x) => x.price)).toFixed(2)} · L $${Math.min(...history.map((x) => x.price)).toFixed(2)}` : ""}</span>
         </div>
       </div>
 
@@ -118,8 +116,8 @@ export function HyperliquidLiveChart({ symbol, label }: { symbol: string; label:
             const prev = history[history.length - 12 + (11 - i) - 1];
             const ch = prev ? pt.price - prev.price : 0;
             return (
-              <div key={pt.t} className="hl-v2-tick" style={{ animationDelay: `${i * 18}ms` }}>
-                <span className="hl-v2-tick-time num">{new Date(pt.t).toLocaleTimeString()}</span>
+              <div key={pt.timestamp} className="hl-v2-tick" style={{ animationDelay: `${i * 18}ms` }}>
+                <span className="hl-v2-tick-time num">{new Date(pt.timestamp).toLocaleTimeString()}</span>
                 <span className="hl-v2-tick-price num">${pt.price.toFixed(2)}</span>
                 <span className={`hl-v2-tick-chg ${ch > 0 ? "positive" : ch < 0 ? "negative" : ""}`}>{ch === 0 ? "—" : `${ch > 0 ? "+" : ""}${ch.toFixed(2)}`}</span>
               </div>

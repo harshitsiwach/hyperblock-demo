@@ -48,11 +48,16 @@ export function HyperliquidAssetsClient() {
   const allSymbols = useMemo(() => SUPPORTED_ASSETS.map((a) => a.symbol), []);
   const prices = useHyperliquidPrices(allSymbols);
   const [active, setActive] = useState<AssetCategory>("commodities");
+  const [query, setQuery] = useState("");
 
-  const visible = useMemo(
-    () => SUPPORTED_ASSETS.filter((a) => a.category === active),
-    [active],
-  );
+  const visible = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    return SUPPORTED_ASSETS.filter((a) => {
+      if (a.category !== active) return false;
+      if (!q) return true;
+      return a.symbol.toLowerCase().includes(q) || a.name.toLowerCase().includes(q) || a.label.toLowerCase().includes(q);
+    });
+  }, [active, query]);
 
   const focusAssets = useMemo(
     () => SUPPORTED_ASSETS.filter((a) => FOCUS_CATEGORIES.includes(a.category)),
@@ -96,20 +101,35 @@ export function HyperliquidAssetsClient() {
           </div>
         </div>
 
-        <div className="category-tabs" role="tablist" aria-label="Asset category">
-          {(["commodities", "forex", "stocks", "crypto"] as AssetCategory[]).map((cat) => (
-            <button
-              key={cat}
-              role="tab"
-              aria-selected={cat === active}
-              className={`category-tab ${cat === active ? "is-active" : ""}`}
-              onClick={() => setActive(cat)}
-              type="button"
-            >
-              <span className="cat-label">{CATEGORY_META[cat].title}</span>
-            </button>
-          ))}
+        <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap", marginBottom: 12 }}>
+          <div className="category-tabs" role="tablist" aria-label="Asset category" style={{ flex: "0 0 auto" }}>
+            {(["commodities", "forex", "stocks", "crypto"] as AssetCategory[]).map((cat) => (
+              <button
+                key={cat}
+                role="tab"
+                aria-selected={cat === active}
+                className={`category-tab ${cat === active ? "is-active" : ""}`}
+                onClick={() => setActive(cat)}
+                type="button"
+              >
+                <span className="cat-label">{CATEGORY_META[cat].title}</span>
+              </button>
+            ))}
+          </div>
+          <div style={{ position: "relative", flex: "1 1 220px", maxWidth: 360 }}>
+            <input
+              type="search"
+              placeholder={`Search ${active} — ${SUPPORTED_ASSETS.filter((a) => a.category === active).length}…`}
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              aria-label="Search assets"
+              style={{ width: "100%", padding: "9px 32px 9px 12px", borderRadius: 10, border: "1px solid var(--hair)", background: "var(--card)", fontSize: 13 }}
+            />
+            <span style={{ position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)", color: "var(--mut)", fontSize: 12 }}>⌕</span>
+            {query && <button onClick={() => setQuery("")} aria-label="Clear" style={{ position: "absolute", right: 26, top: "50%", transform: "translateY(-50%)", fontSize: 12 }} type="button">✕</button>}
+          </div>
         </div>
+        <div style={{ fontSize: 11, color: "var(--mut)", marginBottom: 8 }}>{visible.length} of {SUPPORTED_ASSETS.filter((a) => a.category === active).length} · {query ? `"${query}"` : "all"}</div>
 
         <div className="hl-grid">
           {visible.map((asset) => {
