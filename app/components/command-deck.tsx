@@ -91,8 +91,11 @@ export function CommandDeck({ snapshot, occupiedPositions, busy = false, session
         </div>
       </div>
 
-      <p className="economics num" aria-live="polite">
-        <b>10 sec · 1000× price move</b>
+      <p className="economics num" aria-live="polite" style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+        <b>10 sec · 1000× sensitivity</b>
+        <span style={{ fontSize: 12, color: "var(--mut)", fontWeight: 600 }}>
+          Win up to +${(amount * 4.5).toFixed(2)} profit (→ ${(amount * 5.5).toFixed(2)} return)
+        </span>
       </p>
 
       <div className="direction-actions">

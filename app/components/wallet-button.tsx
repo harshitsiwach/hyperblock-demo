@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useGameWallet } from "@/app/hooks/use-game-wallet";
 import { WalletStatsCard } from "@/app/components/wallet-stats-card";
 
@@ -11,13 +11,21 @@ function compactAddress(address: string): string {
 export function WalletButton({ variant = "pill", showStats = false, snapshot }: { variant?: "pill" | "compact"; showStats?: boolean; snapshot?: import("@/app/lib/domain").MarketSnapshot | null }) {
   const wallet = useGameWallet();
   const [open, setOpen] = useState(false);
-  const label = wallet.address
-    ? compactAddress(wallet.address)
-    : wallet.available
-      ? wallet.connecting
-        ? "Connecting…"
-        : "Connect wallet"
-      : "Install wallet";
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  const label = !mounted
+    ? "Connect wallet"
+    : wallet.address
+      ? compactAddress(wallet.address)
+      : wallet.available
+        ? wallet.connecting
+          ? "Connecting…"
+          : "Connect wallet"
+        : "Install wallet";
 
   const handleClick = () => {
     if (wallet.address && showStats) {

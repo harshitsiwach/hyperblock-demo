@@ -94,12 +94,17 @@ function updateLive(play: Play, currentPrice: number, now: number): Partial<Play
 
 export function updateMockPlayLive(play: Play, currentPrice: number, now: number): Play {
   if (["won", "lost", "breakeven", "refunded", "submitting"].includes(play.status)) return play;
-  if (now < play.expiresAt) {
-    return { ...play, ...updateLive(play, currentPrice, now), status: "active" as const };
+  const move = priceMovePercent(play.entryPrice, currentPrice, play.direction);
+  const profit = estimateProfit(play.collateralUsd, play.entryPrice, currentPrice, play.direction);
+  const nextStatus = now < play.expiresAt ? "active" : now < play.refundAt ? "settling" : "refunding";
+
+  if (play.priceMovePercent === move && play.liveProfitUsd === profit && play.status === nextStatus) {
+    return play;
   }
-  if (now < play.refundAt) {
-    // settling - will be settled by settleMockPlay when we have settle price
-    return { ...play, status: "settling" as const, ...updateLive(play, currentPrice, now) };
-  }
-  return { ...play, status: "refunding" as const };
+  return {
+    ...play,
+    priceMovePercent: move,
+    liveProfitUsd: profit,
+    status: nextStatus as Play["status"],
+  };
 }

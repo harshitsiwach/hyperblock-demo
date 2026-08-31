@@ -46,6 +46,7 @@
   },
   "devDependencies": {
     "@coral-xyz/borsh": "0.31.1",
+    "@rolldown/binding-win32-x64-msvc": "^1.2.6",
     "@types/d3-array": "^3.2.2",
     "@types/node": "24.10.1",
     "@types/react": "19.2.2",

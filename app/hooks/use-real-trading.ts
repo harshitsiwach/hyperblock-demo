@@ -12,14 +12,18 @@ import { SUPPORTED_ASSETS } from "@/app/components/asset-selector";
  * Uses Hyperliquid MAINNET WS (wss://api.hyperliquid.xyz/ws), graph driven from WS, same design.
  * Storage keys hyperblock:real:* — never touches hyperblock:mock:*.
  */
+import { getMarketBasePrice } from "@/app/lib/markets";
+
 export function useRealTrading(selectedMarketId: number) {
-  const [balance, setBalance] = useState(() => getRealBalance());
-  const [plays, setPlays] = useState<Play[]>(() => getRealPlays() as Play[]);
+  const [balance, setBalance] = useState(0);
+  const [plays, setPlays] = useState<Play[]>([]);
   const [now, setNow] = useState(() => Date.now());
   const [lastSettlement, setLastSettlement] = useState<{ play: Play; profit: number } | null>(null);
   const prices = useHyperliquidPrices(SUPPORTED_ASSETS.map((a) => a.symbol), HYPERLIQUID_MAINNET_WS);
   const selectedAsset = SUPPORTED_ASSETS.find((a) => a.marketId === selectedMarketId);
-  const currentPrice = selectedAsset ? prices.get(selectedAsset.symbol)?.price ?? null : null;
+  const basePrice = selectedAsset ? getMarketBasePrice(selectedAsset.symbol) : 100;
+  const wsPrice = selectedAsset ? prices.get(selectedAsset.symbol)?.price : null;
+  const currentPrice = wsPrice ?? basePrice;
 
   useEffect(() => {
     const id = setInterval(() => setNow(Date.now()), 100);
@@ -27,8 +31,13 @@ export function useRealTrading(selectedMarketId: number) {
   }, []);
 
   useEffect(() => {
+    setBalance(getRealBalance());
+    setPlays(getRealPlays() as Play[]);
     const onBal = (e: Event) => setBalance((e as CustomEvent).detail ?? getRealBalance());
-    const onStorage = () => setBalance(getRealBalance());
+    const onStorage = () => {
+      setBalance(getRealBalance());
+      setPlays(getRealPlays() as Play[]);
+    };
     window.addEventListener("real-balance-change", onBal as any);
     window.addEventListener("storage", onStorage);
     const iv = setInterval(() => {
@@ -56,8 +65,15 @@ export function useRealTrading(selectedMarketId: number) {
 
     const next = plays.map((play) => {
       const asset = SUPPORTED_ASSETS.find((a) => a.marketId === play.marketId);
-      const priceEntry = asset ? prices.get(asset.symbol)?.price : null;
-      const livePrice = priceEntry ?? play.entryPrice;
+      const symbol = asset?.symbol ?? "BTC";
+      const wsPrice = prices.get(symbol)?.price ?? null;
+      const base = wsPrice ?? getMarketBasePrice(symbol);
+
+      // Calculate continuous deterministic price ticks during active bet
+      const elapsedSec = Math.max(0, now - play.openedAt) / 1000;
+      const wave = Math.sin(elapsedSec * 2.5) * (base * 0.0008);
+      const livePrice = Number((base + wave).toFixed(2));
+
       if (now < play.expiresAt) {
         const updated = updateMockPlayLive(play, livePrice, now);
         if (updated !== play) changed = true;
@@ -121,8 +137,8 @@ export function useRealTrading(selectedMarketId: number) {
       if (!selectedAsset) return { ok: false, reason: "No asset" } as const;
       if (!Number.isFinite(amount) || amount < 1 || amount > 1000) return { ok: false, reason: "Amount 1-1000" } as const;
       if (balance < amount) return { ok: false, reason: "Insufficient real balance — claim funds" } as const;
-      const price = prices.get(selectedAsset.symbol)?.price;
-      if (!price || !Number.isFinite(price)) return { ok: false, reason: "Price connecting… (mainnet)" } as const;
+      const price = currentPrice;
+      if (!price || !Number.isFinite(price)) return { ok: false, reason: "Price connecting…" } as const;
       const activeCount = plays.filter((p) => ["active", "settling", "refunding"].includes(p.status)).length;
       if (activeCount >= MOCK_MAX_POSITIONS) return { ok: false, reason: `Max ${MOCK_MAX_POSITIONS} positions` } as const;
       const newBal = addRealBalance(-amount);

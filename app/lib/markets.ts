@@ -148,3 +148,36 @@ export function getMarketBySymbol(symbol: string): MarketInfo | undefined {
 }
 export const SUPPORTED_ASSET_IDS = MARKETS.map((m) => m.marketId);
 export const SUPPORTED_SYMBOLS = MARKETS.map((m) => m.symbol);
+
+export const BASE_PRICES: Record<string, number> = {
+  BTC: 87450.00,
+  ETH: 2480.00,
+  SOL: 185.50,
+  HYPE: 52.40,
+  DOGE: 0.165,
+  AVAX: 28.50,
+  ARB: 0.58,
+  AAVE: 165.00,
+  AAPL: 232.00,
+  NVDA: 138.50,
+  TSLA: 245.00,
+  COIN: 215.00,
+  MSFT: 425.00,
+  GOOGL: 178.00,
+  AMZN: 195.00,
+  META: 580.00,
+  GOLD: 2742.50,
+  SILVER: 31.80,
+  BRENTOIL: 74.20,
+  COPPER: 4.35,
+  PLATINUM: 980.00,
+  PALLADIUM: 1040.00,
+  EUR: 1.085,
+  JPY: 152.40,
+  SP500: 5850.00,
+  DXY: 104.20,
+};
+
+export function getMarketBasePrice(symbol: string): number {
+  return BASE_PRICES[symbol.toUpperCase()] ?? 100.00;
+}

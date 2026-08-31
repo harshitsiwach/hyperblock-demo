@@ -8,8 +8,8 @@ import { HYPERLIQUID_MAINNET_WS, useHyperliquidPrices } from "@/app/hooks/use-hy
 import { SUPPORTED_ASSETS } from "@/app/components/asset-selector";
 
 export function useMockTrading(selectedMarketId: number) {
-  const [balance, setBalance] = useState(() => getMockBalance());
-  const [plays, setPlays] = useState<Play[]>(() => getMockPlays() as Play[]);
+  const [balance, setBalance] = useState(0);
+  const [plays, setPlays] = useState<Play[]>([]);
   const [now, setNow] = useState(() => Date.now());
   const [lastSettlement, setLastSettlement] = useState<{ play: Play; profit: number } | null>(null);
   // DEMO now uses REAL mainnet prices (wss://api.hyperliquid.xyz/ws) for convincing showcase — graph driven from WS, isolated storage still mock
@@ -23,10 +23,15 @@ export function useMockTrading(selectedMarketId: number) {
     return () => clearInterval(id);
   }, []);
 
-  // sync balance from storage events (claim)
+  // sync balance & plays from storage on mount and via events (claim)
   useEffect(() => {
+    setBalance(getMockBalance());
+    setPlays(getMockPlays() as Play[]);
     const onBal = (e: Event) => setBalance((e as CustomEvent).detail ?? getMockBalance());
-    const onStorage = () => setBalance(getMockBalance());
+    const onStorage = () => {
+      setBalance(getMockBalance());
+      setPlays(getMockPlays() as Play[]);
+    };
     window.addEventListener("mock-balance-change", onBal as any);
     window.addEventListener("storage", onStorage);
     // also poll for plays changes from other tabs

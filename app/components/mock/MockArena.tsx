@@ -45,11 +45,16 @@ export function MockArena() {
   const [betFlash, setBetFlash] = useState<"up" | "down" | null>(null);
   const [toast, setToast] = useState<string | null>(null);
   const [celebrate, setCelebrate] = useState<{ profit: number; id: string; streak?: number; isMega?: boolean } | null>(null);
-  const [displayBalance, setDisplayBalance] = useState(mock.balance);
+  const [mounted, setMounted] = useState(false);
+  const [displayBalance, setDisplayBalance] = useState(0);
   const [balanceBump, setBalanceBump] = useState(false);
-  const prevBalanceRef = useRef(mock.balance);
-  const [streak, setStreak] = useState(() => getStreak());
-  const [bestStreak, setBestStreak] = useState(() => getBestStreak());
+  const prevBalanceRef = useRef(0);
+  const [streak, setStreak] = useState(0);
+  const [bestStreak, setBestStreak] = useState(0);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   // persist market
   useEffect(() => {
@@ -62,11 +67,11 @@ export function MockArena() {
   // streak dots — calm, not loud, sync with storage events
   useEffect(() => {
     const upd = () => { setStreak(getStreak()); setBestStreak(getBestStreak()); };
-    const onStreak = () => upd();
-    window.addEventListener("mock-streak", onStreak as any);
-    window.addEventListener("mock-balance-change", onStreak as any);
+    upd();
+    window.addEventListener("mock-streak", upd as any);
+    window.addEventListener("mock-balance-change", upd as any);
     const iv = setInterval(upd, 1000);
-    return () => { window.removeEventListener("mock-streak", onStreak as any); window.removeEventListener("mock-balance-change", onStreak as any); clearInterval(iv); };
+    return () => { window.removeEventListener("mock-streak", upd as any); window.removeEventListener("mock-balance-change", upd as any); clearInterval(iv); };
   }, []);
 
   // per-second price history for selected asset — 120 to cover 30s past + 15s future + 10s settlement without clipping entry lines
@@ -80,8 +85,8 @@ export function MockArena() {
     });
   }, [mock.currentPrice]);
 
-  const canClaim = canClaimMock();
-  const lastClaim = getLastClaimAt();
+  const canClaim = mounted ? canClaimMock() : false;
+  const lastClaim = mounted ? getLastClaimAt() : null;
   const cooldownSec = lastClaim ? Math.max(0, Math.ceil((MOCK_CLAIM_COOLDOWN_MS - (Date.now() - lastClaim)) / 1000)) : 0;
 
   const handleClaim = () => {

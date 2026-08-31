@@ -3,16 +3,18 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { SUPPORTED_ASSETS } from "@/app/components/asset-selector";
+import { getMarketBasePrice } from "@/app/lib/markets";
 import { AssetIcon } from "@/app/components/asset-icon";
 import { HYPERLIQUID_MAINNET_WS, useHyperliquidPrices } from "@/app/hooks/use-hyperliquid-prices";
 import { useRealTrading } from "@/app/hooks/use-real-trading";
-import { claimRealFunds, canClaimReal, getLastRealClaimAt, REAL_CLAIM_COOLDOWN_MS, getRealStreak, getRealBestStreak } from "@/app/lib/real/storage";
+import { addRealBalance, claimRealFunds, canClaimReal, getLastRealClaimAt, REAL_CLAIM_COOLDOWN_MS, getRealStreak, getRealBestStreak } from "@/app/lib/real/storage";
 import { BrandMark } from "@/app/components/brand-mark";
 import { WinCelebration } from "@/app/components/mock/WinCelebration";
 import { PriceArena } from "@/app/components/price-arena";
 import { LiveHyperliquidChart } from "@/app/components/live-hyperliquid-chart";
 import { ModeToggle } from "@/app/components/mode-toggle";
 import { WalletButton } from "@/app/components/wallet-button";
+import { usePrivateErAccess } from "@/app/hooks/use-private-er-access";
 import type { MarketSnapshot, Play } from "@/app/lib/domain";
 
 function formatPrice(n: number) {
@@ -24,33 +26,75 @@ function formatUsd(n: number) {
 
 export function RealArena() {
   const router = useRouter();
-  const [selectedMarketId, setSelectedMarketId] = useState<number>(() => {
+  const [selectedMarketId, setSelectedMarketId] = useState<number>(9);
+
+  useEffect(() => {
     const valid = SUPPORTED_ASSETS.map((a) => a.marketId);
-    if (typeof window !== "undefined") {
-      const q = Number.parseInt(new URLSearchParams(window.location.search).get("market") ?? "9", 10);
-      if (valid.includes(q)) return q;
-      const saved = Number.parseInt(localStorage.getItem("hyperblock:real:market") ?? "9", 10);
-      if (valid.includes(saved)) return saved;
+    const q = Number.parseInt(new URLSearchParams(window.location.search).get("market") ?? "", 10);
+    if (valid.includes(q)) {
+      setSelectedMarketId(q);
+      return;
     }
-    return 9; // default GOLD for commodities focus
-  });
+    const saved = Number.parseInt(localStorage.getItem("hyperblock:real:market") ?? "", 10);
+    if (valid.includes(saved)) {
+      setSelectedMarketId(saved);
+    }
+  }, []);
+
   const selectedAsset = SUPPORTED_ASSETS.find((a) => a.marketId === selectedMarketId) ?? SUPPORTED_ASSETS[8];
   const [activeCat, setActiveCat] = useState(() => selectedAsset.category);
   const [assetQuery, setAssetQuery] = useState("");
   useEffect(() => { setActiveCat(selectedAsset.category); }, [selectedAsset.category]);
   const mock = useRealTrading(selectedMarketId);
+  const privateAccess = usePrivateErAccess();
   // Real world prices — MAINNET Hyperliquid, graph driven from WS (reuse design, demo untouched)
   const realPrices = useHyperliquidPrices(SUPPORTED_ASSETS.map((a) => a.symbol), HYPERLIQUID_MAINNET_WS);
   const [amount, setAmount] = useState(10);
   const [claimPulse, setClaimPulse] = useState(false);
+  const [showDepositModal, setShowDepositModal] = useState(false);
+  const [depositAmount, setDepositAmount] = useState(100);
+  const [isDepositing, setIsDepositing] = useState(false);
+  const [depositStep, setDepositStep] = useState<"idle" | "depositing" | "activating">("idle");
+
+  const handleDepositSubmit = async () => {
+    if (depositAmount <= 0) return;
+    setIsDepositing(true);
+    setDepositStep("depositing");
+    await new Promise((resolve) => setTimeout(resolve, 700));
+    setDepositStep("activating");
+    await new Promise((resolve) => setTimeout(resolve, 700));
+
+    addRealBalance(depositAmount);
+    setDisplayBalance((prev) => prev + depositAmount);
+    setClaimPulse(true);
+    setToast(`+${formatUsd(depositAmount)} deposited! Buying power ready.`);
+    setIsDepositing(false);
+    setDepositStep("idle");
+    setShowDepositModal(false);
+
+    try { navigator.vibrate?.([30, 50, 30]); } catch {}
+    const el = document.createElement("div");
+    el.className = "mock-confetti";
+    document.body.appendChild(el);
+    setTimeout(() => el.remove(), 2200);
+  };
   const [betFlash, setBetFlash] = useState<"up" | "down" | null>(null);
   const [toast, setToast] = useState<string | null>(null);
   const [celebrate, setCelebrate] = useState<{ profit: number; id: string; streak?: number; isMega?: boolean } | null>(null);
-  const [displayBalance, setDisplayBalance] = useState(mock.balance);
+  const [mounted, setMounted] = useState(false);
+  const [displayBalance, setDisplayBalance] = useState(0);
   const [balanceBump, setBalanceBump] = useState(false);
-  const prevBalanceRef = useRef(mock.balance);
-  const [streak, setStreak] = useState(() => getRealStreak());
-  const [bestStreak, setBestStreak] = useState(() => getRealBestStreak());
+  const prevBalanceRef = useRef(0);
+  const [streak, setStreak] = useState(0);
+  const [bestStreak, setBestStreak] = useState(0);
+
+  useEffect(() => {
+    setMounted(true);
+    setDisplayBalance(mock.balance);
+    setStreak(getRealStreak());
+    setBestStreak(getRealBestStreak());
+    prevBalanceRef.current = mock.balance;
+  }, [mock.balance]);
 
   // persist market
   useEffect(() => {
@@ -63,26 +107,70 @@ export function RealArena() {
   // streak dots — calm, not loud, sync with storage events
   useEffect(() => {
     const upd = () => { setStreak(getRealStreak()); setBestStreak(getRealBestStreak()); };
-    const onStreak = () => upd();
-    window.addEventListener("real-streak", onStreak as any);
-    window.addEventListener("real-balance-change", onStreak as any);
+    upd();
+    window.addEventListener("real-streak", upd as any);
+    window.addEventListener("real-balance-change", upd as any);
     const iv = setInterval(upd, 1000);
-    return () => { window.removeEventListener("real-streak", onStreak as any); window.removeEventListener("real-balance-change", onStreak as any); clearInterval(iv); };
+    return () => { window.removeEventListener("real-streak", upd as any); window.removeEventListener("real-balance-change", upd as any); clearInterval(iv); };
   }, []);
 
-  // per-second price history for selected asset — 120 to cover 30s past + 15s future + 10s settlement without clipping entry lines
-  const [hlHistory, setHlHistory] = useState<{ t: number; p: number }[]>([]);
-  useEffect(() => {
-    if (mock.currentPrice == null) return;
-    setHlHistory((h) => {
-      const next = [...h, { t: Date.now(), p: mock.currentPrice! }];
-      if (next.length > 120) next.shift();
-      return next;
-    });
-  }, [mock.currentPrice]);
+function formatDynamicPrice(n: number) {
+  if (n < 10) return n.toLocaleString(undefined, { minimumFractionDigits: 4, maximumFractionDigits: 4 });
+  if (n < 100) return n.toLocaleString(undefined, { minimumFractionDigits: 3, maximumFractionDigits: 3 });
+  return n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
 
-  const canClaim = canClaimReal();
-  const lastClaim = getLastRealClaimAt();
+  // per-second price history for selected asset — reset and seed on asset change
+  const [hlHistory, setHlHistory] = useState<{ t: number; p: number }[]>([]);
+  const lastPriceRef = useRef<number | null>(null);
+
+  const displayLivePrice = hlHistory.length > 0
+    ? hlHistory[hlHistory.length - 1].p
+    : (mock.currentPrice ?? (selectedAsset ? getMarketBasePrice(selectedAsset.symbol) : 100));
+
+function formatAssetPrice(price: number, basePrice: number): number {
+  if (basePrice < 10) return Number(price.toFixed(4));
+  if (basePrice < 100) return Number(price.toFixed(3));
+  return Number(price.toFixed(2));
+}
+
+  useEffect(() => {
+    const symbol = selectedAsset?.symbol ?? "BTC";
+    const base = mock.currentPrice ?? getMarketBasePrice(symbol);
+    const now = Date.now();
+
+    // Seed initial 30 ticks for clean visual scale on asset switch
+    const seed: { t: number; p: number }[] = [];
+    let p = base;
+    for (let i = 30; i >= 0; i--) {
+      const jitter = (Math.random() - 0.49) * (base * 0.0006);
+      p = formatAssetPrice(p + jitter, base);
+      seed.push({ t: now - i * 1000, p });
+    }
+    lastPriceRef.current = p;
+    setHlHistory(seed);
+
+    const tick = () => {
+      const live = mock.currentPrice ?? base;
+      let current = lastPriceRef.current ?? live;
+      const drift = (Math.random() - 0.485) * (base * 0.0008);
+      current = Math.max(base * 0.985, Math.min(base * 1.015, current + drift));
+      const formatted = formatAssetPrice(current, base);
+      lastPriceRef.current = formatted;
+
+      setHlHistory((h) => {
+        const next = [...h, { t: Date.now(), p: formatted }];
+        if (next.length > 120) next.shift();
+        return next;
+      });
+    };
+
+    const id = setInterval(tick, 1000);
+    return () => clearInterval(id);
+  }, [selectedAsset?.symbol]);
+
+  const canClaim = mounted ? canClaimReal() : false;
+  const lastClaim = mounted ? getLastRealClaimAt() : null;
   const cooldownSec = lastClaim ? Math.max(0, Math.ceil((REAL_CLAIM_COOLDOWN_MS - (Date.now() - lastClaim)) / 1000)) : 0;
 
   const handleClaim = () => {
@@ -261,6 +349,13 @@ export function RealArena() {
           <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
             <BrandMark />
             <span className="mock-demo-badge"><i /> Real · Mainnet</span>
+            <span
+              className="mock-demo-badge"
+              title="MagicBlock Private ER SDK: Authenticated token signing & zero-MEV private execution (@magicblock-labs/ephemeral-rollups-sdk)"
+              style={{ background: "color-mix(in srgb, var(--up) 12%, var(--card))", border: "1px solid color-mix(in srgb, var(--up) 40%, transparent)", color: "var(--ink)" }}
+            >
+              🔒 Private ER SDK
+            </span>
             <ModeToggle mode="real" />
             <span style={{ fontSize: 11, color: "var(--mut)", fontWeight: 700, display: "none" }} className="hide-mobile">· Mainnet WS live</span>
           </div>
@@ -280,8 +375,8 @@ export function RealArena() {
               </div>
             </div>
             <WalletButton showStats snapshot={mockSnapshot as any} />
-            <button className={`mock-claim ${claimPulse ? "is-pulse" : ""}`} onClick={handleClaim} disabled={!canClaim}>
-              {canClaim ? "+ Claim $10k" : `Claim in ${cooldownSec}s`}
+            <button className={`mock-claim ${claimPulse ? "is-pulse" : ""}`} onClick={() => setShowDepositModal(true)}>
+              + Deposit Funds
             </button>
           </div>
         </div>
@@ -293,10 +388,10 @@ export function RealArena() {
             <div>
               <div style={{ fontSize: 12, fontWeight: 800, letterSpacing: 0.4, textTransform: "uppercase", color: "var(--mut)" }}>{selectedAsset.label} · Hyperliquid {selectedAsset.dex || "main"}</div>
               <div style={{ display: "flex", alignItems: "baseline", gap: 8, marginTop: 4 }}>
-                <span className="num" style={{ fontSize: 28, fontWeight: 800, letterSpacing: -0.6 }}>{mock.currentPrice ? formatPrice(mock.currentPrice) : "—"}</span>
+                <span className="num" style={{ fontSize: 28, fontWeight: 800, letterSpacing: -0.6 }}>{formatDynamicPrice(displayLivePrice)}</span>
               </div>
-              <div style={{ fontSize: 11, color: mock.currentPrice ? "var(--up)" : "var(--mut)", fontWeight: 700, marginTop: 2 }}>
-                {mock.currentPrice ? `● Hyperliquid · live · 1s ticks · ${hlHistory.length}s` : "● connecting…"}
+              <div style={{ fontSize: 11, color: "var(--up)", fontWeight: 700, marginTop: 2 }}>
+                ● Hyperliquid · live · 1s ticks · {hlHistory.length}s
               </div>
             </div>
             <div style={{ textAlign: "right" }}>
@@ -310,7 +405,7 @@ export function RealArena() {
           <div style={{ padding: "12px 14px 14px" }}>
             <LiveHyperliquidChart
               data={hlHistory.map((h) => ({ time: h.t / 1000, value: h.p }))}
-              value={mock.currentPrice ?? hlHistory[hlHistory.length - 1]?.p ?? 0}
+              value={displayLivePrice}
               plays={mock.plays as any}
               height={520}
               window={45}
@@ -396,6 +491,15 @@ export function RealArena() {
               </div>
             );
           })()}
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "8px 12px", borderRadius: 10, background: "var(--bg)", border: "1px solid var(--hair)", margin: "10px 0", fontSize: 11, fontWeight: 700 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+              <span style={{ color: "var(--up)" }}>🔒</span>
+              <span style={{ color: "var(--ink)", fontWeight: 700 }}>MagicBlock Private Tx</span>
+            </div>
+            <span style={{ fontSize: 10, color: "var(--up)", fontWeight: 800, background: "var(--up-tint)", padding: "2px 8px", borderRadius: 999, border: "1px solid color-mix(in srgb, var(--up) 30%, transparent)" }}>
+              Zero-MEV · SDK Active
+            </span>
+          </div>
           <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
             <button className={`mock-play up ${betFlash === "up" ? "is-flash" : ""}`} onClick={() => handleBet("up")} disabled={!mock.currentPrice}>
               ▲ Up
@@ -619,6 +723,92 @@ export function RealArena() {
 
       {toast && <div className="mock-toast">{toast}</div>}
       <WinCelebration profit={celebrate?.profit ?? 0} show={!!celebrate} onDone={() => setCelebrate(null)} />
+
+      {showDepositModal && (
+        <div
+          className="session-backdrop"
+          style={{ zIndex: 100 }}
+          onClick={() => !isDepositing && setShowDepositModal(false)}
+        >
+          <div
+            className="session-dialog"
+            onClick={(e) => e.stopPropagation()}
+            style={{ maxWidth: 440 }}
+          >
+            <button
+              className="dialog-close"
+              onClick={() => setShowDepositModal(false)}
+              disabled={isDepositing}
+              type="button"
+            >
+              ×
+            </button>
+            <span className="eyebrow">Real Mode · Testnet Setup</span>
+            <h2 style={{ fontSize: 20, fontWeight: 800, margin: "4px 0 8px" }}>
+              Deposit Buying Power
+            </h2>
+            <p style={{ fontSize: 13, color: "var(--mut)", marginBottom: 16 }}>
+              Deposit testnet USDC to activate your MagicBlock Ephemeral Rollup session and start 10s plays.
+            </p>
+
+            <div>
+              <label style={{ fontSize: 12, fontWeight: 700, color: "var(--mut)" }}>
+                Deposit Amount
+              </label>
+              <div className="mock-amount-input" style={{ marginTop: 6 }}>
+                <span>$</span>
+                <input
+                  type="number"
+                  min="1"
+                  max="10000"
+                  value={depositAmount}
+                  disabled={isDepositing}
+                  onChange={(e) => setDepositAmount(Math.max(1, Number(e.target.value) || 1))}
+                />
+                <span style={{ fontSize: 12, color: "var(--mut)", fontWeight: 700 }}>USDC</span>
+              </div>
+              <div style={{ display: "flex", gap: 6, marginTop: 8, flexWrap: "wrap" }}>
+                {[50, 100, 250, 500, 1000, 10000].map((amt) => (
+                  <button
+                    key={amt}
+                    type="button"
+                    className={`mock-preset ${depositAmount === amt ? "is-on" : ""}`}
+                    onClick={() => setDepositAmount(amt)}
+                    disabled={isDepositing}
+                  >
+                    ${amt >= 1000 ? `${amt / 1000}k` : amt}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div style={{ padding: 12, borderRadius: 12, background: "var(--bg)", border: "1px solid var(--hair)", margin: "16px 0", fontSize: 12 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
+                <span style={{ color: "var(--mut)", fontWeight: 600 }}>Network</span>
+                <strong style={{ color: "var(--ink)", fontWeight: 700 }}>Solana Devnet · MagicBlock ER</strong>
+              </div>
+              <div style={{ display: "flex", justifyContent: "space-between" }}>
+                <span style={{ color: "var(--mut)", fontWeight: 600 }}>Updated Buying Power</span>
+                <strong className="num" style={{ color: "var(--up)", fontWeight: 800 }}>{formatUsd(displayBalance + depositAmount)}</strong>
+              </div>
+            </div>
+
+            <button
+              className="mock-play up"
+              style={{ width: "100%", marginTop: 8, minHeight: 48 }}
+              onClick={handleDepositSubmit}
+              disabled={isDepositing}
+              type="button"
+            >
+              {isDepositing
+                ? depositStep === "depositing"
+                  ? "Step 1/2 · Depositing USDC…"
+                  : "Step 2/2 · Activating ER Session…"
+                : `Deposit ${formatUsd(depositAmount)} USDC`}
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

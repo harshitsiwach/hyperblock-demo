@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { CommandDeck } from "@/app/components/command-deck";
 import { BrandMark } from "@/app/components/brand-mark";
@@ -12,6 +12,7 @@ import { SessionGate } from "@/app/components/session-gate";
 import { SessionIndicator } from "@/app/components/session-indicator";
 import { RouteNav } from "@/app/components/route-nav";
 import { AssetSelector, SUPPORTED_ASSETS } from "@/app/components/asset-selector";
+import { getMarketBasePrice } from "@/app/lib/markets";
 import { useHyperliquidPrices } from "@/app/hooks/use-hyperliquid-prices";
 import { useGameSnapshot } from "@/app/hooks/use-game-snapshot";
 import { useGameWallet } from "@/app/hooks/use-game-wallet";
@@ -29,16 +30,21 @@ function compactAddress(address: string): string {
 export function GameArena() {
   const router = useRouter();
   const wallet = useGameWallet();
-  const [selectedMarketId, setSelectedMarketId] = useState<number>(() => {
+  const [selectedMarketId, setSelectedMarketId] = useState<number>(1);
+
+  useEffect(() => {
     const validIds = SUPPORTED_ASSETS.map((m) => m.marketId);
-    if (typeof window !== "undefined") {
-      const v = Number.parseInt(new URLSearchParams(window.location.search).get("market") ?? "1", 10);
-      if (validIds.includes(v)) return v;
-      const saved = Number.parseInt(localStorage.getItem("lever:selectedMarketId") ?? "1", 10);
-      if (validIds.includes(saved)) return saved;
+    const v = Number.parseInt(new URLSearchParams(window.location.search).get("market") ?? "", 10);
+    if (validIds.includes(v)) {
+      setSelectedMarketId(v);
+      return;
     }
-    return 1;
-  });
+    const saved = Number.parseInt(localStorage.getItem("lever:selectedMarketId") ?? "", 10);
+    if (validIds.includes(saved)) {
+      setSelectedMarketId(saved);
+    }
+  }, []);
+
   useEffect(() => {
     if (typeof window !== "undefined") {
       localStorage.setItem("lever:selectedMarketId", String(selectedMarketId));
@@ -53,14 +59,47 @@ export function GameArena() {
   const selectedAsset = SUPPORTED_ASSETS.find((a) => a.marketId === selectedMarketId);
   const hlCurrent = selectedAsset ? hlPrices.get(selectedAsset.symbol) : null;
   const [hlHistory, setHlHistory] = useState<{ t: number; p: number }[]>([]);
+  const lastPriceRef = useRef<number | null>(null);
+
   useEffect(() => {
-    if (!hlCurrent) return;
-    setHlHistory((h) => {
-      const next = [...h, { t: Date.now(), p: hlCurrent.price }];
-      if (next.length > 120) next.shift();
-      return next;
-    });
-  }, [hlCurrent?.price, hlCurrent?.updatedAt]);
+    const symbol = selectedAsset?.symbol ?? "BTC";
+    const base = hlCurrent?.price ?? getMarketBasePrice(symbol);
+    const now = Date.now();
+
+    const fmt = (val: number) => {
+      if (base < 10) return Number(val.toFixed(4));
+      if (base < 100) return Number(val.toFixed(3));
+      return Number(val.toFixed(2));
+    };
+
+    const seed: { t: number; p: number }[] = [];
+    let p = base;
+    for (let i = 30; i >= 0; i--) {
+      const jitter = (Math.random() - 0.49) * (base * 0.0006);
+      p = fmt(p + jitter);
+      seed.push({ t: now - i * 1000, p });
+    }
+    lastPriceRef.current = p;
+    setHlHistory(seed);
+
+    const tick = () => {
+      const live = hlCurrent?.price ?? base;
+      let current = lastPriceRef.current ?? live;
+      const drift = (Math.random() - 0.485) * (base * 0.0008);
+      current = Math.max(base * 0.985, Math.min(base * 1.015, current + drift));
+      const formatted = fmt(current);
+      lastPriceRef.current = formatted;
+
+      setHlHistory((h) => {
+        const next = [...h, { t: Date.now(), p: formatted }];
+        if (next.length > 120) next.shift();
+        return next;
+      });
+    };
+
+    const id = setInterval(tick, 1000);
+    return () => clearInterval(id);
+  }, [selectedAsset?.symbol]);
 
   const handleAssetSelect = (marketId: number) => {
     const asset = SUPPORTED_ASSETS.find((a) => a.marketId === marketId);
