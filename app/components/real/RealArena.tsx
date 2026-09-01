@@ -303,7 +303,7 @@ function formatAssetPrice(price: number, basePrice: number): number {
         .mock-claim:disabled { opacity: .55; cursor: not-allowed; }
         .mock-claim.is-pulse { animation: mock-claim-pop .9s cubic-bezier(.16,1,.3,1); }
         @keyframes mock-claim-pop { 0% { transform: scale(1); } 30% { transform: scale(1.06); } 100% { transform: scale(1); } }
-        .mock-hero { max-width: 1160px; margin: 0 auto; padding: 18px 20px 0; display: grid; grid-template-columns: 1fr 360px; gap: 18px; }
+        .mock-hero { max-width: 1280px; margin: 0 auto; padding: 18px 20px 0; display: grid; grid-template-columns: 1fr 340px; gap: 16px; }
         @media (max-width: 900px) { .mock-hero { grid-template-columns: 1fr; } }
         .mock-chart-card { border: 1px solid var(--hair); border-radius: 16px; background: var(--card); overflow: hidden; position: relative; }
         .mock-chart-head { padding: 14px 16px 10px; display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; border-bottom: 1px solid var(--hair); }
@@ -386,14 +386,50 @@ function formatAssetPrice(price: number, basePrice: number): number {
         <div className="mock-chart-card">
           <div className="mock-chart-head">
             <div>
-              <div style={{ fontSize: 12, fontWeight: 800, letterSpacing: 0.4, textTransform: "uppercase", color: "var(--mut)" }}>{selectedAsset.label} · Hyperliquid {selectedAsset.dex || "main"}</div>
-              <div style={{ display: "flex", alignItems: "baseline", gap: 8, marginTop: 4 }}>
-                <span className="num" style={{ fontSize: 28, fontWeight: 800, letterSpacing: -0.6 }}>{formatDynamicPrice(displayLivePrice)}</span>
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <span style={{ fontSize: 13, fontWeight: 800, color: "var(--ink)", letterSpacing: 0.2 }}>
+                  {selectedAsset.symbol} / USD
+                </span>
+                <span
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: 5,
+                    padding: "3px 8px",
+                    borderRadius: 999,
+                    background: "color-mix(in srgb, var(--up-tint) 90%, var(--card))",
+                    color: "var(--up)",
+                    fontSize: 11,
+                    fontWeight: 800,
+                    border: "1px solid color-mix(in srgb, var(--up) 30%, transparent)",
+                  }}
+                >
+                  <i style={{ width: 6, height: 6, borderRadius: "50%", background: "var(--up)", boxShadow: "0 0 0 3px color-mix(in srgb, var(--up) 25%, transparent)" }} />
+                  Live · 0.3s
+                </span>
               </div>
-              <div style={{ fontSize: 11, color: "var(--up)", fontWeight: 700, marginTop: 2 }}>
-                ● Hyperliquid · live · 1s ticks · {hlHistory.length}s
+
+              <div style={{ display: "flex", alignItems: "baseline", gap: 8, marginTop: 6 }}>
+                <span className="num" style={{ fontSize: 32, fontWeight: 900, letterSpacing: -1, color: "var(--ink)" }}>
+                  {formatDynamicPrice(displayLivePrice)}
+                </span>
               </div>
+
+              {(() => {
+                const startPrice = hlHistory[0]?.p ?? displayLivePrice;
+                const priceDiff = displayLivePrice - startPrice;
+                const priceDiffPct = startPrice > 0 ? (priceDiff / startPrice) * 100 : 0;
+                const elapsedSeconds = Math.max(1, hlHistory.length);
+                const isUp = priceDiff >= 0;
+                return (
+                  <div style={{ fontSize: 12, fontWeight: 800, color: isUp ? "var(--up)" : "var(--down)", marginTop: 4, display: "flex", alignItems: "center", gap: 6 }}>
+                    <span>{isUp ? "▲" : "▼"} ${Math.abs(priceDiff).toFixed(2)} ({isUp ? "+" : ""}{priceDiffPct.toFixed(3)}%)</span>
+                    <span style={{ color: "var(--mut)", fontWeight: 600 }}>· last {elapsedSeconds}s</span>
+                  </div>
+                );
+              })()}
             </div>
+
             <div style={{ textAlign: "right" }}>
               <div style={{ fontSize: 11, color: "var(--mut)", fontWeight: 700 }}>Max profit</div>
               <div className="num" style={{ fontSize: 13, fontWeight: 800, color: "var(--ink)" }}>+{formatUsd(maxProfit)}</div>
