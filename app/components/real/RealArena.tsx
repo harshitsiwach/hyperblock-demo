@@ -193,7 +193,7 @@ function formatAssetPrice(price: number, basePrice: number): number {
   };
 
   const handleBet = (dir: "up" | "down") => {
-    const res = mock.placeBet(dir, amount);
+    const res = mock.placeBet(dir, amount, displayLivePrice);
     if (!res.ok) {
       setToast(res.reason);
       setTimeout(() => setToast(null), 2000);

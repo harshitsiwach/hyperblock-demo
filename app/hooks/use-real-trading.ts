@@ -133,11 +133,11 @@ export function useRealTrading(selectedMarketId: number) {
   const canBet = useMemo(() => plays.filter((p) => ["active", "settling", "refunding"].includes(p.status)).length < MOCK_MAX_POSITIONS, [plays]);
 
   const placeBet = useCallback(
-    (direction: Direction, amount: number) => {
+    (direction: Direction, amount: number, overridePrice?: number) => {
       if (!selectedAsset) return { ok: false, reason: "No asset" } as const;
       if (!Number.isFinite(amount) || amount < 1 || amount > 1000) return { ok: false, reason: "Amount 1-1000" } as const;
       if (balance < amount) return { ok: false, reason: "Insufficient real balance — claim funds" } as const;
-      const price = currentPrice;
+      const price = overridePrice && Number.isFinite(overridePrice) && overridePrice > 0 ? overridePrice : currentPrice;
       if (!price || !Number.isFinite(price)) return { ok: false, reason: "Price connecting…" } as const;
       const activeCount = plays.filter((p) => ["active", "settling", "refunding"].includes(p.status)).length;
       if (activeCount >= MOCK_MAX_POSITIONS) return { ok: false, reason: `Max ${MOCK_MAX_POSITIONS} positions` } as const;

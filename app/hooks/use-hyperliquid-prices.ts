@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { BASE_PRICES } from "@/app/lib/markets";
 
 export interface HyperliquidPrice {
   symbol: string;
@@ -38,6 +39,7 @@ export function useHyperliquidPrices(symbols: string[], wsUrl: string = WS_URL):
         const price = parseFloat(v);
         if (isFinite(price)) {
           cacheRef.current.set(sym, { symbol: sym, price, priceStr: v, updatedAt: Date.now() });
+          BASE_PRICES[sym.toUpperCase()] = price;
           changed = true;
         }
       }
