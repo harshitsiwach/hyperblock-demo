@@ -76,9 +76,16 @@ export function WinCelebration({ profit, show, onDone }: { profit: number; show:
 
   if (!show) return null;
   return (
-    <div style={{ position: "fixed", inset: 0, pointerEvents: "none", zIndex: 60 }}>
-      <canvas ref={canvasRef} style={{ position: "absolute", inset: 0, width: "100%", height: "100%" }} />
+    <div
+      onClick={() => onDone?.()}
+      style={{ position: "fixed", inset: 0, pointerEvents: "auto", zIndex: 60, cursor: "pointer" }}
+    >
+      <canvas ref={canvasRef} style={{ position: "absolute", inset: 0, width: "100%", height: "100%", pointerEvents: "none" }} />
       <div
+        onClick={(e) => {
+          e.stopPropagation();
+          onDone?.();
+        }}
         style={{
           position: "absolute",
           left: "50%",
@@ -93,10 +100,23 @@ export function WinCelebration({ profit, show, onDone }: { profit: number; show:
           backdropFilter: "blur(12px)",
           animation: "win-pop 0.7s cubic-bezier(.16,1,.3,1)",
           minWidth: 260,
+          cursor: "pointer",
         }}
       >
-        <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: 1, textTransform: "uppercase", color: profit > 0 ? "var(--up)" : "var(--down)" }}>
-          {profit > 0 ? "You won" : profit < 0 ? "You lost" : "Breakeven"}
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
+          <span style={{ fontSize: 11, fontWeight: 800, letterSpacing: 1, textTransform: "uppercase", color: profit > 0 ? "var(--up)" : "var(--down)" }}>
+            {profit > 0 ? "You won" : profit < 0 ? "You lost" : "Breakeven"}
+          </span>
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              onDone?.();
+            }}
+            style={{ border: 0, background: "transparent", color: "var(--mut)", fontSize: 14, fontWeight: 800, cursor: "pointer" }}
+          >
+            ×
+          </button>
         </div>
         <div className="num" style={{ fontSize: 32, fontWeight: 800, letterSpacing: -0.8, margin: "4px 0", color: profit > 0 ? "var(--up)" : profit < 0 ? "var(--down)" : "var(--ink)" }}>
           {profit > 0 ? "+" : ""}${profit.toFixed(2)}

@@ -109,6 +109,7 @@ export function MockArena() {
   };
 
   const handleBet = (dir: "up" | "down") => {
+    setCelebrate(null);
     const res = mock.placeBet(dir, amount);
     if (!res.ok) {
       setToast(res.reason);
