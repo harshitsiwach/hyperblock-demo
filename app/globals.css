@@ -1,69 +1,75 @@
+@import "tailwindcss";
+
 /* Lever design system — see DESIGN.md. Color appears only when money moves. */
 
 @custom-variant dark (&:is(.dark *));
 
 :root {
-  --bg: #fafaf8;
-  --card: #ffffff;
-  --ink: #17181c;
-  --mut: #6e7076;
-  --hair: #e8e7e3;
-  --up: #00a862;
-  --down: #e5484d;
-  --wait: #b45309;
-  --up-tint: rgba(0, 168, 98, 0.09);
-  --down-tint: rgba(229, 72, 77, 0.09);
-  --wait-tint: rgba(180, 83, 9, 0.1);
-  --scrim: rgba(23, 24, 28, 0.4);
-  --chart-1: oklch(0.32 0 none);
-  --chart-2: oklch(0.41 0 none);
-  --chart-3: oklch(0.54 0 none);
-  --chart-4: oklch(0.71 0 none);
-  --chart-5: oklch(0.89 0 none);
-  --chart-background: oklch(1 0 0);
-  --chart-foreground: oklch(0.145 0.004 285);
-  --chart-foreground-muted: oklch(0.55 0.014 260);
-  --chart-line-primary: var(--chart-1);
-  --chart-line-secondary: var(--chart-2);
-  --chart-crosshair: oklch(0.4 0.1828 274.34);
-  --chart-grid: oklch(0.9 0 0);
-  --chart-brush-border: var(--chart-grid);
-  --chart-tooltip-background: oklch(0.21 0.006 285 / 0.8);
-  --chart-tooltip-foreground: oklch(0.985 0 0);
-  --chart-tooltip-muted: oklch(0.65 0.01 260);
-  --chart-marker-background: oklch(0.97 0.005 260);
-  --chart-marker-border: oklch(0.85 0.01 260);
-  --chart-marker-foreground: oklch(0.3 0.01 260);
-  --chart-label: oklch(0.45 0.01 260);
-  --chart-scale-01: oklch(0.98 0.003 106);
-  --chart-scale-02: oklch(0.92 0.008 106);
-  --chart-scale-03: oklch(0.82 0.015 106);
-  --chart-scale-04: oklch(0.68 0.02 106);
-  --chart-scale-05: oklch(0.55 0.025 106);
-  --chart-scale-pattern-color: oklch(0.96 0.005 106);
+  --bg: #0b0d12;
+  --card: #121620;
+  --panel: #161b26;
+  --elevated: #1a2130;
+  --ink: #f8fafc;
+  --ink-secondary: #94a3b8;
+  --mut: #64748b;
+  --hair: rgba(255, 255, 255, 0.08);
+  --hair-hover: rgba(255, 255, 255, 0.16);
+  --hair-active: rgba(0, 240, 118, 0.35);
+  --up: #00f076;
+  --up-glow: rgba(0, 240, 118, 0.28);
+  --up-tint: rgba(0, 240, 118, 0.10);
+  --up-dark: #008f44;
+  --down: #ff3358;
+  --down-glow: rgba(255, 51, 88, 0.28);
+  --down-tint: rgba(255, 51, 88, 0.10);
+  --down-dark: #a1142f;
+  --wait: #eab308;
+  --wait-tint: rgba(234, 179, 8, 0.12);
+  --scrim: rgba(4, 6, 9, 0.85);
+  --accent: #00f076;
+  --accent-glow: 0 0 20px rgba(0, 240, 118, 0.3);
+  --chart-1: #00f076;
+  --chart-2: #38bdf8;
+  --chart-3: #818cf8;
+  --chart-4: #f43f5e;
+  --chart-5: #eab308;
+  --chart-background: #0b0d12;
+  --chart-foreground: #f8fafc;
+  --chart-foreground-muted: #64748b;
+  --chart-line-primary: #00f076;
+  --chart-line-secondary: #38bdf8;
+  --chart-crosshair: rgba(255, 255, 255, 0.35);
+  --chart-grid: rgba(255, 255, 255, 0.05);
+  --chart-brush-border: rgba(255, 255, 255, 0.1);
+  --chart-tooltip-background: rgba(18, 22, 32, 0.94);
+  --chart-tooltip-foreground: #f8fafc;
+  --chart-tooltip-muted: #94a3b8;
+  --chart-marker-background: #161b26;
+  --chart-marker-border: rgba(255, 255, 255, 0.15);
+  --chart-marker-foreground: #f8fafc;
+  --chart-label: #64748b;
 }
-@media (prefers-color-scheme: dark) {
-  :root {
-    --bg: #131417; --card: #1a1b1f; --ink: #f0efec; --mut: #9b9c9f; --hair: #26272b;
-    --up: #2bd186; --down: #ff6b6e; --wait: #f5a623;
-    --up-tint: rgba(43, 209, 134, 0.1); --down-tint: rgba(255, 107, 110, 0.1);
-    --wait-tint: rgba(245, 166, 35, 0.12);
-    --scrim: rgba(0, 0, 0, 0.55);
-  }
-}
-:root[data-theme="dark"] {
-  --bg: #131417; --card: #1a1b1f; --ink: #f0efec; --mut: #9b9c9f; --hair: #26272b;
-  --up: #2bd186; --down: #ff6b6e; --wait: #f5a623;
-  --up-tint: rgba(43, 209, 134, 0.1); --down-tint: rgba(255, 107, 110, 0.1);
-  --wait-tint: rgba(245, 166, 35, 0.12);
-  --scrim: rgba(0, 0, 0, 0.55);
-}
+:root[data-theme="dark"],
 :root[data-theme="light"] {
-  --bg: #fafaf8; --card: #ffffff; --ink: #17181c; --mut: #6e7076; --hair: #e8e7e3;
-  --up: #00a862; --down: #e5484d; --wait: #b45309;
-  --up-tint: rgba(0, 168, 98, 0.09); --down-tint: rgba(229, 72, 77, 0.09);
-  --wait-tint: rgba(180, 83, 9, 0.1);
-  --scrim: rgba(23, 24, 28, 0.4);
+  --bg: #0b0d12;
+  --card: #121620;
+  --panel: #161b26;
+  --elevated: #1a2130;
+  --ink: #f8fafc;
+  --ink-secondary: #94a3b8;
+  --mut: #64748b;
+  --hair: rgba(255, 255, 255, 0.08);
+  --hair-hover: rgba(255, 255, 255, 0.16);
+  --hair-active: rgba(0, 240, 118, 0.35);
+  --up: #00f076;
+  --up-glow: rgba(0, 240, 118, 0.28);
+  --up-tint: rgba(0, 240, 118, 0.10);
+  --down: #ff3358;
+  --down-glow: rgba(255, 51, 88, 0.28);
+  --down-tint: rgba(255, 51, 88, 0.10);
+  --wait: #eab308;
+  --wait-tint: rgba(234, 179, 8, 0.12);
+  --scrim: rgba(4, 6, 9, 0.85);
 }
 
 * { box-sizing: border-box; }
@@ -1909,3 +1915,251 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--ink); outli
   --color-chart-scale-05: var(----chart-scale-05);
   --color-chart-scale-pattern-color: var(----chart-scale-pattern-color);
 }
+
+/* ==========================================================================
+   TERMINAL NEXT-GEN TRADING STYLES & ANIMATIONS
+   ========================================================================== */
+
+/* Custom Terminal Scrollbar */
+::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+::-webkit-scrollbar-track {
+  background: rgba(11, 13, 18, 0.6);
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.12);
+  border-radius: 999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.22);
+}
+
+/* Kinetic Energy Sweeps */
+@keyframes energy-sweep-up {
+  0% {
+    transform: translateX(-100%);
+    opacity: 0;
+  }
+  30% {
+    opacity: 0.9;
+  }
+  100% {
+    transform: translateX(200%);
+    opacity: 0;
+  }
+}
+
+@keyframes energy-sweep-down {
+  0% {
+    transform: translateX(-100%);
+    opacity: 0;
+  }
+  30% {
+    opacity: 0.9;
+  }
+  100% {
+    transform: translateX(200%);
+    opacity: 0;
+  }
+}
+
+.energy-beam-up {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 50%;
+  background: linear-gradient(90deg, transparent, rgba(0, 240, 118, 0.8), transparent);
+  animation: energy-sweep-up 0.75s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  pointer-events: none;
+}
+
+.energy-beam-down {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 50%;
+  background: linear-gradient(90deg, transparent, rgba(255, 51, 88, 0.8), transparent);
+  animation: energy-sweep-down 0.75s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  pointer-events: none;
+}
+
+/* Price Flash Animations (300ms fade) */
+@keyframes price-flash-green {
+  0% {
+    color: #00f076;
+    text-shadow: 0 0 12px rgba(0, 240, 118, 0.6);
+    transform: scale(1.02);
+  }
+  100% {
+    color: inherit;
+    text-shadow: none;
+    transform: scale(1);
+  }
+}
+
+@keyframes price-flash-red {
+  0% {
+    color: #ff3358;
+    text-shadow: 0 0 12px rgba(255, 51, 88, 0.6);
+    transform: scale(1.02);
+  }
+  100% {
+    color: inherit;
+    text-shadow: none;
+    transform: scale(1);
+  }
+}
+
+.flash-up {
+  animation: price-flash-green 0.35s ease-out;
+}
+
+.flash-down {
+  animation: price-flash-red 0.35s ease-out;
+}
+
+/* Breathing / Pulsing Live Dot */
+@keyframes terminal-pulse-green {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 1;
+    box-shadow: 0 0 0 0 rgba(0, 240, 118, 0.5);
+  }
+  50% {
+    transform: scale(1.1);
+    opacity: 0.85;
+    box-shadow: 0 0 0 5px rgba(0, 240, 118, 0);
+  }
+}
+
+.live-pulse-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #00f076;
+  animation: terminal-pulse-green 2.2s infinite ease-in-out;
+}
+
+@keyframes terminal-pulse-amber {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 1;
+    box-shadow: 0 0 0 0 rgba(234, 179, 8, 0.5);
+  }
+  50% {
+    transform: scale(1.1);
+    opacity: 0.85;
+    box-shadow: 0 0 0 5px rgba(234, 179, 8, 0);
+  }
+}
+
+.amber-pulse-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #eab308;
+  animation: terminal-pulse-amber 2.2s infinite ease-in-out;
+}
+
+/* Subtle Terminal Grid Ambient Layer */
+.terminal-grid-bg {
+  background-size: 32px 32px;
+  background-image: 
+    linear-gradient(to right, rgba(255, 255, 255, 0.02) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
+}
+
+/* Glow Card Classes */
+.terminal-card {
+  background: #121620;
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 14px;
+  transition: border-color 0.2s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.2s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.terminal-card:hover {
+  border-color: rgba(255, 255, 255, 0.14);
+}
+
+.terminal-card-interactive:hover {
+  border-color: rgba(0, 240, 118, 0.25);
+  box-shadow: 0 4px 20px rgba(0, 240, 118, 0.04);
+}
+
+/* Tactile UP / DOWN Trading Triggers */
+.trigger-btn-up {
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(180deg, rgba(0, 240, 118, 0.16) 0%, rgba(0, 240, 118, 0.06) 100%);
+  border: 1px solid rgba(0, 240, 118, 0.32);
+  color: #00f076;
+  transition: all 0.18s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.trigger-btn-up:hover:not(:disabled) {
+  background: linear-gradient(180deg, rgba(0, 240, 118, 0.26) 0%, rgba(0, 240, 118, 0.12) 100%);
+  border-color: #00f076;
+  box-shadow: 0 0 24px rgba(0, 240, 118, 0.22);
+  transform: translateY(-2px);
+}
+
+.trigger-btn-up:active:not(:disabled) {
+  transform: translateY(1px) scale(0.98);
+  box-shadow: 0 0 12px rgba(0, 240, 118, 0.28);
+}
+
+.trigger-btn-down {
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(180deg, rgba(255, 51, 88, 0.16) 0%, rgba(255, 51, 88, 0.06) 100%);
+  border: 1px solid rgba(255, 51, 88, 0.32);
+  color: #ff3358;
+  transition: all 0.18s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.trigger-btn-down:hover:not(:disabled) {
+  background: linear-gradient(180deg, rgba(255, 51, 88, 0.26) 0%, rgba(255, 51, 88, 0.12) 100%);
+  border-color: #ff3358;
+  box-shadow: 0 0 24px rgba(255, 51, 88, 0.22);
+  transform: translateY(-2px);
+}
+
+.trigger-btn-down:active:not(:disabled) {
+  transform: translateY(1px) scale(0.98);
+  box-shadow: 0 0 12px rgba(255, 51, 88, 0.28);
+}
+
+/* Ripple click effect */
+.btn-ripple {
+  position: absolute;
+  border-radius: 50%;
+  transform: scale(0);
+  animation: ripple-effect 0.6s linear;
+  background-color: rgba(255, 255, 255, 0.35);
+  pointer-events: none;
+}
+
+@keyframes ripple-effect {
+  to {
+    transform: scale(4);
+    opacity: 0;
+  }
+}
+
+/* Reduced Motion Override */
+@media (prefers-reduced-motion: reduce) {
+  *, ::before, ::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+  .live-pulse-dot, .amber-pulse-dot {
+    animation: none !important;
+  }
+}
+

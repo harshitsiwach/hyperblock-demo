@@ -1,13 +1,18 @@
 "use client";
 
+import React from "react";
 import type { AssetCategory } from "@/app/lib/markets";
+import {
+  TokenBTC,
+  TokenETH,
+  TokenSOL,
+  TokenAVAX,
+  TokenDOGE,
+  TokenARB,
+  TokenAAVE,
+} from "@web3icons/react";
 
-// thesvg brand icons — tree-shakeable per-icon imports (3KB each)
-import bitcoin from "thesvg/bitcoin";
-import ethereum from "thesvg/ethereum";
-import solana from "thesvg/solana";
-import dogecoin from "thesvg/dogecoin";
-import avalanche from "thesvg/avalanche";
+// thesvg brand icons for major stocks
 import apple from "thesvg/apple";
 import nvidia from "thesvg/nvidia";
 import tesla from "thesvg/tesla";
@@ -18,17 +23,17 @@ import amazon from "thesvg/amazon";
 import meta from "thesvg/meta";
 
 const CATEGORY_COLOR: Record<AssetCategory, string> = {
-  crypto: "#00a862",
+  crypto: "#00f076",
   stocks: "#17181c",
-  commodities: "#b45309",
-  forex: "#e5484d",
+  commodities: "#d4af37",
+  forex: "#3b82f6",
 };
 
 const SYMBOL_COLOR: Record<string, string> = {
   BTC: "#f7931a",
   ETH: "#627eea",
   SOL: "#9945ff",
-  HYPE: "#2bd186",
+  HYPE: "#00f076",
   DOGE: "#c2a633",
   AVAX: "#e84142",
   ARB: "#28a0f0",
@@ -53,12 +58,7 @@ const SYMBOL_COLOR: Record<string, string> = {
   DXY: "#0f4c75",
 };
 
-const THESVG_MAP: Record<string, { svg: string; hex: string }> = {
-  BTC: bitcoin,
-  ETH: ethereum,
-  SOL: solana,
-  DOGE: dogecoin,
-  AVAX: avalanche,
+const STOCK_SVG_MAP: Record<string, { svg: string; hex: string }> = {
   AAPL: apple,
   NVDA: nvidia,
   TSLA: tesla,
@@ -69,77 +69,110 @@ const THESVG_MAP: Record<string, { svg: string; hex: string }> = {
   META: meta,
 };
 
-export function AssetIcon({ symbol, category, size = 36 }: { symbol: string; category: AssetCategory; size?: number }) {
-  const thesvg = THESVG_MAP[symbol];
-  const bg = SYMBOL_COLOR[symbol] ?? CATEGORY_COLOR[category];
-  const isLight = ["GOLD", "SILVER", "PLATINUM", "PALLADIUM"].includes(symbol);
-  const fg = isLight ? "#17181c" : "#fff";
-  const letter = symbol.slice(0, symbol.length > 3 ? 3 : symbol.length);
-  const isCrypto = category === "crypto";
+export function AssetIcon({
+  symbol,
+  category,
+  size = 36,
+  className = "",
+}: {
+  symbol: string;
+  category: AssetCategory;
+  size?: number;
+  className?: string;
+}) {
+  const sym = symbol.toUpperCase();
+  const bg = SYMBOL_COLOR[sym] ?? CATEGORY_COLOR[category];
 
-  // If thesvg brand is available, render crisp SVG logo
-  if (thesvg) {
-    // Use white container for dark logos like Apple, keep brand color as border glow
-    const isDarkLogo = ["AAPL", "NVDA", "TSLA"].includes(symbol);
-    const containerBg = isDarkLogo ? "#fff" : "#fff";
-    const containerBorder = isDarkLogo ? "1px solid var(--hair)" : `1px solid ${bg}18`;
+  // 1. Official Web3 Token Icons from @web3icons/react
+  if (sym === "BTC") {
+    return <TokenBTC size={size} variant="branded" className={`rounded-full flex-shrink-0 ${className}`} />;
+  }
+  if (sym === "ETH") {
+    return <TokenETH size={size} variant="branded" className={`rounded-full flex-shrink-0 ${className}`} />;
+  }
+  if (sym === "SOL") {
+    return <TokenSOL size={size} variant="branded" className={`rounded-full flex-shrink-0 ${className}`} />;
+  }
+  if (sym === "AVAX") {
+    return <TokenAVAX size={size} variant="branded" className={`rounded-full flex-shrink-0 ${className}`} />;
+  }
+  if (sym === "DOGE") {
+    return <TokenDOGE size={size} variant="branded" className={`rounded-full flex-shrink-0 ${className}`} />;
+  }
+  if (sym === "ARB") {
+    return <TokenARB size={size} variant="branded" className={`rounded-full flex-shrink-0 ${className}`} />;
+  }
+  if (sym === "AAVE") {
+    return <TokenAAVE size={size} variant="branded" className={`rounded-full flex-shrink-0 ${className}`} />;
+  }
+
+  // 2. Hyperliquid (HYPE) custom glowing emblem
+  if (sym === "HYPE") {
     return (
       <div
+        className={`relative flex items-center justify-center rounded-full overflow-hidden flex-shrink-0 shadow-sm ${className}`}
         style={{
           width: size,
           height: size,
-          borderRadius: size * 0.28,
-          background: containerBg,
-          display: "grid",
-          placeItems: "center",
-          flex: `0 0 ${size}px`,
-          boxShadow: `0 2px 10px ${bg}22, 0 1px 0 rgba(0,0,0,0.04)`,
-          border: containerBorder,
-          position: "relative",
-          overflow: "hidden",
-          padding: size * 0.18,
+          background: "linear-gradient(135deg, #0b1c14 0%, #00f076 100%)",
+          border: "1px solid rgba(0, 240, 118, 0.4)",
         }}
-        title={symbol}
+      >
+        <svg viewBox="0 0 24 24" width={size * 0.65} height={size * 0.65} fill="none">
+          <path
+            d="M12 2L21 7V17L12 22L3 17V7L12 2Z"
+            fill="#00f076"
+            stroke="#ffffff"
+            strokeWidth="1.5"
+            strokeLinejoin="round"
+          />
+          <path d="M8 12L12 9L16 12L12 15L8 12Z" fill="#0b0d12" />
+        </svg>
+      </div>
+    );
+  }
+
+  // 3. Stock brand SVGs
+  const stockSvg = STOCK_SVG_MAP[sym];
+  if (stockSvg) {
+    const isDarkLogo = ["AAPL", "NVDA", "TSLA"].includes(sym);
+    return (
+      <div
+        className={`flex items-center justify-center rounded-xl overflow-hidden flex-shrink-0 bg-white border border-white/10 ${className}`}
+        style={{
+          width: size,
+          height: size,
+          padding: size * 0.18,
+          boxShadow: `0 2px 8px ${bg}22`,
+        }}
       >
         <div
-          // thesvg provides raw <svg> string with brand colors
           style={{ width: "100%", height: "100%", display: "grid", placeItems: "center" }}
-          dangerouslySetInnerHTML={{ __html: thesvg.svg }}
+          dangerouslySetInnerHTML={{ __html: stockSvg.svg }}
         />
       </div>
     );
   }
 
-  // Fallback: beautiful letter badge (commodities/forex + missing crypto like HYPE/ARB)
+  // 4. Commodities, Forex & Other Assets: Institutional Badge
+  const isLight = ["GOLD", "SILVER", "PLATINUM", "PALLADIUM"].includes(sym);
+  const letter = sym.slice(0, sym.length > 3 ? 3 : sym.length);
+
   return (
     <div
+      className={`flex items-center justify-center rounded-xl font-mono font-extrabold flex-shrink-0 relative overflow-hidden select-none ${className}`}
       style={{
         width: size,
         height: size,
-        borderRadius: size * 0.28,
-        background: bg,
-        color: fg,
-        display: "grid",
-        placeItems: "center",
+        background: isLight ? "linear-gradient(135deg, #e5c158 0%, #b8860b 100%)" : bg,
+        color: isLight ? "#1a1200" : "#ffffff",
         fontSize: size * 0.32,
-        fontWeight: 800,
-        letterSpacing: -0.5,
-        flex: `0 0 ${size}px`,
-        boxShadow: `0 2px 8px ${bg}30, inset 0 1px 0 rgba(255,255,255,0.2)`,
-        border: isLight ? "1px solid #e8e7e3" : "none",
-        position: "relative",
-        overflow: "hidden",
+        boxShadow: `0 2px 10px ${bg}35`,
+        border: "1px solid rgba(255,255,255,0.15)",
       }}
     >
-      <div
-        style={{
-          position: "absolute",
-          inset: 0,
-          background: `linear-gradient(135deg, rgba(255,255,255,${isCrypto ? 0.18 : 0.12}) 0%, transparent 55%)`,
-          pointerEvents: "none",
-        }}
-      />
-      <span style={{ position: "relative", zIndex: 1, fontVariantNumeric: "tabular-nums" }}>{letter}</span>
+      <div className="absolute inset-0 bg-gradient-to-tr from-black/20 to-white/25 pointer-events-none" />
+      <span className="relative z-10">{letter}</span>
     </div>
   );
 }
