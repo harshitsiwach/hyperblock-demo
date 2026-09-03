@@ -7,6 +7,7 @@ import {
   createApproveCheckedInstruction,
   createAssociatedTokenAccountIdempotentInstruction,
   getAssociatedTokenAddressSync,
+  TOKEN_2022_PROGRAM_ID,
 } from "@solana/spl-token";
 import {
   claimTokens,
@@ -31,7 +32,7 @@ interface UseHyperblockAccountOptions {
 }
 
 export function useHyperblockAccount(opts?: UseHyperblockAccountOptions) {
-  const { publicKey, sendTransaction } = useWallet();
+  const { publicKey, sendTransaction, signTransaction } = useWallet();
   const address = useMemo(() => publicKey?.toBase58() ?? null, [publicKey]);
 
   const [config, setConfig] = useState<HyperblockApiConfig | null>(null);
@@ -163,6 +164,30 @@ export function useHyperblockAccount(opts?: UseHyperblockAccountOptions) {
     }
   }, [address, refresh, rememberClaimCooldown, claimCooldownSec]);
 
+/** JSON-safe deep snapshot (captures non-enumerable props like message/stack too). */
+function snapshotError(e: unknown, depth = 0): unknown {
+  if (depth > 4 || e === null || e === undefined) return e ?? null;
+  if (typeof e !== "object") return typeof e === "function" ? `[function ${(e as Function).name || "anonymous"}]` : e;
+  if (e instanceof PublicKey) return (e as PublicKey).toBase58();
+  const out: Record<string, unknown> = {};
+  for (const k of Object.getOwnPropertyNames(e)) {
+    try {
+      const v = (e as Record<string, unknown>)[k];
+      out[k] =
+        typeof v === "bigint"
+          ? `${v.toString()}n`
+          : typeof v === "object" && v !== null
+            ? snapshotError(v, depth + 1)
+            : typeof v === "function"
+              ? `[function ${(v as Function).name || "anonymous"}]`
+              : v;
+    } catch {
+      out[k] = "[unreadable]";
+    }
+  }
+  return out;
+}
+
 /**
  * Walk a wallet-adapter error chain (WalletSendTransactionError wraps the real
  * cause, defaulting to the useless "Unexpected error") and build a readable message.
@@ -170,6 +195,10 @@ export function useHyperblockAccount(opts?: UseHyperblockAccountOptions) {
 function describeTxError(e: unknown): string {
   // eslint-disable-next-line no-console
   console.error("[hyperblock approve] raw error:", e);
+  try {
+    // eslint-disable-next-line no-console
+    console.error("[hyperblock approve] error snapshot:", JSON.stringify(snapshotError(e)));
+  } catch {}
   const parts: string[] = [];
   const seen = new Set<unknown>();
   let cur: unknown = e;
@@ -183,13 +212,16 @@ function describeTxError(e: unknown): string {
     if (typeof rec.message === "string" && rec.message && !parts.includes(rec.message)) {
       parts.push(rec.message);
     }
+    if ((typeof rec.code === "number" || typeof rec.code === "string") && rec.code !== "") {
+      parts.push(`code: ${String(rec.code)}`);
+    }
     if (Array.isArray(rec.logs) && rec.logs.length > 0) {
       parts.push(`logs: ${(rec.logs as unknown[]).slice(-6).join(" | ")}`);
     }
-    cur = rec.cause ?? rec.error ?? null;
+    cur = rec.cause ?? rec.error ?? rec.data ?? null;
   }
   const msg = parts.filter((p) => !/^unexpected error$/i.test(p.trim())).join(" · ").trim();
-  return msg || "Wallet failed to send the approval transaction";
+  return msg || "Wallet failed to send the approval transaction (see console snapshot)";
 }
   /**
    * One-time SPL delegate approval: user signs a single approveChecked tx
@@ -205,7 +237,10 @@ function describeTxError(e: unknown): string {
       const owner = new PublicKey(address);
       const mint = new PublicKey(params.mint);
       const delegate = new PublicKey(params.delegateWallet);
-      const userAta = getAssociatedTokenAddressSync(mint, owner);
+      // NOTE: the tUSD mint is a Token-2022 mint (owner TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnAA9K3DFdMXAqszs),
+      // so the ATA must be derived for — and all instructions must target — the Token-2022
+      // program. Classic-Token instructions fail simulation with IncorrectProgramId.
+      const userAta = getAssociatedTokenAddressSync(mint, owner, false, TOKEN_2022_PROGRAM_ID);
       const allowance = BigInt(params.suggestedAllowanceMinor);
 
       const conn = new Connection(params.rpcEndpoint, "confirmed");
@@ -220,7 +255,7 @@ function describeTxError(e: unknown): string {
       }
 
       const ixs = [
-        createAssociatedTokenAccountIdempotentInstruction(owner, userAta, owner, mint),
+        createAssociatedTokenAccountIdempotentInstruction(owner, userAta, owner, mint, TOKEN_2022_PROGRAM_ID),
         createApproveCheckedInstruction(
           userAta,
           mint,
@@ -228,6 +263,8 @@ function describeTxError(e: unknown): string {
           owner,
           allowance,
           params.tokenDecimals,
+          undefined,
+          TOKEN_2022_PROGRAM_ID,
         ),
       ];
       const { blockhash, lastValidBlockHeight } = await conn.getLatestBlockhash("confirmed");
@@ -235,9 +272,21 @@ function describeTxError(e: unknown): string {
       tx.add(...ixs);
       let sig: string;
       try {
+        // Primary path: wallet prepares, signs and broadcasts.
         sig = await sendTransaction(tx, conn, { skipPreflight: false });
       } catch (e) {
-        throw new Error(describeTxError(e));
+        // Fallback: some standard-wallet send paths fail opaquely ("Unexpected
+        // error"). Have the wallet ONLY sign, then broadcast via our own RPC so
+        // failures surface as real RPC errors with simulation logs.
+        try {
+          // eslint-disable-next-line no-console
+          console.error("[hyperblock approve] sendTransaction failed, trying sign+broadcast fallback");
+          if (!signTransaction) throw new Error("wallet does not support signTransaction");
+          const signed = await signTransaction(tx);
+          sig = await conn.sendRawTransaction(signed.serialize(), { skipPreflight: false });
+        } catch (e2) {
+          throw new Error(`${describeTxError(e2)} (sendTransaction also failed: ${describeTxError(e)})`);
+        }
       }
       await conn.confirmTransaction({ signature: sig, blockhash, lastValidBlockHeight }, "confirmed").catch(() => {});
       await refresh();
@@ -249,7 +298,7 @@ function describeTxError(e: unknown): string {
     } finally {
       setApproving(false);
     }
-  }, [address, publicKey, sendTransaction, refresh]);
+  }, [address, publicKey, sendTransaction, signTransaction, refresh]);
 
   /**
    * Place an onchain bet. The API pulls the stake as SPL delegate, waits ~10s

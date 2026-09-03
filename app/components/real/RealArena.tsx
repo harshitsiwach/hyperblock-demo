@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { MARKETS as SUPPORTED_ASSETS, BASE_PRICES, type MarketInfo } from "@/app/lib/markets";
 import { useRealTrading } from "@/app/hooks/use-real-trading";
 import { useHyperblockAccount } from "@/app/hooks/use-hyperblock-account";
+import { useOnchainBetHistory } from "@/app/hooks/use-onchain-bet-history";
 import { settledBetToPlay } from "@/app/lib/hyperblock-api/mapping";
 import {
   getRealPlays,
@@ -57,6 +58,24 @@ export function RealArena() {
   // from the connected wallet; settled results mirror into local plays for charts.
   const account = useHyperblockAccount();
   const [settling, setSettling] = useState(false);
+  // Pending card shown in Active Orders while the ~10-20s onchain round settles.
+  // Status "submitting" is deliberately ignored by the local trading engine.
+  const [pendingPlay, setPendingPlay] = useState<Play | null>(null);
+  const [historyKey, setHistoryKey] = useState(0);
+
+  // Chain-verified bet record (stake pulls + payouts reconstructed from devnet).
+  const history = useOnchainBetHistory({
+    userAta: account.balances?.userAta ?? null,
+    houseAta: account.balances?.houseAta ?? null,
+    mint: account.config?.tokenMint ?? null,
+    decimals: account.config?.tokenDecimals ?? null,
+    rpcEndpoint: account.config?.baseRpcEndpoint ?? null,
+    refreshKey: historyKey,
+  });
+  const liveActivePlays = useMemo(
+    () => (pendingPlay ? [pendingPlay, ...realTrade.activePlays] : realTrade.activePlays) as Play[],
+    [pendingPlay, realTrade.activePlays],
+  );
 
   // Local interaction & visual state
   const [amount, setAmount] = useState(10);
@@ -217,6 +236,7 @@ export function RealArena() {
     try {
       const { amountTokens, signature } = await account.claim();
       setClaimPulse(true);
+      setHistoryKey((k) => k + 1);
       setToast(`+${amountTokens} tUSD claimed · ${signature.slice(0, 8)}…`);
       setTimeout(() => setClaimPulse(false), 900);
       setTimeout(() => setToast(null), 3500);
@@ -275,6 +295,21 @@ export function RealArena() {
     setTimeout(() => setBetFlash(null), 600);
     setSettling(true);
     setToast("Bet sent · settling ~10s onchain…");
+    // Visible Active Order while the round settles (engine ignores "submitting").
+    const openedAt = Date.now();
+    setPendingPlay({
+      id: `pending-${openedAt}`,
+      marketId: selectedMarketId,
+      direction: dir,
+      collateralUsd: amount,
+      entryPrice,
+      openedAt,
+      expiresAt: openedAt + 10_000,
+      refundAt: openedAt + 30_000,
+      status: "submitting",
+      priceMovePercent: 0,
+      liveProfitUsd: 0,
+    });
 
     setActivityItems((prev) => [
       {
@@ -298,6 +333,8 @@ export function RealArena() {
       const play: any = settledBetToPlay(settled, selectedMarketId);
       const next = [play, ...getRealPlays()].slice(0, 50);
       setRealPlays(next);
+      setPendingPlay(null);
+      setHistoryKey((k) => k + 1);
 
       const profit = settled.profitTokens ?? 0;
       if (settled.status === "won" && profit > 0) {
@@ -345,6 +382,7 @@ export function RealArena() {
       setToast(e instanceof Error ? e.message : "Bet failed");
       setTimeout(() => setToast(null), 3500);
     } finally {
+      setPendingPlay(null);
       setSettling(false);
     }
   };
@@ -433,12 +471,12 @@ export function RealArena() {
       <TerminalNav
         balance={displayBalance}
         balanceBump={balanceBump}
-        activePositionsCount={realTrade.activePlays.length}
+        activePositionsCount={liveActivePlays.length}
         maxPositions={8}
         streak={streak}
         bestStreak={bestStreak}
-        canClaim={!account.claiming}
-        cooldownSec={0}
+        canClaim={!account.claiming && account.claimCooldownSec <= 0}
+        cooldownSec={account.claimCooldownSec}
         onClaim={() => void handleClaim()}
         claimPulse={claimPulse}
         claimLabel="+ Claim 100 tUSD"
@@ -517,7 +555,7 @@ export function RealArena() {
               onAmountChange={setAmount}
               onBet={(dir) => void handleBet(dir)}
               disabled={!realTrade.currentPrice || settling || account.placing}
-              activeCount={realTrade.activePlays.length}
+              activeCount={liveActivePlays.length}
               maxPositions={8}
               betFlash={betFlash}
             />
@@ -540,9 +578,13 @@ export function RealArena() {
           {/* Column 2: Live Position Cards & 10s Countdown */}
           <div className="lg:col-span-6">
             <LivePositions
-              activePlays={realTrade.activePlays as Play[]}
+              activePlays={liveActivePlays}
               historyPlays={realTrade.historyPlays as Play[]}
               now={realTrade.now}
+              records={history.records}
+              historyLoading={history.loading}
+              walletConnected={!!account.address}
+              onRefreshHistory={() => void history.refresh()}
             />
           </div>
 
@@ -575,7 +617,7 @@ export function RealArena() {
         onTabChange={(tab) => setMobileTab(tab as any)}
         onOpenAssetSheet={() => setShowAssetSheet(true)}
         onOpenTradeSheet={() => setShowTradeSheet(true)}
-        activeCount={realTrade.activePlays.length}
+        activeCount={liveActivePlays.length}
       />
 
       {/* Mobile Drawer Bottom Sheet for Asset Browser */}
@@ -617,7 +659,7 @@ export function RealArena() {
                 setShowTradeSheet(false);
               }}
               disabled={!realTrade.currentPrice || settling || account.placing}
-              activeCount={realTrade.activePlays.length}
+              activeCount={liveActivePlays.length}
               maxPositions={8}
               betFlash={betFlash}
             />
