@@ -62,21 +62,26 @@ export function TerminalChart({
   const containerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
-  // Flow animation controller when switching tokens
+  // Flow animation controller when switching tokens or toggling chart types (line vs candle)
   const flowProgressRef = useRef(1);
   const prevSymbolRef = useRef(symbol);
+  const prevChartTypeRef = useRef(chartType);
 
   useEffect(() => {
-    if (symbol !== prevSymbolRef.current) {
+    const isSymbolChange = symbol !== prevSymbolRef.current;
+    const isTypeChange = chartType !== prevChartTypeRef.current;
+
+    if (isSymbolChange || isTypeChange) {
       prevSymbolRef.current = symbol;
+      prevChartTypeRef.current = chartType;
       flowProgressRef.current = 0;
       const startTime = performance.now();
-      const duration = 750; // 750ms flowing wave reveal
+      const duration = isTypeChange ? 650 : 750; // 650ms entry sweep on mode toggle
 
       const step = (now: number) => {
         const elapsed = now - startTime;
         const p = Math.min(1, elapsed / duration);
-        // Ease-out cubic: fast fluid surge that flows gracefully across to the actual price
+        // Ease-out cubic: fast fluid surge that flows across
         flowProgressRef.current = 1 - Math.pow(1 - p, 3);
         if (p < 1) {
           requestAnimationFrame(step);
@@ -86,15 +91,15 @@ export function TerminalChart({
       };
       requestAnimationFrame(step);
     }
-  }, [symbol]);
+  }, [symbol, chartType]);
 
   // Selected timeframe window duration
   const activeWindowSec = TIMEFRAMES.find((tf) => tf.id === activeTf)?.sec ?? 45;
 
-  // Synthesize realistic OHLC bars if in candle mode, grouped by bucket
+  // Synthesize realistic, high-polish OHLC bars if in candle mode
   const candles = useMemo(() => {
     if (data.length === 0) return [];
-    const bucketMs = Math.max(2000, (activeWindowSec * 1000) / 35);
+    const bucketMs = Math.max(1500, (activeWindowSec * 1000) / 28);
     const map = new Map<number, { time: number; open: number; high: number; low: number; close: number; vol: number }>();
 
     data.forEach((pt) => {
@@ -110,7 +115,35 @@ export function TerminalChart({
       }
     });
 
-    return Array.from(map.values()).sort((a, b) => a.time - b.time);
+    const raw = Array.from(map.values()).sort((a, b) => a.time - b.time);
+    if (raw.length === 0) return [];
+
+    // Ensure authentic financial candle anatomy:
+    // 1. Each candle opens at the previous candle's close
+    // 2. Add natural upper and lower shadow wicks so candles don't look like flat horizontal slits
+    const smoothed: typeof raw = [];
+    for (let i = 0; i < raw.length; i++) {
+      const c = raw[i];
+      const prevClose = i > 0 ? smoothed[i - 1].close : c.open;
+      const open = prevClose;
+      const close = c.close;
+      const spread = Math.abs(close - open);
+      const minWick = Math.max(spread * 0.45, (c.high || close) * 0.0002);
+
+      const high = Math.max(c.high, Math.max(open, close) + minWick);
+      const low = Math.min(c.low, Math.min(open, close) - minWick);
+
+      smoothed.push({
+        time: c.time,
+        open,
+        high,
+        low,
+        close,
+        vol: c.vol,
+      });
+    }
+
+    return smoothed;
   }, [data, activeWindowSec]);
 
   // Fullscreen toggle handler
@@ -248,80 +281,261 @@ export function TerminalChart({
       // Render data points slice
       const pts = data.slice(-Math.min(data.length, 120));
 
-      // Enhanced Kinetic Volume Histogram (Bottom 20% of chart)
-      const volH = plotH * 0.22;
-      const volBaseY = topMargin + plotH;
-      const nBars = 42;
-      const barW = (plotW / nBars) * 0.72;
-      const tNow = Date.now();
-
-      for (let i = 0; i < nBars; i++) {
-        const bx = (plotW / nBars) * i + (plotW / nBars - barW) / 2;
-        
-        // Multi-frequency wave simulation with real tick reactivity
-        const wave1 = Math.sin(i * 0.38 + tNow * 0.0022);
-        const wave2 = Math.cos(i * 0.15 - tNow * 0.0015);
-        const wave3 = Math.sin((i + (pts.length % 20)) * 0.5 + tNow * 0.004);
-        const combined = Math.max(0.1, (wave1 * 0.45 + wave2 * 0.35 + wave3 * 0.2 + 1) / 2);
-        
-        const barH = combined * volH * 0.88 + 5;
-        const isUp = i % 3 !== 0;
-
-        // Check if cursor is hovering near this bar
-        const isHovered = hoverData && hoverData.x >= bx && hoverData.x <= bx + barW;
-
-        // Vertical gradient for each bar
-        const barGrad = ctx.createLinearGradient(0, volBaseY, 0, volBaseY - barH);
-        if (isUp) {
-          barGrad.addColorStop(0, "rgba(0, 240, 118, 0.05)");
-          barGrad.addColorStop(0.7, isHovered ? "rgba(0, 240, 118, 0.6)" : "rgba(0, 240, 118, 0.25)");
-          barGrad.addColorStop(1, isHovered ? "rgba(0, 240, 118, 0.95)" : "rgba(0, 240, 118, 0.5)");
-        } else {
-          barGrad.addColorStop(0, "rgba(255, 51, 88, 0.05)");
-          barGrad.addColorStop(0.7, isHovered ? "rgba(255, 51, 88, 0.6)" : "rgba(255, 51, 88, 0.25)");
-          barGrad.addColorStop(1, isHovered ? "rgba(255, 51, 88, 0.95)" : "rgba(255, 51, 88, 0.5)");
-        }
-
-        ctx.fillStyle = barGrad;
-        ctx.fillRect(bx, volBaseY - barH, barW, barH);
-
-        // Luminous Laser Cap at the tip of each volume bar
-        ctx.fillStyle = isUp ? "#00f076" : "#ff3358";
-        ctx.shadowColor = isUp ? "rgba(0, 240, 118, 0.8)" : "rgba(255, 51, 88, 0.8)";
-        ctx.shadowBlur = isHovered ? 8 : 4;
-        ctx.fillRect(bx, volBaseY - barH, barW, 2);
-        ctx.shadowBlur = 0; // reset shadow
-      }
-
       // Render Candlesticks or Smooth Line with Flow Animation
       const flow = Math.max(0.01, Math.min(1, flowProgressRef.current));
+      const tNow = Date.now();
 
+      // =========================================================================
+      // BOTTOM VISUALIZATION:
+      // - Line Chart Mode: Animated Volume Equalizer Bars with Laser Caps
+      // - Candle Chart Mode: Animated Flowing Momentum Wave Line
+      // =========================================================================
+      const volH = plotH * 0.20;
+      const volBaseY = topMargin + plotH;
+
+      if (chartType === "line") {
+        // LINE MODE: Animated Kinetic Volume Histogram Bars with Laser Caps
+        const nBars = 42;
+        const barW = (plotW / nBars) * 0.72;
+
+        for (let i = 0; i < nBars; i++) {
+          const bx = (plotW / nBars) * i + (plotW / nBars - barW) / 2;
+
+          // Multi-frequency wave simulation with live price tick reactivity
+          const wave1 = Math.sin(i * 0.38 + tNow * 0.0022);
+          const wave2 = Math.cos(i * 0.15 - tNow * 0.0015);
+          const wave3 = Math.sin((i + (pts.length % 20)) * 0.5 + tNow * 0.004);
+          const combined = Math.max(0.1, (wave1 * 0.45 + wave2 * 0.35 + wave3 * 0.2 + 1) / 2);
+
+          // Staggered entry spring surge
+          const barSurge = Math.max(0.04, Math.min(1, (flow - (i / nBars) * 0.35) * 2.8));
+          const barH = (combined * volH * 0.88 + 5) * barSurge;
+          const isUp = i % 3 !== 0;
+
+          // Hover detection
+          const isHovered = hoverData && hoverData.x >= bx && hoverData.x <= bx + barW;
+
+          // Vertical gradient for each bar
+          const barGrad = ctx.createLinearGradient(0, volBaseY, 0, volBaseY - barH);
+          if (isUp) {
+            barGrad.addColorStop(0, "rgba(0, 240, 118, 0.04)");
+            barGrad.addColorStop(0.7, isHovered ? "rgba(0, 240, 118, 0.6)" : "rgba(0, 240, 118, 0.25)");
+            barGrad.addColorStop(1, isHovered ? "rgba(0, 240, 118, 0.95)" : "rgba(0, 240, 118, 0.5)");
+          } else {
+            barGrad.addColorStop(0, "rgba(255, 51, 88, 0.04)");
+            barGrad.addColorStop(0.7, isHovered ? "rgba(255, 51, 88, 0.6)" : "rgba(255, 51, 88, 0.25)");
+            barGrad.addColorStop(1, isHovered ? "rgba(255, 51, 88, 0.95)" : "rgba(255, 51, 88, 0.5)");
+          }
+
+          ctx.fillStyle = barGrad;
+          ctx.fillRect(bx, volBaseY - barH, barW, barH);
+
+          // Luminous Laser Cap at the tip of each volume bar
+          ctx.fillStyle = isUp ? "#00f076" : "#ff3358";
+          ctx.shadowColor = isUp ? "rgba(0, 240, 118, 0.8)" : "rgba(255, 51, 88, 0.8)";
+          ctx.shadowBlur = isHovered ? 8 : 4;
+          ctx.fillRect(bx, volBaseY - barH, barW, 2);
+          ctx.shadowBlur = 0;
+        }
+
+        ctx.fillStyle = "rgba(255, 255, 255, 0.22)";
+        ctx.font = "9px monospace";
+        ctx.fillText("VOLUME EQUALIZER · 1s TICKS", 10, volBaseY - 6);
+      } else {
+        // CANDLE MODE: Animated Flowing Momentum Wave Line
+        const wavePointsCount = 64;
+        const waveStepX = plotW / (wavePointsCount - 1);
+        const waveCoords: { x: number; y: number }[] = [];
+
+        for (let i = 0; i < wavePointsCount; i++) {
+          const wx = i * waveStepX;
+          const normX = i / wavePointsCount;
+
+          const wave1 = Math.sin(normX * 8 + tNow * 0.0022);
+          const wave2 = Math.cos(normX * 16 - tNow * 0.003) * 0.5;
+          const wave3 = Math.sin(normX * 28 + tNow * 0.0045) * 0.25;
+          const combined = Math.max(0.1, Math.min(0.95, (wave1 + wave2 + wave3 + 1.75) / 3.5));
+
+          const waveSurge = Math.max(0.05, Math.min(1, (flow - normX * 0.3) * 2));
+          const wy = volBaseY - (combined * volH * 0.85 + 4) * waveSurge;
+          waveCoords.push({ x: wx, y: wy });
+        }
+
+        // Draw glowing gradient area below the wave line
+        const waveAreaGrad = ctx.createLinearGradient(0, volBaseY - volH, 0, volBaseY);
+        waveAreaGrad.addColorStop(0, "rgba(0, 240, 118, 0.16)");
+        waveAreaGrad.addColorStop(0.5, "rgba(0, 229, 255, 0.06)");
+        waveAreaGrad.addColorStop(1, "rgba(0, 240, 118, 0.0)");
+
+        ctx.beginPath();
+        ctx.moveTo(waveCoords[0].x, volBaseY);
+        ctx.lineTo(waveCoords[0].x, waveCoords[0].y);
+        for (let i = 1; i < waveCoords.length; i++) {
+          const prev = waveCoords[i - 1];
+          const curr = waveCoords[i];
+          const midX = (prev.x + curr.x) / 2;
+          const midY = (prev.y + curr.y) / 2;
+          ctx.quadraticCurveTo(prev.x, prev.y, midX, midY);
+        }
+        ctx.lineTo(waveCoords[waveCoords.length - 1].x, waveCoords[waveCoords.length - 1].y);
+        ctx.lineTo(waveCoords[waveCoords.length - 1].x, volBaseY);
+        ctx.closePath();
+        ctx.fillStyle = waveAreaGrad;
+        ctx.fill();
+
+        // Draw glowing neon wave stroke line
+        const waveLineGrad = ctx.createLinearGradient(0, 0, plotW, 0);
+        waveLineGrad.addColorStop(0, "rgba(0, 240, 118, 0.4)");
+        waveLineGrad.addColorStop(0.5, "#00f076");
+        waveLineGrad.addColorStop(1, "#00e5ff");
+
+        ctx.beginPath();
+        ctx.moveTo(waveCoords[0].x, waveCoords[0].y);
+        for (let i = 1; i < waveCoords.length; i++) {
+          const prev = waveCoords[i - 1];
+          const curr = waveCoords[i];
+          const midX = (prev.x + curr.x) / 2;
+          const midY = (prev.y + curr.y) / 2;
+          ctx.quadraticCurveTo(prev.x, prev.y, midX, midY);
+        }
+        ctx.lineTo(waveCoords[waveCoords.length - 1].x, waveCoords[waveCoords.length - 1].y);
+
+        ctx.strokeStyle = waveLineGrad;
+        ctx.lineWidth = 2.0;
+        ctx.shadowColor = "rgba(0, 240, 118, 0.5)";
+        ctx.shadowBlur = 6;
+        ctx.stroke();
+        ctx.shadowBlur = 0;
+
+        // Flowing energy particle traveling along the wave
+        const particleProgress = (tNow % 3600) / 3600;
+        const pIdx = Math.min(waveCoords.length - 2, Math.floor(particleProgress * (waveCoords.length - 1)));
+        const pFrac = particleProgress * (waveCoords.length - 1) - pIdx;
+        const px = waveCoords[pIdx].x + (waveCoords[pIdx + 1].x - waveCoords[pIdx].x) * pFrac;
+        const py = waveCoords[pIdx].y + (waveCoords[pIdx + 1].y - waveCoords[pIdx].y) * pFrac;
+
+        ctx.beginPath();
+        ctx.arc(px, py, 3.5, 0, Math.PI * 2);
+        ctx.fillStyle = "#ffffff";
+        ctx.shadowColor = "#00e5ff";
+        ctx.shadowBlur = 8;
+        ctx.fill();
+        ctx.shadowBlur = 0;
+
+        ctx.fillStyle = "rgba(255, 255, 255, 0.22)";
+        ctx.font = "9px monospace";
+        ctx.fillText("MOMENTUM STREAM · 1s LIVE", 10, volBaseY - 6);
+      }
+
+      // =========================================================================
+      // MAIN CHART VISUALIZATION:
+      // - Candlestick View with laser sweep entry & rounded dual-gradient bodies
+      // - Line View with fluid wave comet flow
+      // =========================================================================
       if (chartType === "candle" && candles.length > 1) {
-        const candleW = Math.max(3, (plotW / candles.length) * 0.65);
-        const maxCandleIdx = Math.floor(flow * candles.length);
+        const candleCount = candles.length;
+        const slotW = plotW / candleCount;
+        const candleW = Math.max(4, Math.min(15, slotW * 0.62));
+        const maxCandleIdx = Math.floor(flow * candleCount);
+
+        // Cool Laser Scanline Sweep on Entry Animation
+        if (flow < 0.98) {
+          const scanX = plotW * flow;
+          const scanGrad = ctx.createLinearGradient(scanX - 36, 0, scanX + 6, 0);
+          scanGrad.addColorStop(0, "rgba(0, 240, 118, 0)");
+          scanGrad.addColorStop(0.85, "rgba(0, 240, 118, 0.12)");
+          scanGrad.addColorStop(1, "rgba(0, 240, 118, 0.75)");
+
+          ctx.fillStyle = scanGrad;
+          ctx.fillRect(scanX - 36, topMargin, 42, plotH);
+
+          ctx.strokeStyle = "#00f076";
+          ctx.lineWidth = 1.5;
+          ctx.shadowColor = "#00f076";
+          ctx.shadowBlur = 10;
+          ctx.beginPath();
+          ctx.moveTo(scanX, topMargin);
+          ctx.lineTo(scanX, topMargin + plotH);
+          ctx.stroke();
+          ctx.shadowBlur = 0;
+        }
 
         candles.forEach((c, idx) => {
           if (idx > maxCandleIdx) return;
-          const cx = (plotW / (candles.length - 1 || 1)) * idx;
+          const cx = slotW * idx + slotW / 2;
           const openY = getY(c.open);
           const closeY = getY(c.close);
           const highY = getY(c.high);
           const lowY = getY(c.low);
           const isUp = c.close >= c.open;
+          const isLatest = idx === candleCount - 1;
 
-          ctx.strokeStyle = isUp ? "#00f076" : "#ff3358";
-          ctx.fillStyle = isUp ? "rgba(0, 240, 118, 0.8)" : "rgba(255, 51, 88, 0.8)";
+          // Scaling factor as the entry wave hits this candle
+          const candleEntryProgress = Math.max(0.05, Math.min(1, (flow - (idx / candleCount) * 0.8) * 3));
 
-          // Wick
+          // 1. High-Precision Centered Wick (Shadow)
+          const midY = (openY + closeY) / 2;
+          const scaledHighY = midY - (midY - highY) * candleEntryProgress;
+          const scaledLowY = midY + (lowY - midY) * candleEntryProgress;
+
           ctx.beginPath();
-          ctx.moveTo(cx, highY);
-          ctx.lineTo(cx, lowY);
+          ctx.moveTo(cx, scaledHighY);
+          ctx.lineTo(cx, scaledLowY);
+          ctx.strokeStyle = isUp ? "rgba(0, 240, 118, 0.85)" : "rgba(255, 51, 88, 0.85)";
+          ctx.lineWidth = 1.5;
           ctx.stroke();
 
-          // Body
-          const top = Math.min(openY, closeY);
-          const bodyH = Math.max(2, Math.abs(closeY - openY));
-          ctx.fillRect(cx - candleW / 2, top, candleW, bodyH);
+          // 2. High-Polish Candlestick Body with subtle rounded corners & dual-stop gradient
+          const rawTop = Math.min(openY, closeY);
+          const rawH = Math.abs(closeY - openY);
+          const bodyH = Math.max(3, rawH) * candleEntryProgress;
+          const top = midY - bodyH / 2;
+          const bodyX = cx - candleW / 2;
+
+          const cGrad = ctx.createLinearGradient(0, top, 0, top + bodyH);
+          if (isUp) {
+            cGrad.addColorStop(0, "rgba(0, 255, 128, 0.95)");
+            cGrad.addColorStop(1, "rgba(0, 175, 80, 0.82)");
+          } else {
+            cGrad.addColorStop(0, "rgba(255, 75, 110, 0.95)");
+            cGrad.addColorStop(1, "rgba(200, 30, 65, 0.82)");
+          }
+
+          ctx.beginPath();
+          if (typeof ctx.roundRect === "function") {
+            ctx.roundRect(bodyX, top, candleW, bodyH, 2);
+          } else {
+            ctx.rect(bodyX, top, candleW, bodyH);
+          }
+
+          if (isLatest) {
+            ctx.shadowColor = isUp ? "rgba(0, 240, 118, 0.6)" : "rgba(255, 51, 88, 0.6)";
+            ctx.shadowBlur = 8;
+          }
+
+          ctx.fillStyle = cGrad;
+          ctx.fill();
+
+          // Crisp neon border stroke
+          ctx.strokeStyle = isUp ? "#00f076" : "#ff3358";
+          ctx.lineWidth = 1.2;
+          ctx.stroke();
+          ctx.shadowBlur = 0;
+
+          // 3. Live pulsating beacon for the latest active candle
+          if (isLatest && flow > 0.8) {
+            const activeY = closeY;
+            const pulse = Math.sin(tNow * 0.006) * 2 + 5;
+            ctx.beginPath();
+            ctx.arc(cx, activeY, pulse, 0, Math.PI * 2);
+            ctx.fillStyle = isUp ? "rgba(0, 240, 118, 0.35)" : "rgba(255, 51, 88, 0.35)";
+            ctx.fill();
+
+            ctx.beginPath();
+            ctx.arc(cx, activeY, 2.5, 0, Math.PI * 2);
+            ctx.fillStyle = "#ffffff";
+            ctx.fill();
+          }
         });
       } else if (pts.length > 1) {
         // Line & Glowing Gradient Area with Flowing Wave Animation
