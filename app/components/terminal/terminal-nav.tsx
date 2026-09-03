@@ -39,6 +39,8 @@ interface TerminalNavProps {
   onNavTabChange: (tab: string) => void;
   snapshot?: MarketSnapshot;
   isReal?: boolean;
+  claimLabel?: string;
+  claimBusy?: boolean;
 }
 
 const NAV_TABS = [
@@ -68,6 +70,8 @@ export function TerminalNav({
   onNavTabChange,
   snapshot,
   isReal = false,
+  claimLabel,
+  claimBusy = false,
 }: TerminalNavProps) {
   // Dropdown states (mutually exclusive)
   const [activeDropdown, setActiveDropdown] = useState<"notifications" | "settings" | null>(null);
@@ -225,19 +229,19 @@ export function TerminalNav({
             )}
           </div>
 
-          {/* + Claim $10k Button */}
+          {/* + Claim Button (tUSD faucet via Hyperblock API when claimLabel is set) */}
           <button
             onClick={onClaim}
-            disabled={!canClaim}
+            disabled={!canClaim || claimBusy}
             className={`relative overflow-hidden rounded-lg px-3 py-1.5 text-xs font-extrabold tracking-wide transition-all ${
-              canClaim
+              canClaim && !claimBusy
                 ? "bg-[#00f076] text-[#090a0f] shadow-[0_0_16px_rgba(0,240,118,0.25)] hover:bg-[#1cf387] active:scale-95"
                 : "bg-white/[0.05] text-slate-400 cursor-not-allowed border border-white/[0.06]"
             } ${claimPulse ? "scale-105" : ""}`}
           >
             <div className="flex items-center gap-1.5">
               <Zap className="h-3.5 w-3.5" />
-              <span>{canClaim ? "+ Claim $10k" : `${cooldownSec}s`}</span>
+              <span>{claimBusy ? "Claiming…" : claimLabel ?? (canClaim ? "+ Claim $10k" : `${cooldownSec}s`)}</span>
             </div>
           </button>
 

@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useEffect, useState } from "react";
 import type { AssetCategory } from "@/app/lib/markets";
 import {
   TokenBTC,
@@ -80,8 +80,34 @@ export function AssetIcon({
   size?: number;
   className?: string;
 }) {
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
   const sym = symbol.toUpperCase();
   const bg = SYMBOL_COLOR[sym] ?? CATEGORY_COLOR[category];
+  const letter = sym.slice(0, sym.length > 3 ? 3 : sym.length);
+  const isLight = ["GOLD", "SILVER", "PLATINUM", "PALLADIUM"].includes(sym);
+
+  if (!mounted) {
+    return (
+      <div
+        className={`flex items-center justify-center rounded-xl font-mono font-extrabold flex-shrink-0 relative overflow-hidden select-none ${className}`}
+        style={{
+          width: size,
+          height: size,
+          background: isLight ? "linear-gradient(135deg, #e5c158 0%, #b8860b 100%)" : bg,
+          color: isLight ? "#1a1200" : "#ffffff",
+          fontSize: size * 0.32,
+          border: "1px solid rgba(255,255,255,0.15)",
+        }}
+      >
+        <span className="relative z-10">{letter}</span>
+      </div>
+    );
+  }
 
   // 1. Official Web3 Token Icons from @web3icons/react
   if (sym === "BTC") {
@@ -135,7 +161,6 @@ export function AssetIcon({
   // 3. Stock brand SVGs
   const stockSvg = STOCK_SVG_MAP[sym];
   if (stockSvg) {
-    const isDarkLogo = ["AAPL", "NVDA", "TSLA"].includes(sym);
     return (
       <div
         className={`flex items-center justify-center rounded-xl overflow-hidden flex-shrink-0 bg-white border border-white/10 ${className}`}
@@ -155,9 +180,6 @@ export function AssetIcon({
   }
 
   // 4. Commodities, Forex & Other Assets: Institutional Badge
-  const isLight = ["GOLD", "SILVER", "PLATINUM", "PALLADIUM"].includes(sym);
-  const letter = sym.slice(0, sym.length > 3 ? 3 : sym.length);
-
   return (
     <div
       className={`flex items-center justify-center rounded-xl font-mono font-extrabold flex-shrink-0 relative overflow-hidden select-none ${className}`}

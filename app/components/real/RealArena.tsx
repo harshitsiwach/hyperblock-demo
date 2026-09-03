@@ -4,13 +4,14 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { MARKETS as SUPPORTED_ASSETS, BASE_PRICES, type MarketInfo } from "@/app/lib/markets";
 import { useRealTrading } from "@/app/hooks/use-real-trading";
+import { useHyperblockAccount } from "@/app/hooks/use-hyperblock-account";
+import { settledBetToPlay } from "@/app/lib/hyperblock-api/mapping";
 import {
-  claimRealFunds,
-  canClaimReal,
-  getLastRealClaimAt,
-  REAL_CLAIM_COOLDOWN_MS,
+  getRealPlays,
+  setRealPlays,
   getRealStreak,
   getRealBestStreak,
+  updateRealStreak,
 } from "@/app/lib/real/storage";
 import { CustomCursor } from "@/app/components/terminal/custom-cursor";
 import { TerminalNav } from "@/app/components/terminal/terminal-nav";
@@ -51,6 +52,11 @@ export function RealArena() {
   );
 
   const realTrade = useRealTrading(selectedMarketId);
+
+  // Onchain tUSD account (Hyperblock API faucet + betting). Stakes real tUSD
+  // from the connected wallet; settled results mirror into local plays for charts.
+  const account = useHyperblockAccount();
+  const [settling, setSettling] = useState(false);
 
   // Local interaction & visual state
   const [amount, setAmount] = useState(10);
@@ -187,61 +193,160 @@ export function RealArena() {
     });
   }, [realTrade.currentPrice, selectedMarketId]);
 
-  const canClaim = mounted ? canClaimReal() : false;
-  const lastClaim = mounted ? getLastRealClaimAt() : null;
-  const cooldownSec = lastClaim
-    ? Math.max(0, Math.ceil((REAL_CLAIM_COOLDOWN_MS - (Date.now() - lastClaim)) / 1000))
-    : 0;
+  const tusdBalance = account.tusdBalance;
+  // Nav shows onchain tUSD only — the old local balance is retired.
+  const navBalance = tusdBalance ?? 0;
+  const needsApproval = !!account.address && !account.isApprovedFor(amount);
 
-  // Handle Real claim
-  const handleClaim = () => {
-    const res = claimRealFunds(10_000);
-    if (res.claimed) {
-      setClaimPulse(true);
-      setToast(`+${formatUsd(10_000)} Real Balance Added`);
-      setTimeout(() => setClaimPulse(false), 900);
+  // One-time cleanup: drop the retired local balance so it never shows again.
+  useEffect(() => {
+    try {
+      localStorage.removeItem("hyperblock:real:balance");
+      window.dispatchEvent(new CustomEvent("real-balance-change", { detail: 0 }));
+    } catch {}
+  }, []);
+
+  // Handle tUSD faucet claim via Hyperblock API (POST /api/claim)
+  const handleClaim = async () => {
+    if (!account.address) {
+      setToast("Connect a Solana wallet to claim tUSD");
       setTimeout(() => setToast(null), 2500);
+      return;
+    }
+    if (account.claiming) return;
+    try {
+      const { amountTokens, signature } = await account.claim();
+      setClaimPulse(true);
+      setToast(`+${amountTokens} tUSD claimed · ${signature.slice(0, 8)}…`);
+      setTimeout(() => setClaimPulse(false), 900);
+      setTimeout(() => setToast(null), 3500);
 
-      // Push activity event
       setActivityItems((prev) => [
         {
           id: `claim-${Date.now()}`,
           type: "system",
-          title: "Real Balance Credited",
-          subtitle: `Added ${formatUsd(10_000)} to your real account`,
+          title: "tUSD Faucet Claimed (Live)",
+          subtitle: `+${amountTokens} tUSD · ${signature.slice(0, 12)}…`,
           timestamp: Date.now(),
           highlight: "green",
         },
         ...prev.slice(0, 19),
       ]);
+    } catch (e) {
+      setToast(e instanceof Error ? e.message : "Claim failed");
+      setTimeout(() => setToast(null), 3000);
     }
   };
 
-  // Handle Order Placement
-  const handleBet = (dir: "up" | "down") => {
+  // Handle onchain bet: one-time SPL delegate approval, then POST /api/bets/place
+  // (server pulls stake, waits ~10s, settles — the response IS the result).
+  const handleBet = async (dir: "up" | "down") => {
     setCelebrate(null);
-    const res = realTrade.placeBet(dir, amount);
-    if (!res.ok) {
-      setToast(res.reason);
+    if (settling || account.placing) return;
+    if (!account.address) {
+      setToast("Connect a Solana wallet to bet tUSD");
+      setTimeout(() => setToast(null), 2500);
+      return;
+    }
+    const entryPrice = realTrade.currentPrice;
+    if (entryPrice == null || !Number.isFinite(entryPrice)) {
+      setToast("Price connecting…");
       setTimeout(() => setToast(null), 2000);
       return;
+    }
+    if (tusdBalance !== null && tusdBalance < amount) {
+      setToast("Insufficient tUSD — claim faucet funds");
+      setTimeout(() => setToast(null), 2500);
+      return;
+    }
+    if (!account.isApprovedFor(amount)) {
+      setToast("One-time approval — confirm in wallet…");
+      try {
+        await account.approve();
+        setToast("Approved · placing bet…");
+      } catch (e) {
+        setToast(e instanceof Error ? e.message : "Approval failed");
+        setTimeout(() => setToast(null), 3000);
+        return;
+      }
     }
 
     setBetFlash(dir);
     setTimeout(() => setBetFlash(null), 600);
+    setSettling(true);
+    setToast("Bet sent · settling ~10s onchain…");
 
-    // Push activity event
     setActivityItems((prev) => [
       {
         id: `bet-${Date.now()}`,
         type: "trade",
         title: `Opened ${dir.toUpperCase()} on ${selectedAsset.symbol}`,
-        subtitle: `Stake: $${amount} · Entry: $${realTrade.currentPrice?.toFixed(2) ?? "—"}`,
+        subtitle: `Stake: ${amount} tUSD · Entry: $${entryPrice.toFixed(2)}`,
         timestamp: Date.now(),
         highlight: dir === "up" ? "green" : "red",
       },
       ...prev.slice(0, 19),
     ]);
+
+    try {
+      const settled = await account.placeOnchainBet({
+        token: selectedAsset.symbol,
+        direction: dir,
+        betAmount: amount,
+        currentPrice: entryPrice,
+      });
+      const play: any = settledBetToPlay(settled, selectedMarketId);
+      const next = [play, ...getRealPlays()].slice(0, 50);
+      setRealPlays(next);
+
+      const profit = settled.profitTokens ?? 0;
+      if (settled.status === "won" && profit > 0) {
+        const streakInfo = updateRealStreak(true);
+        play.streak = streakInfo.streak;
+        const isMega = profit >= amount * 5 * 0.9 - 1e-9;
+        setCelebrate({ profit, id: play.id, streak: play.streak, isMega });
+        setActivityItems((prev) => [
+          {
+            id: `settle-win-${Date.now()}`,
+            type: "settlement",
+            title: `Won +${profit.toFixed(2)} tUSD on ${selectedAsset.symbol}`,
+            subtitle: `${dir.toUpperCase()} ${amount} tUSD · exit $${settled.exitPrice?.toFixed(2) ?? "—"}`,
+            timestamp: Date.now(),
+            highlight: "green",
+          },
+          ...prev.slice(0, 19),
+        ]);
+        const t = setTimeout(() => setCelebrate(null), isMega ? 3600 : 2800);
+        void t;
+      } else {
+        updateRealStreak(false);
+        const label =
+          settled.status === "refunded" || settled.status === "breakeven"
+            ? `Trade ${settled.status} · stake returned`
+            : `Trade Settled · -${amount} tUSD`;
+        setToast(label);
+        setTimeout(() => setToast(null), 2600);
+        setActivityItems((prev) => [
+          {
+            id: `settle-loss-${Date.now()}`,
+            type: "settlement",
+            title:
+              settled.status === "won"
+                ? `Settled on ${selectedAsset.symbol}`
+                : `Lost -${amount} tUSD on ${selectedAsset.symbol}`,
+            subtitle: `${dir.toUpperCase()} · exit $${settled.exitPrice?.toFixed(2) ?? "—"} · ${settled.status}`,
+            timestamp: Date.now(),
+            highlight: settled.status === "won" ? "green" : "red",
+          },
+          ...prev.slice(0, 19),
+        ]);
+      }
+    } catch (e) {
+      setToast(e instanceof Error ? e.message : "Bet failed");
+      setTimeout(() => setToast(null), 3500);
+    } finally {
+      setSettling(false);
+    }
   };
 
   // Settlement reaction & win celebration
@@ -291,10 +396,10 @@ export function RealArena() {
     }
   }, [realTrade.lastSettlement]);
 
-  // Balance rolling count-up animation
+  // Balance rolling count-up animation (tracks onchain tUSD when connected)
   useEffect(() => {
     const from = prevBalanceRef.current;
-    const to = realTrade.balance;
+    const to = navBalance;
     prevBalanceRef.current = to;
     if (from === to) return;
 
@@ -317,7 +422,7 @@ export function RealArena() {
       else setDisplayBalance(to);
     };
     requestAnimationFrame(tick);
-  }, [realTrade.balance]);
+  }, [navBalance]);
 
   return (
     <div className="min-h-screen bg-[#0b0d12] text-slate-100 flex flex-col font-sans selection:bg-[#00f076]/30 selection:text-white relative">
@@ -332,10 +437,12 @@ export function RealArena() {
         maxPositions={8}
         streak={streak}
         bestStreak={bestStreak}
-        canClaim={canClaim}
-        cooldownSec={cooldownSec}
-        onClaim={handleClaim}
+        canClaim={!account.claiming}
+        cooldownSec={0}
+        onClaim={() => void handleClaim()}
         claimPulse={claimPulse}
+        claimLabel="+ Claim 100 tUSD"
+        claimBusy={account.claiming}
         activeNavTab={activeNavTab}
         onNavTabChange={(tab) => {
           setActiveNavTab(tab);
@@ -381,12 +488,35 @@ export function RealArena() {
 
           {/* Column 3: Order Console & Asset Selector (Right Column) */}
           <div className="lg:col-span-3 flex flex-col gap-4">
+            {!account.address && (
+              <div className="rounded-xl border border-amber-400/25 bg-amber-400/[0.07] px-3 py-2.5 text-[11px] font-semibold text-amber-200">
+                Connect a Solana wallet (top-right) to claim 100 tUSD and place onchain bets.
+              </div>
+            )}
+            {needsApproval && (
+              <div className="rounded-xl border border-cyan-400/25 bg-cyan-400/[0.06] px-3 py-2.5 text-[11px] text-cyan-100">
+                <div className="font-bold">One-time tUSD approval</div>
+                <div className="mt-0.5 text-cyan-200/80">Authorize the house wallet as SPL delegate once — bets after that need no popup.</div>
+                <button
+                  onClick={() => void account.approve().then(() => setToast("Approved · you can bet now")).catch((e) => setToast(e instanceof Error ? e.message : "Approval failed"))}
+                  disabled={account.approving}
+                  className="mt-2 w-full rounded-lg bg-cyan-300 px-3 py-1.5 text-[11px] font-extrabold text-[#090a0f] disabled:opacity-50"
+                >
+                  {account.approving ? "Approving…" : "Approve tUSD"}
+                </button>
+              </div>
+            )}
+            {settling && (
+              <div className="rounded-xl border border-[#00f076]/30 bg-[#00f076]/[0.07] px-3 py-2.5 text-[11px] font-bold text-[#00f076] animate-pulse">
+                Settling onchain… stake pulled, waiting ~10s for Hyperliquid exit price.
+              </div>
+            )}
             <TradingTicket
               asset={selectedAsset}
               amount={amount}
               onAmountChange={setAmount}
-              onBet={handleBet}
-              disabled={!realTrade.currentPrice}
+              onBet={(dir) => void handleBet(dir)}
+              disabled={!realTrade.currentPrice || settling || account.placing}
               activeCount={realTrade.activePlays.length}
               maxPositions={8}
               betFlash={betFlash}
@@ -483,10 +613,10 @@ export function RealArena() {
               amount={amount}
               onAmountChange={setAmount}
               onBet={(dir) => {
-                handleBet(dir);
+                void handleBet(dir);
                 setShowTradeSheet(false);
               }}
-              disabled={!realTrade.currentPrice}
+              disabled={!realTrade.currentPrice || settling || account.placing}
               activeCount={realTrade.activePlays.length}
               maxPositions={8}
               betFlash={betFlash}
