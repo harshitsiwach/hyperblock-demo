@@ -62,11 +62,14 @@ export function useOnchainBetHistory(args: UseOnchainBetHistoryArgs) {
     void refresh();
   }, [refresh]);
 
+  // Self-healing: while any bet is still "settling" (usually the payout tx just
+  // isn't indexed yet), re-poll fast; otherwise poll slowly.
+  const hasUnsettled = records.some((r) => r.kind === "bet" && r.status === "settling");
   useEffect(() => {
     if (!args.userAta) return;
-    const iv = setInterval(() => void refresh(), args.pollIntervalMs ?? 60_000);
+    const iv = setInterval(() => void refresh(), hasUnsettled ? 5000 : (args.pollIntervalMs ?? 60_000));
     return () => clearInterval(iv);
-  }, [refresh, args.userAta, args.pollIntervalMs]);
+  }, [refresh, args.userAta, args.pollIntervalMs, hasUnsettled]);
 
   const bets = records.filter((r) => r.kind === "bet");
   const claims = records.filter((r) => r.kind === "claim");

@@ -161,7 +161,12 @@ export async function fetchOnchainHistory(input: HistoryInput): Promise<{
         ]).catch(() => null),
       ),
     );
-    chunk.forEach((s, j) => txCache.set(s.signature, txs[j]));
+    chunk.forEach((s, j) => {
+      // Never cache failures: a null right after settlement is usually RPC lag,
+      // and caching it would pin the stake as "settling" forever.
+      if (txs[j]) txCache.set(s.signature, txs[j]);
+      else txCache.delete(s.signature);
+    });
   }
 
   // Walk oldest -> newest, pairing each stake pull with the next house payout.
