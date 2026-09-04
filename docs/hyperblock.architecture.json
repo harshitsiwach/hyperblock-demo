@@ -1,0 +1,177 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "HyperBlock Lever - 10s Prediction Game",
+    "quality_profile": "showcase",
+    "locale": "en",
+    "viewBox": [1150, 680],
+    "repository": {
+      "url": "https://github.com/harshitsiwach/hyperblock-demo.git",
+      "revision": "ff0224c42d589d16b279baa85603a5c113d0719f"
+    },
+    "views": [
+      {
+        "id": "trade-path",
+        "label": "Trade path",
+        "focus": ["traders", "frontend", "session", "er", "program"],
+        "note": "One-tap Up/Down play settles automatically in 10 seconds."
+      },
+      {
+        "id": "price-path",
+        "label": "Price path",
+        "focus": ["oracle_feed", "oracle_writer", "er", "program"],
+        "note": "Hyperliquid prices written to ER every 500ms, 5s staleness gate."
+      },
+      {
+        "id": "money-history",
+        "label": "Money and history",
+        "focus": ["lps", "er", "indexer", "db", "indexer_api"],
+        "note": "LP pool pays wins, keeps losses. Indexer serves history."
+      }
+    ]
+  },
+  "components": [
+    {
+      "id": "traders",
+      "type": "external",
+      "label": "Traders",
+      "sublabel": "Browser + Phantom",
+      "pos": [40, 80],
+      "size": [130, 62],
+      "sources": [{ "path": "app/page.tsx", "label": "trade entry" }]
+    },
+    {
+      "id": "frontend",
+      "type": "frontend",
+      "label": "Lever Frontend",
+      "sublabel": "Next.js Trade / Liquidity",
+      "pos": [300, 80],
+      "size": [150, 62],
+      "sources": [{ "path": "app/components/game-arena.tsx", "label": "game arena" }]
+    },
+    {
+      "id": "session",
+      "type": "security",
+      "label": "Wallet Session",
+      "sublabel": "1h allowance, gasless",
+      "pos": [560, 80],
+      "size": [150, 62],
+      "sources": [{ "path": "app/hooks/use-game-session.ts", "label": "session hook" }]
+    },
+    {
+      "id": "oracle_feed",
+      "type": "external",
+      "label": "Hyperliquid",
+      "sublabel": "Testnet allMids WS",
+      "pos": [40, 280],
+      "size": [130, 62],
+      "sources": [{ "path": "oracle-reference/src/hyperliquid.ts", "label": "ws feed" }]
+    },
+    {
+      "id": "oracle_writer",
+      "type": "backend",
+      "label": "Oracle Writer",
+      "sublabel": "500ms update_price",
+      "pos": [300, 280],
+      "size": [150, 62],
+      "sources": [{ "path": "oracle-reference/src/index.ts", "label": "writer loop" }]
+    },
+    {
+      "id": "er",
+      "type": "backend",
+      "label": "MagicBlock ER",
+      "sublabel": "Ephemeral Rollup gameplay",
+      "pos": [560, 280],
+      "size": [150, 62],
+      "sources": [{ "path": "programs/leveraged-prediction/src/lib.rs", "label": "ephemeral program" }]
+    },
+    {
+      "id": "program",
+      "type": "backend",
+      "label": "Prediction Program",
+      "sublabel": "Anchor Solana devnet",
+      "pos": [820, 280],
+      "size": [150, 62],
+      "sources": [{ "path": "programs/leveraged-prediction/src/lib.rs", "line": 36, "label": "program id" }]
+    },
+    {
+      "id": "lps",
+      "type": "external",
+      "label": "Liquidity Providers",
+      "sublabel": "USDC pool backers",
+      "pos": [40, 480],
+      "size": [130, 62],
+      "sources": [{ "path": "app/liquidity/page.tsx", "label": "liquidity page" }]
+    },
+    {
+      "id": "indexer",
+      "type": "backend",
+      "label": "Indexer Writer",
+      "sublabel": "logsSubscribe events",
+      "pos": [300, 480],
+      "size": [150, 62],
+      "sources": [{ "path": "services/indexer/README.md", "label": "indexer docs" }]
+    },
+    {
+      "id": "db",
+      "type": "database",
+      "label": "Postgres 17",
+      "sublabel": "positions + leaderboard",
+      "pos": [560, 480],
+      "size": [150, 62]
+    },
+    {
+      "id": "indexer_api",
+      "type": "backend",
+      "label": "Indexer API",
+      "sublabel": "REST + WS history",
+      "pos": [820, 480],
+      "size": [150, 62],
+      "sources": [{ "path": "services/indexer/README.md", "line": 12, "label": "api routes" }]
+    }
+  ],
+  "boundaries": [
+    {
+      "kind": "region",
+      "label": "Solana + MagicBlock devnet",
+      "wraps": ["er", "program"]
+    },
+    {
+      "kind": "security-group",
+      "label": "Session + ER trust",
+      "wraps": ["session", "er"]
+    }
+  ],
+  "connections": [
+    { "id": "traders-frontend", "from": "traders", "to": "frontend", "label": "Connect + Play", "variant": "emphasis" },
+    { "id": "lp-frontend", "from": "lps", "to": "frontend", "label": "Add / Remove", "fromSide": "left", "toSide": "top", "via": [[10, 511], [10, 40], [375, 40]] },
+    { "id": "frontend-session", "from": "frontend", "to": "session", "label": "1h allowance" },
+    { "id": "session-er", "from": "session", "to": "er", "label": "open_position gasless", "variant": "security", "labelAt": [642, 156] },
+    { "id": "frontend-er", "from": "frontend", "to": "er", "label": "live reads + WS", "fromSide": "bottom", "toSide": "top" },
+    { "id": "feed-writer", "from": "oracle_feed", "to": "oracle_writer", "label": "allMids" },
+    { "id": "writer-er", "from": "oracle_writer", "to": "er", "label": "update_price" },
+    { "id": "er-program", "from": "er", "to": "program", "label": "10s commit" },
+    { "id": "er-indexer", "from": "er", "to": "indexer", "label": "PositionCreated / Closed", "variant": "dashed", "fromSide": "bottom", "toSide": "top" },
+    { "id": "indexer-db", "from": "indexer", "to": "db", "label": "projections" },
+    { "id": "api-db", "from": "indexer_api", "to": "db", "label": "SQL read", "fromSide": "left", "toSide": "right" },
+    { "id": "frontend-api", "from": "frontend", "to": "indexer_api", "label": "history + leaderboard", "variant": "dashed", "fromSide": "top", "toSide": "right", "via": [[375, 28], [1050, 28], [1050, 511]] }
+  ],
+  "cards": [
+    {
+      "dot": "emerald",
+      "title": "Play",
+      "items": ["Up/Down $1-$1000, 1000x sensitivity", "Auto-settle in 10s, refund after 10s buffer", "Win capped, loss floored at stake"]
+    },
+    {
+      "dot": "cyan",
+      "title": "Money",
+      "items": ["LP USDC pool pays wins, keeps losses", "10% fee on profit split LP + protocol", "Fallback escrow if payout account closed"]
+    },
+    {
+      "dot": "amber",
+      "title": "Trust",
+      "items": ["Price staleness gate 5s on ER", "Max 8 active per market + exposure cap", "Indexer is read-only, never signs"]
+    }
+  ]
+}

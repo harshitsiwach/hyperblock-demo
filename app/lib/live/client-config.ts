@@ -12,28 +12,27 @@ export interface ClientLiveConfig {
 }
 
 export function readClientLiveConfig(): ClientLiveConfig {
-  const marketId = Number(
-    process.env.NEXT_PUBLIC_LEVERAGED_PREDICTION_MARKET_ID ?? "1",
-  );
+  const rawMarketId = process.env.NEXT_PUBLIC_LEVERAGED_PREDICTION_MARKET_ID?.trim() || "1";
+  const marketId = Number(rawMarketId);
   if (!Number.isInteger(marketId) || marketId < 0 || marketId > 65_535) {
     throw new Error("NEXT_PUBLIC_LEVERAGED_PREDICTION_MARKET_ID must be a u16");
   }
 
   return {
     baseRpcEndpoint:
-      process.env.NEXT_PUBLIC_SOLANA_RPC_ENDPOINT ??
+      process.env.NEXT_PUBLIC_SOLANA_RPC_ENDPOINT?.trim() ||
       "https://rpc.magicblock.app/devnet",
     routerEndpoint:
-      process.env.NEXT_PUBLIC_ROUTER_ENDPOINT ??
+      process.env.NEXT_PUBLIC_ROUTER_ENDPOINT?.trim() ||
       "https://devnet-router.magicblock.app/",
     erStreamRpcEndpoint: process.env.NEXT_PUBLIC_ER_STREAM_RPC_ENDPOINT,
     erStreamWsEndpoint: process.env.NEXT_PUBLIC_ER_STREAM_WS_ENDPOINT,
-    sessionSetupLookupTable: process.env.NEXT_PUBLIC_SESSION_SETUP_LOOKUP_TABLE
-      ? new PublicKey(process.env.NEXT_PUBLIC_SESSION_SETUP_LOOKUP_TABLE)
+    sessionSetupLookupTable: process.env.NEXT_PUBLIC_SESSION_SETUP_LOOKUP_TABLE?.trim()
+      ? new PublicKey(process.env.NEXT_PUBLIC_SESSION_SETUP_LOOKUP_TABLE.trim())
       : undefined,
     programId: new PublicKey(
-      process.env.NEXT_PUBLIC_LEVERAGED_PREDICTION_PROGRAM_ID ??
-        DEFAULT_PROGRAM_ID,
+      process.env.NEXT_PUBLIC_LEVERAGED_PREDICTION_PROGRAM_ID?.trim() ||
+        DEFAULT_PROGRAM_ID.toBase58(),
     ),
     marketId,
   };

@@ -9,10 +9,10 @@ import { PhantomWalletAdapter, SolflareWalletAdapter, TorusWalletAdapter, Ledger
 const DEFAULT_BASE_RPC = "https://rpc.magicblock.app/devnet";
 
 export function SolanaProvider({ children }: { children: ReactNode }) {
-  const endpoint = useMemo(
-    () => process.env.NEXT_PUBLIC_SOLANA_RPC_ENDPOINT ?? DEFAULT_BASE_RPC,
-    [],
-  );
+  const endpoint = useMemo(() => {
+    const configured = process.env.NEXT_PUBLIC_SOLANA_RPC_ENDPOINT?.trim();
+    return configured ? configured : DEFAULT_BASE_RPC;
+  }, []);
   const wallets = useMemo(
     () => [new PhantomWalletAdapter(), new SolflareWalletAdapter(), new TorusWalletAdapter(), new LedgerWalletAdapter()],
     [],
