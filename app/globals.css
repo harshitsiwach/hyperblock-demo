@@ -2390,17 +2390,19 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--ink); outli
   position: relative;
   border-radius: 18px;
   overflow: hidden;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.35), 0 0 16px -4px var(--ui-tint-ambient-high, rgba(56, 189, 248, 0.2));
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.4), 
+              0 0 20px 2px var(--ui-tint-glow, rgba(56, 189, 248, 0.4)),
+              0 0 36px 4px var(--ui-tint-ambient-high, rgba(56, 189, 248, 0.2));
   transition: box-shadow 0.3s cubic-bezier(0.16, 1, 0.3, 1), transform 0.2s ease;
-  animation: ticket-edge-breathe 4s ease-in-out infinite;
+  animation: ticket-edge-breathe 3.6s ease-in-out infinite;
 }
 
-/* Edge Mask: Excludes the center card body 100%, allowing the beam to render ONLY on the 1.5px border */
+/* Edge Mask: Excludes the center card body 100%, allowing the beam to render ONLY on the 2.5px border */
 .ticket-beam-mask {
   position: absolute;
   inset: 0;
   border-radius: 18px;
-  padding: 1.5px;
+  padding: 2.5px;
   -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
   -webkit-mask-composite: xor;
   mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
@@ -2410,7 +2412,7 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--ink); outli
   z-index: 2;
 }
 
-/* Rotating edge laser beam */
+/* Rotating edge laser beam - prominent luminous base with brilliant rotating sweep */
 .ticket-border-beam {
   position: absolute;
   top: -150%;
@@ -2419,15 +2421,17 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--ink); outli
   height: 400%;
   background: conic-gradient(
     from 0deg at 50% 50%,
-    transparent 0deg,
-    transparent 280deg,
-    var(--ui-tint-color, #38bdf8) 320deg,
-    #ffffff 345deg,
-    var(--ui-tint-color, #38bdf8) 355deg,
-    transparent 360deg
+    rgba(56, 189, 248, 0.28) 0deg,
+    rgba(56, 189, 248, 0.35) 140deg,
+    var(--ui-tint-color, #38bdf8) 230deg,
+    #ffffff 295deg,
+    #ffffff 330deg,
+    var(--ui-tint-color, #38bdf8) 350deg,
+    rgba(56, 189, 248, 0.28) 360deg
   );
-  animation: ticket-beam-spin 4.5s linear infinite;
-  opacity: 0.85;
+  animation: ticket-beam-spin 3.6s linear infinite;
+  opacity: 1;
+  filter: drop-shadow(0 0 8px var(--ui-tint-color, #38bdf8)) drop-shadow(0 0 2px #ffffff);
   pointer-events: none;
   will-change: transform;
 }
@@ -2444,10 +2448,15 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--ink); outli
 /* Ambient Edge Breathing Glow */
 @keyframes ticket-edge-breathe {
   0%, 100% {
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.35), 0 0 14px -2px var(--ui-tint-glow, rgba(56, 189, 248, 0.25));
+    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.4), 
+                0 0 18px 2px var(--ui-tint-glow, rgba(56, 189, 248, 0.35)),
+                0 0 36px 4px var(--ui-tint-ambient-high, rgba(56, 189, 248, 0.2));
   }
   50% {
-    box-shadow: 0 6px 28px rgba(0, 0, 0, 0.45), 0 0 28px 2px var(--ui-tint-glow, rgba(56, 189, 248, 0.45)), inset 0 0 1px 1px rgba(255, 255, 255, 0.4);
+    box-shadow: 0 6px 32px rgba(0, 0, 0, 0.5), 
+                0 0 32px 5px var(--ui-tint-glow, rgba(56, 189, 248, 0.65)),
+                0 0 54px 8px var(--ui-tint-ambient-high, rgba(56, 189, 248, 0.35)),
+                0 0 2px 1px rgba(255, 255, 255, 0.6);
   }
 }
 
@@ -2457,17 +2466,19 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--ink); outli
   top: 0;
   left: 0;
   right: 0;
-  height: 2px;
+  height: 3px;
   background: linear-gradient(
     90deg,
     transparent 0%,
-    rgba(255, 255, 255, 0) 15%,
+    rgba(255, 255, 255, 0) 10%,
+    rgba(255, 255, 255, 0.95) 45%,
     #ffffff 50%,
+    rgba(255, 255, 255, 0.95) 55%,
     var(--ui-tint-color, #38bdf8) 75%,
     transparent 100%
   );
   background-size: 200% 100%;
-  animation: ticket-glint-sweep 3.6s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+  animation: ticket-glint-sweep 3.2s cubic-bezier(0.4, 0, 0.2, 1) infinite;
   pointer-events: none;
   border-top-left-radius: 18px;
   border-top-right-radius: 18px;
@@ -2495,14 +2506,17 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--ink); outli
 /* Hover State: Instant Luminous Edge Shine */
 .ticket-edge-shimmer:hover {
   animation: none;
-  box-shadow: 0 8px 36px rgba(0, 0, 0, 0.5), 0 0 36px 4px var(--ui-tint-glow, rgba(56, 189, 248, 0.55)), 0 0 14px 1px rgba(255, 255, 255, 0.6);
+  box-shadow: 0 8px 40px rgba(0, 0, 0, 0.55), 
+              0 0 40px 6px var(--ui-tint-glow, rgba(56, 189, 248, 0.75)), 
+              0 0 64px 12px var(--ui-tint-ambient-high, rgba(56, 189, 248, 0.4)),
+              0 0 16px 2px rgba(255, 255, 255, 0.7);
   transform: translateY(-1px);
 }
 
 .ticket-edge-shimmer:hover .ticket-border-beam {
   opacity: 1;
-  animation-duration: 2.2s;
-  filter: brightness(1.35) drop-shadow(0 0 8px var(--ui-tint-color, #38bdf8));
+  animation-duration: 2s;
+  filter: brightness(1.4) drop-shadow(0 0 12px var(--ui-tint-color, #38bdf8)) drop-shadow(0 0 4px #ffffff);
 }
 
 .ticket-edge-shimmer:hover .ticket-specular-glint {
@@ -2514,8 +2528,16 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--ink); outli
   0% {
     background-position: -150% 0;
   }
+  30% {
+    opacity: 1;
+  }
+  70% {
+    background-position: 150% 0;
+    opacity: 1;
+  }
   100% {
     background-position: 150% 0;
+    opacity: 0;
   }
 }
 

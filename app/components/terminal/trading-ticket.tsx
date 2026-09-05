@@ -62,7 +62,7 @@ export function TradingTicket({
       <div className="ticket-specular-glint" />
 
       {/* Inner Liquid Glass Card Body */}
-      <div className="terminal-card relative z-10 w-full h-full flex flex-col p-4 lg:p-4.5 space-y-3.5 rounded-[18px]">
+      <div className="terminal-card relative z-10 w-full h-full flex flex-col p-4 lg:p-4.5 space-y-3.5 rounded-[15.5px]">
         {/* Top Header: Title & Info */}
         <div className="flex items-center justify-between border-b border-[var(--glass-panel-border-subtle)] pb-2.5">
         <div className="flex items-center gap-2">

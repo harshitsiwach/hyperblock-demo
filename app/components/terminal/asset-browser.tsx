@@ -50,7 +50,7 @@ export function AssetBrowser({
   }, [activeCategory, searchQuery]);
 
   return (
-    <div className="terminal-card flex flex-col p-3.5 space-y-2.5 flex-1 min-h-0">
+    <div className="terminal-card flex flex-col p-3.5 space-y-2.5 flex-shrink-0">
       {/* Header & Search */}
       <div className="space-y-2.5">
         <div className="flex items-center justify-between">
@@ -104,8 +104,8 @@ export function AssetBrowser({
         </div>
       </div>
 
-      {/* Asset Cards Grid (2 columns on desktop) */}
-      <div className="grid grid-cols-2 gap-2 flex-1 min-h-0 overflow-y-auto pr-1">
+      {/* Asset Cards Grid (2 columns on desktop) - height fixed to 4 rows so Commodities and Stocks match Crypto layout */}
+      <div className="grid grid-cols-2 gap-2 h-[352px] max-h-[352px] overflow-y-auto pr-1">
         {visibleAssets.map((asset) => {
           const isSelected = asset.marketId === selectedMarketId;
           const hlPrice = prices.get(asset.symbol)?.price;
