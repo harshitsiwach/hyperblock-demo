@@ -49,27 +49,173 @@
   --chart-marker-foreground: #f8fafc;
   --chart-label: #64748b;
 }
-:root[data-theme="dark"],
-:root[data-theme="light"] {
-  --bg: #0b0d12;
-  --card: #121620;
-  --panel: #161b26;
-  --elevated: #1a2130;
-  --ink: #f8fafc;
-  --ink-secondary: #94a3b8;
-  --mut: #64748b;
+:root {
+  --bg: #07090e;
+  --terminal-bg-solid: #07090e;
+  --card: rgba(14, 18, 27, 0.65);
+  --panel: rgba(18, 24, 36, 0.7);
+  --elevated: rgba(22, 30, 46, 0.82);
+  --ink: #ffffff;
+  --ink-secondary: #cbd5e1;
+  --ink-muted: #8492a6;
+  --ink-faint: rgba(255, 255, 255, 0.35);
   --hair: rgba(255, 255, 255, 0.08);
   --hair-hover: rgba(255, 255, 255, 0.16);
-  --hair-active: rgba(0, 240, 118, 0.35);
-  --up: #00f076;
-  --up-glow: rgba(0, 240, 118, 0.28);
-  --up-tint: rgba(0, 240, 118, 0.10);
-  --down: #ff3358;
-  --down-glow: rgba(255, 51, 88, 0.28);
-  --down-tint: rgba(255, 51, 88, 0.10);
+  --hair-active: rgba(56, 189, 248, 0.35);
+  --up: #22c55e;
+  --up-glow: rgba(34, 197, 94, 0.25);
+  --up-tint: rgba(34, 197, 94, 0.12);
+  --up-dark: #15803d;
+  --down: #f43f5e;
+  --down-glow: rgba(244, 63, 94, 0.25);
+  --down-tint: rgba(244, 63, 94, 0.12);
+  --down-dark: #be123c;
   --wait: #eab308;
   --wait-tint: rgba(234, 179, 8, 0.12);
   --scrim: rgba(4, 6, 9, 0.85);
+  --accent: #38bdf8;
+  --accent-glow: 0 0 20px rgba(56, 189, 248, 0.25);
+  --chart-1: #38bdf8;
+  --chart-2: #22c55e;
+  --chart-3: #818cf8;
+  --chart-4: #f43f5e;
+  --chart-5: #eab308;
+  --chart-background: transparent;
+  --chart-foreground: #ffffff;
+  --chart-foreground-muted: #8492a6;
+  --chart-line-primary: #38bdf8;
+  --chart-line-secondary: #22c55e;
+  --chart-crosshair: rgba(255, 255, 255, 0.35);
+  --chart-grid: rgba(255, 255, 255, 0.05);
+  --chart-grid-color: rgba(255, 255, 255, 0.05);
+  --chart-text-color: #8492a6;
+  --chart-brush-border: rgba(255, 255, 255, 0.1);
+  --chart-tooltip-background: rgba(14, 18, 27, 0.94);
+  --chart-tooltip-foreground: #ffffff;
+  --chart-tooltip-muted: #94a3b8;
+  --chart-marker-background: #121722;
+  --chart-marker-border: rgba(255, 255, 255, 0.15);
+  --chart-marker-foreground: #ffffff;
+  --chart-label: #8492a6;
+
+  /* Liquid Glass System Tokens - Dark Mode (Default) */
+  --glass-panel-bg: linear-gradient(160deg, rgba(255, 255, 255, 0.055) 0%, rgba(255, 255, 255, 0.012) 35%, rgba(6, 11, 20, 0.68) 100%), rgba(10, 15, 25, 0.72);
+  --glass-panel-border: rgba(135, 195, 255, 0.22);
+  --glass-panel-border-subtle: rgba(135, 195, 255, 0.10);
+  --glass-panel-specular: inset 0 1px 1.5px 0 rgba(255, 255, 255, 0.35), inset 0 0 18px 0 rgba(56, 189, 248, 0.04);
+  --glass-panel-shadow: 0 0 24px -4px rgba(56, 189, 248, 0.16), 0 24px 48px -12px rgba(0, 0, 0, 0.82), 0 4px 12px rgba(0, 0, 0, 0.5);
+  
+  --glass-card-bg: rgba(255, 255, 255, 0.032);
+  --glass-card-border: rgba(255, 255, 255, 0.085);
+  --glass-card-hover-bg: rgba(255, 255, 255, 0.065);
+  --glass-card-hover-border: rgba(140, 210, 255, 0.35);
+  
+  --glass-elevated-bg: linear-gradient(160deg, rgba(255, 255, 255, 0.08) 0%, rgba(255, 255, 255, 0.02) 40%, rgba(12, 18, 30, 0.85) 100%), rgba(12, 18, 30, 0.88);
+  --glass-elevated-border: rgba(140, 210, 255, 0.28);
+  
+  --glass-input-bg: rgba(3, 7, 15, 0.65);
+  --glass-input-border: rgba(140, 200, 255, 0.18);
+  --glass-input-focus: rgba(56, 189, 248, 0.55);
+  
+  --glass-blur: 28px;
+  --glass-saturate: 200%;
+
+  /* Default UI Tint: Sky Blue */
+  --ui-tint-color: #38bdf8;
+  --ui-tint-bg: rgba(56, 189, 248, 0.09);
+  --ui-tint-border: rgba(56, 189, 248, 0.4);
+  --ui-tint-glow: rgba(56, 189, 248, 0.22);
+}
+
+:root[data-theme="dark"],
+.dark {
+  --bg: #07090e;
+  --terminal-bg-solid: #07090e;
+  --card: rgba(14, 18, 27, 0.65);
+  --panel: rgba(18, 24, 36, 0.7);
+  --elevated: rgba(22, 30, 46, 0.82);
+  --ink: #ffffff;
+  --ink-secondary: #cbd5e1;
+  --ink-muted: #8492a6;
+  --ink-faint: rgba(255, 255, 255, 0.35);
+  --hair: rgba(255, 255, 255, 0.08);
+  --hair-hover: rgba(255, 255, 255, 0.16);
+  --hair-active: var(--ui-tint-border);
+
+  --chart-background: transparent;
+  --chart-foreground: #ffffff;
+  --chart-foreground-muted: #8492a6;
+  --chart-grid-color: rgba(255, 255, 255, 0.05);
+  --chart-text-color: #8492a6;
+
+  --glass-panel-bg: linear-gradient(160deg, rgba(255, 255, 255, 0.055) 0%, rgba(255, 255, 255, 0.012) 35%, rgba(6, 11, 20, 0.68) 100%), rgba(10, 15, 25, 0.72);
+  --glass-panel-border: rgba(135, 195, 255, 0.22);
+  --glass-panel-border-subtle: rgba(135, 195, 255, 0.10);
+  --glass-panel-specular: inset 0 1px 1.5px 0 rgba(255, 255, 255, 0.35), inset 0 0 18px 0 rgba(56, 189, 248, 0.04);
+  --glass-panel-shadow: 0 0 24px -4px rgba(56, 189, 248, 0.16), 0 24px 48px -12px rgba(0, 0, 0, 0.82), 0 4px 12px rgba(0, 0, 0, 0.5);
+  
+  --glass-card-bg: rgba(255, 255, 255, 0.032);
+  --glass-card-border: rgba(255, 255, 255, 0.085);
+  --glass-card-hover-bg: rgba(255, 255, 255, 0.065);
+  --glass-card-hover-border: rgba(140, 210, 255, 0.35);
+  
+  --glass-elevated-bg: linear-gradient(160deg, rgba(255, 255, 255, 0.08) 0%, rgba(255, 255, 255, 0.02) 40%, rgba(12, 18, 30, 0.85) 100%), rgba(12, 18, 30, 0.88);
+  --glass-elevated-border: rgba(140, 210, 255, 0.28);
+  
+  --glass-input-bg: rgba(3, 7, 15, 0.65);
+  --glass-input-border: rgba(140, 200, 255, 0.18);
+  --glass-input-focus: rgba(56, 189, 248, 0.55);
+  
+  --glass-blur: 28px;
+  --glass-saturate: 200%;
+}
+
+:root[data-theme="light"],
+.light {
+  --bg: #edf2f9;
+  --terminal-bg-solid: #edf2f9;
+  --card: rgba(255, 255, 255, 0.78);
+  --panel: rgba(255, 255, 255, 0.82);
+  --elevated: rgba(255, 255, 255, 0.94);
+  --ink: #090d16;
+  --ink-secondary: #273444;
+  --ink-muted: #53647b;
+  --ink-faint: rgba(15, 23, 42, 0.4);
+  --hair: rgba(0, 0, 0, 0.08);
+  --hair-hover: rgba(0, 0, 0, 0.16);
+  --hair-active: var(--ui-tint-border);
+
+  --chart-background: transparent;
+  --chart-foreground: #090d16;
+  --chart-foreground-muted: #53647b;
+  --chart-grid: rgba(0, 0, 0, 0.06);
+  --chart-grid-color: rgba(0, 0, 0, 0.06);
+  --chart-text-color: #53647b;
+  --chart-crosshair: rgba(0, 0, 0, 0.3);
+  --chart-tooltip-background: rgba(255, 255, 255, 0.96);
+  --chart-tooltip-foreground: #090d16;
+  --chart-tooltip-muted: #53647b;
+
+  --glass-panel-bg: linear-gradient(145deg, rgba(255, 255, 255, 0.92) 0%, rgba(255, 255, 255, 0.72) 45%, rgba(240, 245, 252, 0.78) 100%), rgba(245, 248, 253, 0.82);
+  --glass-panel-border: rgba(0, 0, 0, 0.085);
+  --glass-panel-border-subtle: rgba(0, 0, 0, 0.05);
+  --glass-panel-specular: inset 0 1px 1.5px 0 rgba(255, 255, 255, 1), inset 0 0 0 1px rgba(255, 255, 255, 0.75);
+  --glass-panel-shadow: 0 16px 40px -8px rgba(15, 23, 42, 0.10), 0 2px 8px rgba(15, 23, 42, 0.04);
+
+  --glass-card-bg: rgba(0, 0, 0, 0.025);
+  --glass-card-border: rgba(0, 0, 0, 0.065);
+  --glass-card-hover-bg: rgba(0, 0, 0, 0.05);
+  --glass-card-hover-border: rgba(0, 0, 0, 0.14);
+
+  --glass-elevated-bg: linear-gradient(145deg, rgba(255, 255, 255, 0.98) 0%, rgba(255, 255, 255, 0.88) 100%), rgba(255, 255, 255, 0.95);
+  --glass-elevated-border: rgba(0, 0, 0, 0.11);
+
+  --glass-input-bg: rgba(255, 255, 255, 0.95);
+  --glass-input-border: rgba(0, 0, 0, 0.14);
+  --glass-input-focus: rgba(56, 189, 248, 0.5);
+
+  --glass-blur: 28px;
+  --glass-saturate: 190%;
 }
 
 * { box-sizing: border-box; }
@@ -2065,72 +2211,156 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--ink); outli
   animation: terminal-pulse-amber 2.2s infinite ease-in-out;
 }
 
-/* Subtle Terminal Grid Ambient Layer */
+/* Atmospheric Refraction Background for Real Liquid Glass */
 .terminal-grid-bg {
-  background-size: 32px 32px;
+  background-color: var(--bg);
   background-image: 
     linear-gradient(to right, rgba(255, 255, 255, 0.02) 1px, transparent 1px),
-    linear-gradient(to bottom, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.02) 1px, transparent 1px),
+    linear-gradient(135deg, var(--ui-tint-ambient-wash, rgba(56, 189, 248, 0.05)) 0%, transparent 50%, var(--ui-tint-ambient-low, rgba(56, 189, 248, 0.07)) 100%),
+    radial-gradient(circle 900px at 10% 85%, var(--ui-tint-ambient-mid, rgba(56, 189, 248, 0.12)), transparent 70%),
+    radial-gradient(circle 800px at 90% 45%, var(--ui-tint-ambient-low, rgba(56, 189, 248, 0.07)), transparent 70%);
+  background-size: 38px 38px, 38px 38px, 100% 100%, 100% 100%, 100% 100%;
+  transition: background-color 0.4s ease;
 }
 
-/* Glow Card Classes */
-.terminal-card {
-  background: #121620;
-  border: 1px solid rgba(255, 255, 255, 0.07);
-  border-radius: 14px;
-  transition: border-color 0.2s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.2s cubic-bezier(0.22, 1, 0.36, 1);
+:root[data-theme="light"] .terminal-grid-bg,
+.light .terminal-grid-bg {
+  background-color: var(--bg);
+  background-image: 
+    linear-gradient(to right, rgba(15, 23, 42, 0.03) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(15, 23, 42, 0.03) 1px, transparent 1px),
+    linear-gradient(135deg, var(--ui-tint-ambient-wash, rgba(56, 189, 248, 0.04)) 0%, transparent 50%, var(--ui-tint-ambient-low, rgba(56, 189, 248, 0.06)) 100%),
+    radial-gradient(circle 850px at 10% 85%, var(--ui-tint-ambient-mid, rgba(56, 189, 248, 0.11)), transparent 70%),
+    radial-gradient(circle 750px at 90% 45%, var(--ui-tint-ambient-low, rgba(56, 189, 248, 0.06)), transparent 70%);
+  background-size: 38px 38px, 38px 38px, 100% 100%, 100% 100%, 100% 100%, 100% 100%, 100% 100%;
+  transition: background-color 0.4s ease;
 }
 
-.terminal-card:hover {
-  border-color: rgba(255, 255, 255, 0.14);
+/* Liquid Glass Cards & Panels with Realistic Specular Edge */
+.terminal-card,
+.glass-panel {
+  background: var(--glass-panel-bg);
+  backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+  border: 1px solid var(--glass-panel-border);
+  box-shadow: var(--glass-panel-shadow), var(--glass-panel-specular);
+  border-radius: 18px;
+  position: relative;
+  transition: border-color 0.22s ease, box-shadow 0.22s ease, background 0.22s ease;
+}
+
+.terminal-card:hover,
+.glass-panel:hover {
+  border-color: var(--glass-card-hover-border);
+  box-shadow: 0 0 28px -2px rgba(56, 189, 248, 0.22), var(--glass-panel-shadow), var(--glass-panel-specular);
+}
+
+.glass-panel-elevated {
+  background: var(--glass-elevated-bg);
+  backdrop-filter: blur(28px) saturate(200%);
+  -webkit-backdrop-filter: blur(28px) saturate(200%);
+  border: 1px solid var(--glass-elevated-border);
+  box-shadow: 0 24px 52px -8px rgba(0, 0, 0, 0.6), var(--glass-panel-specular);
+  border-radius: 18px;
+}
+
+:root[data-theme="light"] .glass-panel-elevated,
+.light .glass-panel-elevated {
+  box-shadow: 0 20px 48px -8px rgba(15, 23, 42, 0.11), inset 0 1px 1.5px 0 rgba(255, 255, 255, 1);
 }
 
 .terminal-card-interactive:hover {
-  border-color: rgba(0, 240, 118, 0.25);
-  box-shadow: 0 4px 20px rgba(0, 240, 118, 0.04);
+  border-color: var(--ui-tint-border);
+  box-shadow: 0 4px 24px var(--ui-tint-glow);
 }
 
-/* Tactile UP / DOWN Trading Triggers */
+/* Liquid Glass Contextual UP / DOWN Trading Triggers */
 .trigger-btn-up {
   position: relative;
   overflow: hidden;
-  background: linear-gradient(180deg, rgba(0, 240, 118, 0.16) 0%, rgba(0, 240, 118, 0.06) 100%);
-  border: 1px solid rgba(0, 240, 118, 0.32);
-  color: #00f076;
-  transition: all 0.18s cubic-bezier(0.22, 1, 0.36, 1);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.06) 0%, rgba(255, 255, 255, 0.015) 100%), rgba(14, 19, 30, 0.55);
+  backdrop-filter: blur(16px) saturate(180%);
+  -webkit-backdrop-filter: blur(16px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: inset 0 1px 1px 0 rgba(255, 255, 255, 0.2), 0 3px 12px rgba(0, 0, 0, 0.25);
+  color: var(--ink);
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
+:root[data-theme="light"] .trigger-btn-up,
+.light .trigger-btn-up {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.95) 0%, rgba(245, 248, 255, 0.8) 100%);
+  border: 1px solid rgba(0, 0, 0, 0.10);
+  box-shadow: inset 0 1px 1px 0 rgba(255, 255, 255, 1), 0 3px 10px rgba(15, 23, 42, 0.05);
+  color: var(--ink);
+}
+
+/* Contextual Green Reveal on Hover */
 .trigger-btn-up:hover:not(:disabled) {
-  background: linear-gradient(180deg, rgba(0, 240, 118, 0.26) 0%, rgba(0, 240, 118, 0.12) 100%);
-  border-color: #00f076;
-  box-shadow: 0 0 24px rgba(0, 240, 118, 0.22);
-  transform: translateY(-2px);
+  background: linear-gradient(180deg, rgba(34, 197, 94, 0.22) 0%, rgba(34, 197, 94, 0.10) 100%), rgba(16, 42, 28, 0.45);
+  border-color: rgba(34, 197, 94, 0.55);
+  color: #22c55e !important;
+  box-shadow: 0 6px 26px rgba(34, 197, 94, 0.25), inset 0 1px 1.5px 0 rgba(34, 197, 94, 0.35);
+  transform: translateY(-2px) scale(1.01);
+}
+
+:root[data-theme="light"] .trigger-btn-up:hover:not(:disabled),
+.light .trigger-btn-up:hover:not(:disabled) {
+  background: linear-gradient(180deg, rgba(34, 197, 94, 0.18) 0%, rgba(34, 197, 94, 0.06) 100%), rgba(255, 255, 255, 0.9);
+  border-color: rgba(34, 197, 94, 0.6);
+  color: #15803d !important;
+  box-shadow: 0 6px 22px rgba(34, 197, 94, 0.2), inset 0 1px 1px 0 rgba(255, 255, 255, 1);
 }
 
 .trigger-btn-up:active:not(:disabled) {
+  background: rgba(34, 197, 94, 0.25);
   transform: translateY(1px) scale(0.98);
-  box-shadow: 0 0 12px rgba(0, 240, 118, 0.28);
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.3);
 }
 
+/* Default: Minimal liquid glass DOWN trigger */
 .trigger-btn-down {
   position: relative;
   overflow: hidden;
-  background: linear-gradient(180deg, rgba(255, 51, 88, 0.16) 0%, rgba(255, 51, 88, 0.06) 100%);
-  border: 1px solid rgba(255, 51, 88, 0.32);
-  color: #ff3358;
-  transition: all 0.18s cubic-bezier(0.22, 1, 0.36, 1);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.06) 0%, rgba(255, 255, 255, 0.015) 100%), rgba(14, 19, 30, 0.55);
+  backdrop-filter: blur(16px) saturate(180%);
+  -webkit-backdrop-filter: blur(16px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: inset 0 1px 1px 0 rgba(255, 255, 255, 0.2), 0 3px 12px rgba(0, 0, 0, 0.25);
+  color: var(--ink);
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
+:root[data-theme="light"] .trigger-btn-down,
+.light .trigger-btn-down {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.95) 0%, rgba(255, 248, 248, 0.8) 100%);
+  border: 1px solid rgba(0, 0, 0, 0.10);
+  box-shadow: inset 0 1px 1px 0 rgba(255, 255, 255, 1), 0 3px 10px rgba(15, 23, 42, 0.05);
+  color: var(--ink);
+}
+
+/* Contextual Red Reveal on Hover */
 .trigger-btn-down:hover:not(:disabled) {
-  background: linear-gradient(180deg, rgba(255, 51, 88, 0.26) 0%, rgba(255, 51, 88, 0.12) 100%);
-  border-color: #ff3358;
-  box-shadow: 0 0 24px rgba(255, 51, 88, 0.22);
-  transform: translateY(-2px);
+  background: linear-gradient(180deg, rgba(244, 63, 94, 0.22) 0%, rgba(244, 63, 94, 0.10) 100%), rgba(45, 18, 24, 0.45);
+  border-color: rgba(244, 63, 94, 0.55);
+  color: #f43f5e !important;
+  box-shadow: 0 6px 26px rgba(244, 63, 94, 0.25), inset 0 1px 1.5px 0 rgba(244, 63, 94, 0.35);
+  transform: translateY(-2px) scale(1.01);
+}
+
+:root[data-theme="light"] .trigger-btn-down:hover:not(:disabled),
+.light .trigger-btn-down:hover:not(:disabled) {
+  background: linear-gradient(180deg, rgba(244, 63, 94, 0.18) 0%, rgba(244, 63, 94, 0.06) 100%), rgba(255, 255, 255, 0.9);
+  border-color: rgba(244, 63, 94, 0.6);
+  color: #be123c !important;
+  box-shadow: 0 6px 22px rgba(244, 63, 94, 0.2), inset 0 1px 1px 0 rgba(255, 255, 255, 1);
 }
 
 .trigger-btn-down:active:not(:disabled) {
+  background: rgba(244, 63, 94, 0.25);
   transform: translateY(1px) scale(0.98);
-  box-shadow: 0 0 12px rgba(255, 51, 88, 0.28);
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.3);
 }
 
 /* Ripple click effect */
@@ -2148,6 +2378,155 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--ink); outli
     transform: scale(4);
     opacity: 0;
   }
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+   10-SECOND ORDER TICKET — ANIMATED SHINING EDGE GLOW SYSTEM
+   - Continuous / periodic 3.6s shining edge laser sweep
+   - Instant illuminated specular glow & faster beam on hover
+   ══════════════════════════════════════════════════════════════════════ */
+
+.ticket-edge-shimmer {
+  position: relative;
+  border-radius: 18px;
+  overflow: hidden;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.35), 0 0 16px -4px var(--ui-tint-ambient-high, rgba(56, 189, 248, 0.2));
+  transition: box-shadow 0.3s cubic-bezier(0.16, 1, 0.3, 1), transform 0.2s ease;
+  animation: ticket-edge-breathe 4s ease-in-out infinite;
+}
+
+/* Edge Mask: Excludes the center card body 100%, allowing the beam to render ONLY on the 1.5px border */
+.ticket-beam-mask {
+  position: absolute;
+  inset: 0;
+  border-radius: 18px;
+  padding: 1.5px;
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  mask-composite: exclude;
+  pointer-events: none;
+  overflow: hidden;
+  z-index: 2;
+}
+
+/* Rotating edge laser beam */
+.ticket-border-beam {
+  position: absolute;
+  top: -150%;
+  left: -150%;
+  width: 400%;
+  height: 400%;
+  background: conic-gradient(
+    from 0deg at 50% 50%,
+    transparent 0deg,
+    transparent 280deg,
+    var(--ui-tint-color, #38bdf8) 320deg,
+    #ffffff 345deg,
+    var(--ui-tint-color, #38bdf8) 355deg,
+    transparent 360deg
+  );
+  animation: ticket-beam-spin 4.5s linear infinite;
+  opacity: 0.85;
+  pointer-events: none;
+  will-change: transform;
+}
+
+@keyframes ticket-beam-spin {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+/* Ambient Edge Breathing Glow */
+@keyframes ticket-edge-breathe {
+  0%, 100% {
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.35), 0 0 14px -2px var(--ui-tint-glow, rgba(56, 189, 248, 0.25));
+  }
+  50% {
+    box-shadow: 0 6px 28px rgba(0, 0, 0, 0.45), 0 0 28px 2px var(--ui-tint-glow, rgba(56, 189, 248, 0.45)), inset 0 0 1px 1px rgba(255, 255, 255, 0.4);
+  }
+}
+
+/* Top-Edge Specular Sweep Glint */
+.ticket-specular-glint {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0) 15%,
+    #ffffff 50%,
+    var(--ui-tint-color, #38bdf8) 75%,
+    transparent 100%
+  );
+  background-size: 200% 100%;
+  animation: ticket-glint-sweep 3.6s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+  pointer-events: none;
+  border-top-left-radius: 18px;
+  border-top-right-radius: 18px;
+  z-index: 10;
+}
+
+@keyframes ticket-glint-sweep {
+  0% {
+    background-position: -150% 0;
+    opacity: 0;
+  }
+  20% {
+    opacity: 1;
+  }
+  60% {
+    background-position: 150% 0;
+    opacity: 1;
+  }
+  80%, 100% {
+    background-position: 150% 0;
+    opacity: 0;
+  }
+}
+
+/* Hover State: Instant Luminous Edge Shine */
+.ticket-edge-shimmer:hover {
+  animation: none;
+  box-shadow: 0 8px 36px rgba(0, 0, 0, 0.5), 0 0 36px 4px var(--ui-tint-glow, rgba(56, 189, 248, 0.55)), 0 0 14px 1px rgba(255, 255, 255, 0.6);
+  transform: translateY(-1px);
+}
+
+.ticket-edge-shimmer:hover .ticket-border-beam {
+  opacity: 1;
+  animation-duration: 2.2s;
+  filter: brightness(1.35) drop-shadow(0 0 8px var(--ui-tint-color, #38bdf8));
+}
+
+.ticket-edge-shimmer:hover .ticket-specular-glint {
+  animation: ticket-glint-hover 1.2s cubic-bezier(0.16, 1, 0.3, 1) infinite;
+  opacity: 1;
+}
+
+@keyframes ticket-glint-hover {
+  0% {
+    background-position: -150% 0;
+  }
+  100% {
+    background-position: 150% 0;
+  }
+}
+
+.trigger-btn-up:hover:not(:disabled) {
+  box-shadow: 0 0 28px 2px rgba(34, 197, 94, 0.4), inset 0 1px 2px 0 rgba(255, 255, 255, 0.6), inset 0 0 12px rgba(34, 197, 94, 0.25) !important;
+  border-color: rgba(34, 197, 94, 0.8) !important;
+}
+
+.trigger-btn-down:hover:not(:disabled) {
+  box-shadow: 0 0 28px 2px rgba(244, 63, 94, 0.4), inset 0 1px 2px 0 rgba(255, 255, 255, 0.6), inset 0 0 12px rgba(244, 63, 94, 0.25) !important;
+  border-color: rgba(244, 63, 94, 0.8) !important;
 }
 
 /* Reduced Motion Override */

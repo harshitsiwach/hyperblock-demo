@@ -14,6 +14,7 @@ import {
   Clock 
 } from "lucide-react";
 import type { Play } from "@/app/lib/domain";
+import { useTheme } from "@/app/providers/theme-provider";
 
 interface TerminalChartProps {
   data: { t: number; p: number }[]; // timestamp ms, price
@@ -51,8 +52,10 @@ export function TerminalChart({
   currentPrice,
   activePlays,
   symbol,
-  height = 540,
+  height = 600,
 }: TerminalChartProps) {
+  const { mode, activeTintConfig } = useTheme();
+
   const [chartType, setChartType] = useState<"line" | "candle">("line");
   const [activeTf, setActiveTf] = useState<string>("5s");
   const [isFullscreen, setIsFullscreen] = useState(false);
@@ -216,10 +219,10 @@ export function TerminalChart({
       ctx.scale(dpr, dpr);
       ctx.clearRect(0, 0, width, cHeight);
 
-      // Margins
-      const topMargin = 20;
-      const bottomMargin = 40;
-      const rightMargin = 72; // for Y-axis scale
+      // Margins - optimized to maximize drawable canvas space
+      const topMargin = 14;
+      const bottomMargin = 26;
+      const rightMargin = 66; // for Y-axis scale
       const plotW = width - rightMargin;
       const plotH = cHeight - topMargin - bottomMargin;
 
@@ -236,20 +239,20 @@ export function TerminalChart({
       });
 
       const span = maxP - minP || 1;
-      const padding = span * 0.12;
+      const padding = span * 0.07;
       const yMin = minP - padding;
       const yMax = maxP + padding;
 
       const getY = (val: number) => topMargin + plotH - ((val - yMin) / (yMax - yMin)) * plotH;
 
       // Draw Grid Lines (Horizontal & Vertical)
-      ctx.strokeStyle = "rgba(255, 255, 255, 0.04)";
+      ctx.strokeStyle = mode === "dark" ? "rgba(255, 255, 255, 0.05)" : "rgba(0, 0, 0, 0.06)";
       ctx.lineWidth = 1;
 
       // Horizontal price grid ticks
       const gridTicks = 6;
       ctx.font = "10px ui-monospace, monospace";
-      ctx.fillStyle = "#64748b";
+      ctx.fillStyle = mode === "dark" ? "#8492a6" : "#475569";
       ctx.textAlign = "left";
 
       for (let i = 0; i <= gridTicks; i++) {
@@ -290,7 +293,7 @@ export function TerminalChart({
       // - Line Chart Mode: Animated Volume Equalizer Bars with Laser Caps
       // - Candle Chart Mode: Animated Flowing Momentum Wave Line
       // =========================================================================
-      const volH = plotH * 0.20;
+      const volH = plotH * 0.15;
       const volBaseY = topMargin + plotH;
 
       if (chartType === "line") {
@@ -315,30 +318,30 @@ export function TerminalChart({
           // Hover detection
           const isHovered = hoverData && hoverData.x >= bx && hoverData.x <= bx + barW;
 
-          // Vertical gradient for each bar
+          // Vertical gradient for each bar - futuristic silver-ice translucent bars matching Image 1
           const barGrad = ctx.createLinearGradient(0, volBaseY, 0, volBaseY - barH);
           if (isUp) {
-            barGrad.addColorStop(0, "rgba(0, 240, 118, 0.04)");
-            barGrad.addColorStop(0.7, isHovered ? "rgba(0, 240, 118, 0.6)" : "rgba(0, 240, 118, 0.25)");
-            barGrad.addColorStop(1, isHovered ? "rgba(0, 240, 118, 0.95)" : "rgba(0, 240, 118, 0.5)");
+            barGrad.addColorStop(0, "rgba(220, 235, 255, 0.02)");
+            barGrad.addColorStop(0.7, isHovered ? "rgba(180, 230, 255, 0.45)" : "rgba(200, 225, 255, 0.22)");
+            barGrad.addColorStop(1, isHovered ? "rgba(255, 255, 255, 0.85)" : "rgba(220, 240, 255, 0.45)");
           } else {
-            barGrad.addColorStop(0, "rgba(255, 51, 88, 0.04)");
-            barGrad.addColorStop(0.7, isHovered ? "rgba(255, 51, 88, 0.6)" : "rgba(255, 51, 88, 0.25)");
-            barGrad.addColorStop(1, isHovered ? "rgba(255, 51, 88, 0.95)" : "rgba(255, 51, 88, 0.5)");
+            barGrad.addColorStop(0, "rgba(255, 180, 200, 0.02)");
+            barGrad.addColorStop(0.7, isHovered ? "rgba(255, 100, 130, 0.45)" : "rgba(255, 120, 150, 0.22)");
+            barGrad.addColorStop(1, isHovered ? "rgba(255, 220, 230, 0.85)" : "rgba(255, 140, 170, 0.45)");
           }
 
           ctx.fillStyle = barGrad;
           ctx.fillRect(bx, volBaseY - barH, barW, barH);
 
           // Luminous Laser Cap at the tip of each volume bar
-          ctx.fillStyle = isUp ? "#00f076" : "#ff3358";
-          ctx.shadowColor = isUp ? "rgba(0, 240, 118, 0.8)" : "rgba(255, 51, 88, 0.8)";
+          ctx.fillStyle = isUp ? "rgba(210, 240, 255, 0.95)" : "rgba(255, 140, 170, 0.95)";
+          ctx.shadowColor = isUp ? "rgba(140, 210, 255, 0.8)" : "rgba(255, 90, 120, 0.8)";
           ctx.shadowBlur = isHovered ? 8 : 4;
           ctx.fillRect(bx, volBaseY - barH, barW, 2);
           ctx.shadowBlur = 0;
         }
 
-        ctx.fillStyle = "rgba(255, 255, 255, 0.22)";
+        ctx.fillStyle = mode === "dark" ? "rgba(255, 255, 255, 0.35)" : "rgba(15, 23, 42, 0.45)";
         ctx.font = "9px monospace";
         ctx.fillText("VOLUME EQUALIZER · 1s TICKS", 10, volBaseY - 6);
       } else {
@@ -422,7 +425,7 @@ export function TerminalChart({
         ctx.fill();
         ctx.shadowBlur = 0;
 
-        ctx.fillStyle = "rgba(255, 255, 255, 0.22)";
+        ctx.fillStyle = mode === "dark" ? "rgba(255, 255, 255, 0.35)" : "rgba(15, 23, 42, 0.45)";
         ctx.font = "9px monospace";
         ctx.fillText("MOMENTUM STREAM · 1s LIVE", 10, volBaseY - 6);
       }
@@ -551,9 +554,9 @@ export function TerminalChart({
 
         // Fill area up to current flowing headX
         const grad = ctx.createLinearGradient(0, topMargin, 0, topMargin + plotH);
-        grad.addColorStop(0, "rgba(0, 240, 118, 0.24)");
-        grad.addColorStop(0.5, "rgba(0, 240, 118, 0.06)");
-        grad.addColorStop(1, "rgba(0, 240, 118, 0.0)");
+        grad.addColorStop(0, activeTintConfig.subtleBg.replace("0.08", "0.22"));
+        grad.addColorStop(0.6, activeTintConfig.subtleBg);
+        grad.addColorStop(1, "transparent");
 
         ctx.beginPath();
         ctx.moveTo(0, getY(pts[0].p));
@@ -574,16 +577,19 @@ export function TerminalChart({
           ctx.lineTo(idx * stepX, getY(pts[idx].p));
         }
         ctx.lineTo(headX, headY);
-        ctx.strokeStyle = "#00f076";
-        ctx.lineWidth = 2.4;
+        ctx.strokeStyle = activeTintConfig.color;
+        ctx.lineWidth = 2.6;
+        ctx.shadowColor = activeTintConfig.color;
+        ctx.shadowBlur = 12;
         ctx.stroke();
+        ctx.shadowBlur = 0;
 
-        // Flowing Comet Head / Neon Energy Tip
+        // Flowing Comet Head / Energy Tip
         const pulse = Math.sin(Date.now() * 0.005) * 4 + 10;
         const radial = ctx.createRadialGradient(headX, headY, 1, headX, headY, pulse * (flow < 0.98 ? 1.4 : 1));
-        radial.addColorStop(0, "rgba(0, 240, 118, 0.95)");
-        radial.addColorStop(0.5, "rgba(0, 240, 118, 0.4)");
-        radial.addColorStop(1, "rgba(0, 240, 118, 0)");
+        radial.addColorStop(0, activeTintConfig.color);
+        radial.addColorStop(0.5, activeTintConfig.subtleBg);
+        radial.addColorStop(1, "transparent");
 
         ctx.beginPath();
         ctx.arc(headX, headY, pulse * (flow < 0.98 ? 1.4 : 1), 0, Math.PI * 2);
@@ -592,13 +598,13 @@ export function TerminalChart({
 
         // Solid core
         ctx.beginPath();
-        ctx.arc(headX, headY, 3.5, 0, Math.PI * 2);
+        ctx.arc(headX, headY, 3, 0, Math.PI * 2);
         ctx.fillStyle = "#ffffff";
         ctx.fill();
 
         // Flow wave ripple while actively flowing
         if (flow < 0.98) {
-          ctx.strokeStyle = "rgba(0, 240, 118, 0.7)";
+          ctx.strokeStyle = activeTintConfig.borderColor;
           ctx.lineWidth = 1.5;
           ctx.beginPath();
           ctx.arc(headX, headY, pulse * 1.8, 0, Math.PI * 2);
@@ -612,7 +618,7 @@ export function TerminalChart({
         const rayAlpha = Math.min(1, flow * 1.2);
 
         ctx.setLineDash([4, 4]);
-        ctx.strokeStyle = `rgba(0, 240, 118, ${0.6 * rayAlpha})`;
+        ctx.strokeStyle = activeTintConfig.borderColor;
         ctx.lineWidth = 1.2;
         ctx.beginPath();
         ctx.moveTo(0, curY);
@@ -621,13 +627,13 @@ export function TerminalChart({
         ctx.setLineDash([]);
 
         // Glowing price badge on the right axis
-        ctx.fillStyle = "#00f076";
+        ctx.fillStyle = activeTintConfig.color;
         ctx.beginPath();
         ctx.roundRect(plotW + 2, curY - 11, rightMargin - 4, 22, 5);
         ctx.fill();
 
         // Price text inside badge
-        ctx.fillStyle = "#0b0d12";
+        ctx.fillStyle = mode === "dark" ? "#07090e" : "#ffffff";
         ctx.font = "bold 10px ui-monospace, monospace";
         ctx.textAlign = "center";
         ctx.fillText(`$${formatPrice(cur)}`, plotW + rightMargin / 2, curY + 3.5);
@@ -688,14 +694,14 @@ export function TerminalChart({
         ctx.setLineDash([]);
 
         // Hover price pill on Y-axis
-        ctx.fillStyle = "#1e293b";
+        ctx.fillStyle = mode === "dark" ? "#0f172a" : "#ffffff";
         ctx.beginPath();
         ctx.roundRect(plotW + 2, hoverData.y - 10, rightMargin - 4, 20, 4);
         ctx.fill();
-        ctx.strokeStyle = "rgba(255, 255, 255, 0.2)";
+        ctx.strokeStyle = mode === "dark" ? "rgba(255, 255, 255, 0.25)" : "rgba(0, 0, 0, 0.15)";
         ctx.stroke();
 
-        ctx.fillStyle = "#ffffff";
+        ctx.fillStyle = mode === "dark" ? "#ffffff" : "#090d16";
         ctx.font = "10px ui-monospace, monospace";
         ctx.textAlign = "center";
         ctx.fillText(`$${formatPrice(hoverData.price)}`, plotW + rightMargin / 2, hoverData.y + 3.5);
@@ -710,29 +716,31 @@ export function TerminalChart({
     return () => {
       cancelAnimationFrame(animFrame);
     };
-  }, [data, currentPrice, activePlays, chartType, candles, activeWindowSec, hoverData]);
+  }, [data, currentPrice, activePlays, chartType, candles, activeWindowSec, hoverData, mode, activeTintConfig]);
 
   return (
     <div
       ref={containerRef}
-      className={`terminal-card flex flex-col overflow-hidden bg-[#121620] relative ${
-        isFullscreen ? "fixed inset-0 z-50 rounded-none h-screen" : ""
+      className={`terminal-card flex flex-col overflow-hidden relative w-full ${
+        isFullscreen
+          ? "fixed inset-0 z-50 rounded-none h-screen"
+          : "min-h-[460px] sm:min-h-[520px] lg:min-h-[590px]"
       }`}
       style={{ height: isFullscreen ? "100vh" : height }}
     >
       {/* Chart Top Toolbar */}
-      <div className="flex flex-wrap items-center justify-between border-b border-white/[0.08] px-3 py-2 bg-[#0e1118]">
+      <div className="flex flex-wrap items-center justify-between border-b border-[var(--glass-card-border)] px-3 py-2 bg-[var(--glass-card-bg)] backdrop-blur-md">
         {/* Left Toolbar Items: Type Toggle & Timeframes */}
         <div className="flex items-center gap-1.5 overflow-x-auto py-0.5">
           {/* Chart Type (Line / Candle) */}
-          <div className="flex items-center rounded-lg border border-white/[0.08] bg-white/[0.03] p-0.5 mr-2">
+          <div className="flex items-center rounded-lg border border-[var(--glass-card-border)] bg-[var(--glass-card-bg)] p-0.5 mr-2">
             <button
               onClick={() => setChartType("line")}
               title="Line Chart"
-              className={`flex h-7 w-7 items-center justify-center rounded-md text-xs transition-colors ${
+              className={`flex h-7 w-7 items-center justify-center rounded-md text-xs transition-all ${
                 chartType === "line"
-                  ? "bg-[#00f076] text-[#090a0f] font-bold"
-                  : "text-slate-400 hover:text-white"
+                  ? "bg-[var(--ink)] text-[var(--bg)] font-extrabold shadow-sm"
+                  : "text-[var(--ink-muted)] hover:text-[var(--ink)]"
               }`}
             >
               <LineIcon className="h-3.5 w-3.5" />
@@ -740,10 +748,10 @@ export function TerminalChart({
             <button
               onClick={() => setChartType("candle")}
               title="Candlestick Chart"
-              className={`flex h-7 w-7 items-center justify-center rounded-md text-xs transition-colors ${
+              className={`flex h-7 w-7 items-center justify-center rounded-md text-xs transition-all ${
                 chartType === "candle"
-                  ? "bg-[#00f076] text-[#090a0f] font-bold"
-                  : "text-slate-400 hover:text-white"
+                  ? "bg-[var(--ink)] text-[var(--bg)] font-extrabold shadow-sm"
+                  : "text-[var(--ink-muted)] hover:text-[var(--ink)]"
               }`}
             >
               <CandleIcon className="h-3.5 w-3.5" />
@@ -752,19 +760,31 @@ export function TerminalChart({
 
           {/* Timeframe Buttons */}
           <div className="flex items-center gap-1">
-            {TIMEFRAMES.map((tf) => (
-              <button
-                key={tf.id}
-                onClick={() => setActiveTf(tf.id)}
-                className={`rounded-md px-2 py-1 text-[11px] font-bold tracking-wide transition-all ${
-                  activeTf === tf.id
-                    ? "bg-white/[0.12] text-[#00f076] shadow-sm"
-                    : "text-slate-400 hover:text-slate-200"
-                }`}
-              >
-                {tf.label}
-              </button>
-            ))}
+            {TIMEFRAMES.map((tf) => {
+              const isSelected = activeTf === tf.id;
+              return (
+                <button
+                  key={tf.id}
+                  onClick={() => setActiveTf(tf.id)}
+                  className={`rounded-lg px-2.5 py-1 text-[11px] font-bold tracking-wide transition-all border ${
+                    isSelected
+                      ? "shadow-sm"
+                      : "border-transparent text-[var(--ink-muted)] hover:text-[var(--ink)] hover:bg-[var(--glass-card-hover-bg)]"
+                  }`}
+                  style={
+                    isSelected
+                      ? {
+                          backgroundColor: activeTintConfig.subtleBg,
+                          color: activeTintConfig.color,
+                          borderColor: activeTintConfig.borderColor,
+                        }
+                      : undefined
+                  }
+                >
+                  {tf.label}
+                </button>
+              );
+            })}
           </div>
         </div>
 
@@ -772,10 +792,10 @@ export function TerminalChart({
         <div className="flex items-center gap-1.5 ml-auto">
           <button
             onClick={() => setShowIndicators(!showIndicators)}
-            className={`flex h-7 items-center gap-1 rounded-md px-2 text-[11px] font-semibold transition-colors ${
+            className={`flex h-7 items-center gap-1.5 rounded-lg px-2.5 text-[11px] font-semibold transition-all border ${
               showIndicators
-                ? "bg-white/[0.08] text-slate-200 border border-white/[0.12]"
-                : "text-slate-400 hover:text-white"
+                ? "bg-[var(--glass-card-hover-bg)] text-[var(--ink)] border-[var(--glass-card-hover-border)] shadow-sm"
+                : "border-transparent text-[var(--ink-muted)] hover:text-[var(--ink)] hover:bg-[var(--glass-card-hover-bg)]"
             }`}
           >
             <Layers className="h-3 w-3" />
@@ -785,7 +805,7 @@ export function TerminalChart({
           <button
             onClick={handleScreenshot}
             title="Download Chart Snapshot"
-            className="flex h-7 w-7 items-center justify-center rounded-md text-slate-400 hover:bg-white/[0.06] hover:text-white transition-colors"
+            className="flex h-7 w-7 items-center justify-center rounded-lg text-[var(--ink-muted)] hover:bg-[var(--glass-card-hover-bg)] hover:text-[var(--ink)] transition-colors"
           >
             <Camera className="h-3.5 w-3.5" />
           </button>
@@ -793,7 +813,7 @@ export function TerminalChart({
           <button
             onClick={toggleFullscreen}
             title="Toggle Fullscreen"
-            className="flex h-7 w-7 items-center justify-center rounded-md text-slate-400 hover:bg-white/[0.06] hover:text-white transition-colors"
+            className="flex h-7 w-7 items-center justify-center rounded-lg text-[var(--ink-muted)] hover:bg-[var(--glass-card-hover-bg)] hover:text-[var(--ink)] transition-colors"
           >
             {isFullscreen ? <Minimize2 className="h-3.5 w-3.5" /> : <Maximize2 className="h-3.5 w-3.5" />}
           </button>
@@ -810,16 +830,18 @@ export function TerminalChart({
 
         {/* Hover inspection pill at top-left of canvas */}
         {hoverData && (
-          <div className="absolute left-3 top-3 z-10 flex items-center gap-3 rounded-lg border border-white/[0.12] bg-[#0b0d12]/90 px-3 py-1.5 text-xs backdrop-blur-md">
-            <span className="font-mono text-slate-400">{formatTime(hoverData.time)}</span>
-            <span className="font-mono font-extrabold text-[#00f076]">${formatPrice(hoverData.price)}</span>
+          <div className="absolute left-3 top-3 z-10 flex items-center gap-3 rounded-xl border border-[var(--glass-panel-border)] glass-panel-elevated px-3 py-1.5 text-xs text-[var(--ink)] shadow-xl">
+            <span className="font-mono text-[var(--ink-muted)]">{formatTime(hoverData.time)}</span>
+            <span className="font-mono font-extrabold" style={{ color: activeTintConfig.color }}>
+              ${formatPrice(hoverData.price)}
+            </span>
           </div>
         )}
 
         {/* Connecting overlay state if no data */}
         {data.length === 0 && (
-          <div className="absolute inset-0 z-20 flex items-center justify-center bg-[#0b0d12]/70 backdrop-blur-sm">
-            <div className="flex items-center gap-2 rounded-full border border-white/[0.1] bg-[#141824] px-4 py-2 text-xs font-bold text-slate-300">
+          <div className="absolute inset-0 z-20 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+            <div className="flex items-center gap-2 rounded-full border border-[var(--glass-panel-border)] glass-panel-elevated px-4 py-2 text-xs font-bold text-[var(--ink)] shadow-xl">
               <span className="live-pulse-dot" />
               <span>Connecting to Hyperliquid Live Feed…</span>
             </div>
@@ -828,23 +850,23 @@ export function TerminalChart({
       </div>
 
       {/* Chart Footer Readout Bar */}
-      <div className="flex items-center justify-between border-t border-white/[0.08] px-4 py-2 text-[11px] font-medium text-slate-400 bg-[#0e1118]">
+      <div className="flex items-center justify-between border-t border-[var(--glass-card-border)] px-4 py-2 text-[11px] font-medium text-[var(--ink-muted)] bg-[var(--glass-card-bg)]">
         <div className="flex items-center gap-3">
-          <span className="flex items-center gap-1.5 text-[#00f076] font-bold">
+          <span className="flex items-center gap-1.5 font-bold" style={{ color: activeTintConfig.color }}>
             <span className="live-pulse-dot" />
             1s Streaming Updates
           </span>
-          <span className="hidden sm:inline text-slate-500">·</span>
+          <span className="hidden sm:inline text-[var(--ink-faint)]">·</span>
           <span className="hidden sm:inline">{data.length} Real-Time Ticks</span>
         </div>
 
         <div className="flex items-center gap-2">
           {activePlays.length > 0 ? (
-            <span className="rounded bg-[#00f076]/10 px-2 py-0.5 font-bold text-[#00f076] border border-[#00f076]/20">
+            <span className="rounded-lg bg-emerald-500/10 px-2.5 py-0.5 font-bold text-emerald-400 border border-emerald-500/20">
               {activePlays.length} Active Positions Projected
             </span>
           ) : (
-            <span className="text-slate-500">Ready for order placement</span>
+            <span className="text-[var(--ink-muted)]">Ready for order placement</span>
           )}
         </div>
       </div>

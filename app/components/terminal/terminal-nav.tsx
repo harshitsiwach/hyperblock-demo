@@ -11,18 +11,19 @@ import {
   Settings,
   Zap,
   ShieldCheck,
-  ChevronRight,
   Volume2,
   VolumeX,
   Smartphone,
-  Check,
   Trash2,
   X,
   Radio,
   Sliders,
   Sparkles,
+  Palette,
 } from "lucide-react";
 import type { MarketSnapshot } from "@/app/lib/domain";
+import { ThemePopover } from "@/app/components/terminal/theme-popover";
+import { useTheme } from "@/app/providers/theme-provider";
 
 interface TerminalNavProps {
   balance: number;
@@ -41,6 +42,7 @@ interface TerminalNavProps {
   isReal?: boolean;
   claimLabel?: string;
   claimBusy?: boolean;
+  level?: number;
 }
 
 const NAV_TABS = [
@@ -72,9 +74,12 @@ export function TerminalNav({
   isReal = false,
   claimLabel,
   claimBusy = false,
+  level = 1,
 }: TerminalNavProps) {
+  const { activeTintConfig } = useTheme();
+
   // Dropdown states (mutually exclusive)
-  const [activeDropdown, setActiveDropdown] = useState<"notifications" | "settings" | null>(null);
+  const [activeDropdown, setActiveDropdown] = useState<"notifications" | "settings" | "theme" | null>(null);
 
   // Settings states
   const [soundEnabled, setSoundEnabled] = useState(true);
@@ -146,15 +151,15 @@ export function TerminalNav({
   };
 
   return (
-    <header className="sticky top-0 z-40 w-full border-b border-white/[0.08] bg-[#0b0d12]/90 backdrop-blur-md">
-      <div className="mx-auto flex h-14 max-w-[1720px] items-center justify-between px-4 lg:px-6">
+    <div className="sticky top-0 z-40 w-full px-3 sm:px-4 lg:px-6 pt-3 sm:pt-4 pointer-events-none">
+      <header className="mx-auto flex h-14 max-w-[1720px] items-center justify-between px-4 lg:px-5 rounded-2xl border border-[var(--glass-panel-border)] terminal-card shadow-xl !backdrop-blur-2xl pointer-events-auto">
         {/* Left Section: Brand & Nav Tabs */}
         <div className="flex items-center gap-6">
           <div className="flex items-center gap-3">
             <BrandMark />
-            <div className="hidden items-center gap-1.5 rounded-full border border-white/[0.08] bg-white/[0.03] px-2.5 py-1 sm:flex">
+            <div className="hidden items-center gap-1.5 rounded-full border border-[var(--glass-card-border)] bg-[var(--glass-card-bg)] px-2.5 py-1 sm:flex">
               <span className="live-pulse-dot" />
-              <span className={`text-[10px] font-extrabold uppercase tracking-widest ${isReal ? "text-amber-400" : "text-[#00f076]"}`}>
+              <span className={`text-[10px] font-extrabold uppercase tracking-widest ${isReal ? "text-amber-400" : "text-[var(--ink-secondary)]"}`}>
                 {isReal ? "Real Terminal" : "Demo Terminal"}
               </span>
             </div>
@@ -169,14 +174,17 @@ export function TerminalNav({
                   key={tab.id}
                   onClick={() => onNavTabChange(tab.id)}
                   className={`relative px-3.5 py-1.5 text-xs font-semibold tracking-wide transition-colors ${
-                    isActive ? "text-white" : "text-slate-400 hover:text-slate-200"
+                    isActive ? "text-[var(--ink)]" : "text-[var(--ink-muted)] hover:text-[var(--ink)]"
                   }`}
                 >
                   {tab.label}
                   {isActive && (
                     <motion.div
                       layoutId="active-nav-pill"
-                      className="absolute inset-0 rounded-lg bg-white/[0.08] border border-white/[0.12]"
+                      className="absolute inset-0 rounded-lg bg-[var(--glass-card-hover-bg)] border border-[var(--glass-card-hover-border)] shadow-sm"
+                      style={{
+                        borderColor: activeTintConfig.borderColor,
+                      }}
                       transition={{ type: "spring", stiffness: 450, damping: 35 }}
                     />
                   )}
@@ -190,34 +198,34 @@ export function TerminalNav({
         <div ref={dropdownRef} className="relative flex items-center gap-2.5 sm:gap-3">
           {/* Balance Display */}
           <div
-            className={`flex items-center gap-2.5 rounded-lg border border-white/[0.08] bg-[#121620] px-3 py-1.5 transition-transform duration-200 ${
-              balanceBump ? "scale-[1.04] border-[#00f076]/40 bg-[#00f076]/[0.06]" : ""
+            className={`flex items-center gap-2.5 rounded-xl border border-[var(--glass-card-border)] bg-[var(--glass-card-bg)] px-3 py-1.5 transition-transform duration-200 ${
+              balanceBump ? "scale-[1.04] border-[var(--glass-card-hover-border)] bg-[var(--glass-card-hover-bg)]" : ""
             }`}
           >
-            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Balance</span>
-            <span className="font-mono text-xs font-extrabold text-white sm:text-sm">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--ink-muted)]">Balance</span>
+            <span className="font-mono text-xs font-extrabold text-[var(--ink)] sm:text-sm">
               {formatUsd(balance)}
             </span>
 
-            <div className="h-3 w-[1px] bg-white/[0.08]" />
+            <div className="h-3 w-[1px] bg-[var(--glass-card-border)]" />
 
             {/* Active Position Count Pill */}
-            <div className="flex items-center gap-1 text-[11px] font-semibold text-slate-300">
+            <div className="flex items-center gap-1 text-[11px] font-semibold text-[var(--ink-secondary)]">
               <span
                 className={`inline-block h-1.5 w-1.5 rounded-full ${
-                  activePositionsCount > 0 ? "bg-[#00f076] shadow-[0_0_6px_#00f076]" : "bg-slate-500"
+                  activePositionsCount > 0 ? "bg-emerald-400 shadow-[0_0_6px_#22c55e]" : "bg-slate-400"
                 }`}
               />
               <span>
                 {activePositionsCount}/{maxPositions}
               </span>
-              <span className="hidden text-[10px] text-slate-500 xl:inline">Live</span>
+              <span className="hidden text-[10px] text-[var(--ink-muted)] xl:inline">Live</span>
             </div>
 
             {/* Streak Flame Pill */}
             {streak > 0 && (
               <>
-                <div className="h-3 w-[1px] bg-white/[0.08]" />
+                <div className="h-3 w-[1px] bg-[var(--glass-card-border)]" />
                 <div
                   className="flex items-center gap-1 text-[11px] font-bold text-amber-400"
                   title={`Current streak: ${streak} | Best: ${bestStreak}`}
@@ -227,26 +235,39 @@ export function TerminalNav({
                 </div>
               </>
             )}
+
+            <div className="h-3 w-[1px] bg-[var(--glass-card-border)]" />
+
+            {/* Elevated User Level Pill */}
+            <div
+              className="flex items-center gap-1 text-[11px] font-black text-amber-400"
+              title={`Trader Level ${level} · Level Up with more bets and winning streaks`}
+            >
+              <span className="flex h-3.5 w-3.5 items-center justify-center rounded-full bg-amber-400/20 text-amber-400 border border-amber-400/40 text-[8px] font-black">
+                ★
+              </span>
+              <span>LVL {level}</span>
+            </div>
           </div>
 
-          {/* + Claim Button (tUSD faucet via Hyperblock API when claimLabel is set) */}
+          {/* + Claim Button */}
           <button
             onClick={onClaim}
             disabled={!canClaim || claimBusy}
-            className={`relative overflow-hidden rounded-lg px-3 py-1.5 text-xs font-extrabold tracking-wide transition-all ${
+            className={`relative overflow-hidden rounded-xl px-3.5 py-1.5 text-xs font-bold tracking-wide transition-all border ${
               canClaim && !claimBusy
-                ? "bg-[#00f076] text-[#090a0f] shadow-[0_0_16px_rgba(0,240,118,0.25)] hover:bg-[#1cf387] active:scale-95"
-                : "bg-white/[0.05] text-slate-400 cursor-not-allowed border border-white/[0.06]"
+                ? "bg-[var(--glass-card-bg)] hover:bg-[var(--glass-card-hover-bg)] text-[var(--ink)] border-[var(--glass-card-border)] shadow-sm active:scale-95"
+                : "bg-[var(--glass-card-bg)] opacity-40 text-[var(--ink-muted)] cursor-not-allowed border-[var(--glass-card-border)]"
             } ${claimPulse ? "scale-105" : ""}`}
           >
             <div className="flex items-center gap-1.5">
-              <Zap className="h-3.5 w-3.5" />
+              <Zap className="h-3.5 w-3.5 text-emerald-400" />
               <span>{claimBusy ? "Claiming…" : claimLabel ?? (canClaim ? "+ Claim $10k" : `${cooldownSec}s`)}</span>
             </div>
           </button>
 
           {/* Solana Wallet Button */}
-          <WalletButton showStats={false} snapshot={snapshot as any} />
+          <WalletButton showStats={false} snapshot={snapshot} />
 
           {/* Mode Toggle (Demo / Real Devnet) */}
           <div className="hidden lg:block">
@@ -260,14 +281,20 @@ export function TerminalNav({
             }
             className={`relative flex h-8 w-8 items-center justify-center rounded-lg border transition-all ${
               activeDropdown === "notifications"
-                ? "border-[#00f076]/50 bg-[#00f076]/10 text-white shadow-[0_0_10px_rgba(0,240,118,0.2)]"
-                : "border-white/[0.08] bg-[#121620] text-slate-400 hover:border-white/20 hover:text-white"
+                ? "bg-[var(--glass-card-hover-bg)] text-[var(--ink)] shadow-sm border-[var(--glass-card-hover-border)]"
+                : "border-[var(--glass-card-border)] bg-[var(--glass-card-bg)] text-[var(--ink-muted)] hover:border-[var(--glass-card-hover-border)] hover:text-[var(--ink)]"
             }`}
+            style={{
+              borderColor: activeDropdown === "notifications" ? activeTintConfig.borderColor : undefined,
+            }}
             aria-label="Terminal Notifications"
           >
             <Bell className="h-3.5 w-3.5" />
             {unreadCount > 0 && (
-              <span className="absolute right-1.5 top-1.5 h-1.5 w-1.5 rounded-full bg-[#00f076] animate-pulse" />
+              <span
+                className="absolute right-1.5 top-1.5 h-1.5 w-1.5 rounded-full"
+                style={{ backgroundColor: activeTintConfig.color }}
+              />
             )}
           </button>
 
@@ -278,12 +305,35 @@ export function TerminalNav({
             }
             className={`flex h-8 w-8 items-center justify-center rounded-lg border transition-all ${
               activeDropdown === "settings"
-                ? "border-[#00f076]/50 bg-[#00f076]/10 text-white shadow-[0_0_10px_rgba(0,240,118,0.2)]"
-                : "border-white/[0.08] bg-[#121620] text-slate-400 hover:border-white/20 hover:text-white"
+                ? "bg-[var(--glass-card-hover-bg)] text-[var(--ink)] shadow-sm border-[var(--glass-card-hover-border)]"
+                : "border-[var(--glass-card-border)] bg-[var(--glass-card-bg)] text-[var(--ink-muted)] hover:border-[var(--glass-card-hover-border)] hover:text-[var(--ink)]"
             }`}
+            style={{
+              borderColor: activeDropdown === "settings" ? activeTintConfig.borderColor : undefined,
+            }}
             aria-label="Terminal Settings"
           >
             <Settings className="h-3.5 w-3.5" />
+          </button>
+
+          {/* Theme & Appearance Customization Trigger Button */}
+          <button
+            onClick={() =>
+              setActiveDropdown((prev) => (prev === "theme" ? null : "theme"))
+            }
+            className={`relative flex h-8 w-8 items-center justify-center rounded-lg border transition-all ${
+              activeDropdown === "theme"
+                ? "bg-[var(--glass-card-hover-bg)] text-[var(--ink)] shadow-sm border-[var(--glass-card-hover-border)]"
+                : "border-[var(--glass-card-border)] bg-[var(--glass-card-bg)] text-[var(--ink-muted)] hover:border-[var(--glass-card-hover-border)] hover:text-[var(--ink)]"
+            }`}
+            style={{
+              borderColor: activeDropdown === "theme" ? activeTintConfig.borderColor : undefined,
+              boxShadow: activeDropdown === "theme" ? `0 0 12px ${activeTintConfig.glowColor}` : undefined,
+            }}
+            aria-label="Terminal Appearance & Theme"
+            title="Appearance & Theme"
+          >
+            <Palette className="h-3.5 w-3.5" />
           </button>
 
           {/* ========================================================================= */}
@@ -517,8 +567,15 @@ export function TerminalNav({
               </motion.div>
             )}
           </AnimatePresence>
+
+          {/* Theme Customization Floating Panel */}
+          <AnimatePresence>
+            {activeDropdown === "theme" && (
+              <ThemePopover onClose={() => setActiveDropdown(null)} />
+            )}
+          </AnimatePresence>
         </div>
-      </div>
-    </header>
+      </header>
+    </div>
   );
 }

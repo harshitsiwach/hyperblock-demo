@@ -4,18 +4,21 @@ import { useMemo } from "react";
 import { Award, Flame, Target, TrendingDown, TrendingUp } from "lucide-react";
 import type { Play } from "@/app/lib/domain";
 import { TypewriterNumber } from "@/app/components/terminal/typewriter-number";
+import { useTheme } from "@/app/providers/theme-provider";
 
 interface SessionStatsProps {
   plays: Play[];
   streak: number;
   bestStreak: number;
+  walletConnected?: boolean;
 }
 
 function formatUsd(n: number) {
   return `$${Math.abs(n).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
 
-export function SessionStats({ plays, streak, bestStreak }: SessionStatsProps) {
+export function SessionStats({ plays, streak, bestStreak, walletConnected = true }: SessionStatsProps) {
+  const { activeTintConfig } = useTheme();
   const wins = useMemo(() => plays.filter((p) => p.status === "won").length, [plays]);
   const losses = useMemo(() => plays.filter((p) => p.status === "lost").length, [plays]);
   const breakevens = useMemo(
@@ -38,16 +41,16 @@ export function SessionStats({ plays, streak, bestStreak }: SessionStatsProps) {
   const strokeDashoffset = 100 - progressRatio * 100;
 
   return (
-    <div className="terminal-card flex flex-col justify-between p-4 lg:p-5 bg-[#121620] h-full">
-      {/* Header with Level & Progress Ring */}
-      <div className="flex items-start justify-between border-b border-white/[0.08] pb-3">
+    <div className="terminal-card flex flex-col justify-between p-4 lg:p-5 h-full">
+      {/* Header */}
+      <div className="flex items-start justify-between border-b border-[var(--glass-panel-border-subtle)] pb-3">
         <div>
-          <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+          <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--ink-muted)]">
             Session Performance
           </span>
           <div className="flex items-center gap-2 mt-0.5">
-            <h4 className="text-sm font-extrabold text-white">LEVEL {level}</h4>
-            <span className="rounded bg-white/[0.08] px-1.5 py-0.2 text-[10px] font-bold text-slate-300">
+            <h4 className="text-sm font-extrabold text-[var(--ink)]">LEVEL {level}</h4>
+            <span className="rounded bg-[var(--glass-card-bg)] px-1.5 py-0.5 text-[10px] font-bold text-[var(--ink-secondary)] border border-[var(--glass-card-border)]">
               {3 - winsInCurrentLevel} to Lvl {level + 1}
             </span>
           </div>
@@ -60,7 +63,7 @@ export function SessionStats({ plays, streak, bestStreak }: SessionStatsProps) {
               cx="18"
               cy="18"
               r="14"
-              className="stroke-white/[0.08]"
+              className="stroke-[var(--glass-card-border)]"
               strokeWidth="3.5"
               fill="none"
             />
@@ -68,7 +71,8 @@ export function SessionStats({ plays, streak, bestStreak }: SessionStatsProps) {
               cx="18"
               cy="18"
               r="14"
-              className="stroke-[#00f076] transition-all duration-700 ease-out"
+              style={{ stroke: activeTintConfig.color }}
+              className="transition-all duration-700 ease-out"
               strokeWidth="3.5"
               strokeDasharray="100"
               strokeDashoffset={strokeDashoffset}
@@ -76,7 +80,7 @@ export function SessionStats({ plays, streak, bestStreak }: SessionStatsProps) {
               fill="none"
             />
           </svg>
-          <span className="absolute font-mono text-xs font-extrabold text-white">
+          <span className="absolute font-mono text-xs font-extrabold text-[var(--ink)]">
             {level}
           </span>
         </div>
@@ -84,7 +88,7 @@ export function SessionStats({ plays, streak, bestStreak }: SessionStatsProps) {
 
       {/* Main P&L Number with Typewriter Animation */}
       <div className="my-2">
-        <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+        <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--ink-muted)]">
           Total Net P&L
         </span>
         <div className="flex items-baseline gap-2 mt-0.5">
@@ -92,49 +96,64 @@ export function SessionStats({ plays, streak, bestStreak }: SessionStatsProps) {
             value={totalPnL}
             prefix={isPositive ? "+$" : "-$"}
             decimals={2}
-            className={`text-2xl font-extrabold tracking-tight ${
-              isPositive ? "text-[#00f076]" : "text-[#ff3358]"
+            className={`text-2xl font-extrabold tracking-tight font-mono ${
+              isPositive ? "text-emerald-400" : "text-rose-400"
             }`}
           />
-          <span className="text-xs font-semibold text-slate-400">USD</span>
+          <span className="text-xs font-semibold text-[var(--ink-muted)]">USD</span>
         </div>
       </div>
 
       {/* Scorecard: Wins / Losses / Win Rate */}
-      <div className="grid grid-cols-3 gap-2 pt-2 border-t border-white/[0.06]">
-        <div className="rounded-lg bg-white/[0.02] border border-white/[0.06] p-2 text-center">
-          <span className="text-[10px] font-semibold text-slate-400 uppercase">Wins</span>
+      <div className="grid grid-cols-3 gap-2 pt-2 border-t border-[var(--glass-panel-border-subtle)]">
+        <div className="rounded-xl bg-[var(--glass-card-bg)] border border-[var(--glass-card-border)] p-2 text-center">
+          <span className="text-[10px] font-bold text-[var(--ink-muted)] uppercase">Wins</span>
           <div className="mt-0.5">
-            <TypewriterNumber value={wins} decimals={0} className="text-base font-extrabold text-[#00f076]" />
+            <TypewriterNumber value={wins} decimals={0} className="text-base font-extrabold text-emerald-400 font-mono" />
           </div>
         </div>
 
-        <div className="rounded-lg bg-white/[0.02] border border-white/[0.06] p-2 text-center">
-          <span className="text-[10px] font-semibold text-slate-400 uppercase">Losses</span>
+        <div className="rounded-xl bg-[var(--glass-card-bg)] border border-[var(--glass-card-border)] p-2 text-center">
+          <span className="text-[10px] font-bold text-[var(--ink-muted)] uppercase">Losses</span>
           <div className="mt-0.5">
-            <TypewriterNumber value={losses} decimals={0} className="text-base font-extrabold text-[#ff3358]" />
+            <TypewriterNumber value={losses} decimals={0} className="text-base font-extrabold text-rose-400 font-mono" />
           </div>
         </div>
 
-        <div className="rounded-lg bg-white/[0.02] border border-white/[0.06] p-2 text-center">
-          <span className="text-[10px] font-semibold text-slate-400 uppercase">Win Rate</span>
-          <div className="font-mono text-base font-extrabold text-slate-200 mt-0.5">
+        <div className="rounded-xl bg-[var(--glass-card-bg)] border border-[var(--glass-card-border)] p-2 text-center">
+          <span className="text-[10px] font-bold text-[var(--ink-muted)] uppercase">Win Rate</span>
+          <div className="font-mono text-base font-extrabold text-[var(--ink)] mt-0.5">
             {totalSettled > 0 ? `${winRate}%` : "—"}
           </div>
         </div>
       </div>
 
       {/* Streak Footer */}
-      <div className="mt-3 flex items-center justify-between text-xs text-slate-400">
+      <div className="mt-3 flex items-center justify-between text-xs text-[var(--ink-muted)]">
         <div className="flex items-center gap-1.5 font-medium">
           <Flame className="h-3.5 w-3.5 text-amber-400 fill-amber-400" />
           <span>Current Streak:</span>
-          <b className="text-white font-mono">{streak}x</b>
+          <b className="text-[var(--ink)] font-mono">{streak}x</b>
         </div>
         <div className="text-[11px]">
-          Best: <b className="text-slate-200 font-mono">{bestStreak}x</b>
+          Best: <b className="text-[var(--ink-secondary)] font-mono">{bestStreak}x</b>
         </div>
       </div>
+
+      {/* Wallet Onboarding Notice Inside Session Performance Box */}
+      {!walletConnected && (
+        <div className="mt-3 rounded-xl border border-[var(--ui-tint-border)] bg-[var(--ui-tint-bg)] p-3 flex items-start gap-2.5 shadow-sm">
+          <div className="flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full bg-[var(--ui-tint-color)]/20 text-[var(--ui-tint-color)] text-[10px] font-bold mt-0.5">
+            ✦
+          </div>
+          <div>
+            <div className="text-[11px] font-extrabold text-[var(--ink)]">Claim 100 tUSD</div>
+            <p className="text-[10px] font-medium text-[var(--ink-secondary)] leading-relaxed mt-0.5">
+              Connect a Solana wallet (top-right) to claim 100 tUSD and place onchain bets.
+            </p>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

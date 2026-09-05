@@ -5,6 +5,7 @@ import { AssetIcon } from "@/app/components/asset-icon";
 import { MARKETS as SUPPORTED_ASSETS, type AssetCategory, type MarketInfo } from "@/app/lib/markets";
 import type { HyperliquidPrice } from "@/app/hooks/use-hyperliquid-prices";
 import { Search, X, Check } from "lucide-react";
+import { useTheme } from "@/app/providers/theme-provider";
 
 interface AssetBrowserProps {
   selectedMarketId: number;
@@ -30,6 +31,7 @@ export function AssetBrowser({
   onSelect,
   prices,
 }: AssetBrowserProps) {
+  const { activeTintConfig } = useTheme();
   const selectedAsset = SUPPORTED_ASSETS.find((a) => a.marketId === selectedMarketId) ?? SUPPORTED_ASSETS[8];
   const [activeCategory, setActiveCategory] = useState<AssetCategory>(selectedAsset.category);
   const [searchQuery, setSearchQuery] = useState("");
@@ -48,32 +50,32 @@ export function AssetBrowser({
   }, [activeCategory, searchQuery]);
 
   return (
-    <div className="terminal-card flex flex-col p-4 bg-[#121620] space-y-3">
+    <div className="terminal-card flex flex-col p-3.5 space-y-2.5 flex-1 min-h-0">
       {/* Header & Search */}
       <div className="space-y-2.5">
         <div className="flex items-center justify-between">
-          <h3 className="text-xs font-bold uppercase tracking-wider text-white">
+          <h3 className="text-xs font-bold uppercase tracking-wider text-[var(--ink)]">
             Market Asset Browser
           </h3>
-          <span className="text-[11px] font-mono text-slate-400">
+          <span className="text-[11px] font-mono text-[var(--ink-muted)]">
             {visibleAssets.length} Available
           </span>
         </div>
 
         {/* Search Input */}
         <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-[var(--ink-muted)]" />
           <input
             type="text"
             placeholder="Search markets (GOLD, BTC, NVDA…)"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full rounded-xl border border-white/[0.08] bg-[#0b0d12] py-2 pl-9 pr-8 text-xs font-medium text-white placeholder-slate-500 focus:border-[#00f076] outline-none transition-colors"
+            className="w-full rounded-xl border border-[var(--glass-input-border)] bg-[var(--glass-input-bg)] py-2 pl-9 pr-8 text-xs font-medium text-[var(--ink)] placeholder:text-[var(--ink-muted)] focus:border-[var(--ui-tint-border)] outline-none transition-colors shadow-inner"
           />
           {searchQuery && (
             <button
               onClick={() => setSearchQuery("")}
-              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white"
+              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[var(--ink-muted)] hover:text-[var(--ink)]"
             >
               <X className="h-3.5 w-3.5" />
             </button>
@@ -91,8 +93,8 @@ export function AssetBrowser({
                 onClick={() => setActiveCategory(cat.id)}
                 className={`flex-shrink-0 rounded-lg px-2.5 py-1 text-[11px] font-bold tracking-wide transition-all ${
                   isSelected
-                    ? "bg-white text-[#090a0f] shadow-sm font-extrabold"
-                    : "border border-white/[0.06] bg-white/[0.02] text-slate-400 hover:bg-white/[0.06] hover:text-slate-200"
+                    ? "bg-[var(--ink)] text-[var(--bg)] shadow-md font-extrabold"
+                    : "border border-[var(--glass-card-border)] bg-[var(--glass-card-bg)] text-[var(--ink-muted)] hover:bg-[var(--glass-card-hover-bg)] hover:text-[var(--ink)]"
                 }`}
               >
                 {cat.label}
@@ -103,7 +105,7 @@ export function AssetBrowser({
       </div>
 
       {/* Asset Cards Grid (2 columns on desktop) */}
-      <div className="grid grid-cols-2 gap-2 max-h-[290px] overflow-y-auto pr-1">
+      <div className="grid grid-cols-2 gap-2 flex-1 min-h-0 overflow-y-auto pr-1">
         {visibleAssets.map((asset) => {
           const isSelected = asset.marketId === selectedMarketId;
           const hlPrice = prices.get(asset.symbol)?.price;
@@ -113,11 +115,20 @@ export function AssetBrowser({
               key={asset.symbol}
               type="button"
               onClick={() => onSelect(asset.marketId)}
-              className={`group flex flex-col justify-between rounded-xl p-2.5 text-left transition-all ${
+              className={`group flex flex-col justify-between rounded-xl p-2.5 text-left transition-all border ${
                 isSelected
-                  ? "border border-[#00f076] bg-[#00f076]/[0.08] shadow-[0_0_16px_rgba(0,240,118,0.12)]"
-                  : "border border-white/[0.06] bg-[#0e1118] hover:border-white/20 hover:bg-white/[0.04]"
+                  ? "shadow-sm"
+                  : "border-[var(--glass-card-border)] bg-[var(--glass-card-bg)] hover:border-[var(--glass-card-hover-border)] hover:bg-[var(--glass-card-hover-bg)]"
               }`}
+              style={
+                isSelected
+                  ? {
+                      borderColor: activeTintConfig.borderColor,
+                      backgroundColor: activeTintConfig.subtleBg,
+                      boxShadow: `0 0 16px ${activeTintConfig.glowColor}`,
+                    }
+                  : undefined
+              }
             >
               <div className="flex items-center justify-between w-full">
                 <div className="flex items-center gap-2">
@@ -125,11 +136,13 @@ export function AssetBrowser({
                     <AssetIcon symbol={asset.symbol} category={asset.category} size={20} />
                   </div>
                   <div>
-                    <div className="text-xs font-extrabold text-white flex items-center gap-1">
+                    <div className="text-xs font-extrabold text-[var(--ink)] flex items-center gap-1">
                       {asset.symbol}
-                      {isSelected && <Check className="h-3 w-3 text-[#00f076]" />}
+                      {isSelected && (
+                        <Check className="h-3 w-3" style={{ color: activeTintConfig.color }} />
+                      )}
                     </div>
-                    <div className="text-[10px] text-slate-400 truncate max-w-[85px]">
+                    <div className="text-[10px] text-[var(--ink-muted)] truncate max-w-[85px]">
                       {asset.name}
                     </div>
                   </div>
@@ -137,11 +150,11 @@ export function AssetBrowser({
               </div>
 
               {/* Live Price Tag */}
-              <div className="mt-2 flex items-baseline justify-between pt-1 border-t border-white/[0.04]">
-                <span className="font-mono text-xs font-bold text-slate-200">
+              <div className="mt-2 flex items-baseline justify-between pt-1 border-t border-[var(--glass-card-border)]">
+                <span className="font-mono text-xs font-bold text-[var(--ink)]">
                   ${hlPrice ? formatPrice(hlPrice) : "—"}
                 </span>
-                <span className="text-[9px] font-semibold text-[#00f076]">
+                <span className="text-[9px] font-semibold text-[var(--ink-muted)]">
                   1s tick
                 </span>
               </div>

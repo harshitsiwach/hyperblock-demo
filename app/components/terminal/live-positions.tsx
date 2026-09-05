@@ -73,14 +73,14 @@ export function LivePositions({
   const claimedTotal = useMemo(() => claims.reduce((s, c) => s + c.amountTokens, 0), [claims]);
   const settledCount = enriched.filter((b) => b.status === "settled").length;
   return (
-    <div className="terminal-card flex flex-col p-4 lg:p-5 bg-[#121620] h-full space-y-3">
+    <div className="terminal-card flex flex-col p-4 lg:p-5 h-full space-y-3">
       {/* Header */}
       <div className="flex items-center justify-between border-b border-white/[0.08] pb-2.5">
         <div className="flex items-center gap-2">
           <h3 className="text-xs font-bold uppercase tracking-wider text-white">
             Active Orders & Settlement
           </h3>
-          <span className="rounded-full bg-[#00f076]/10 px-2 py-0.5 text-[10px] font-bold text-[#00f076] border border-[#00f076]/20">
+          <span className="rounded-full bg-white/[0.05] px-2.5 py-0.5 text-[10px] font-bold text-slate-200 border border-white/[0.1]">
             {activePlays.length} Live
           </span>
         </div>
@@ -90,7 +90,7 @@ export function LivePositions({
       </div>
 
       {/* Main Content: Active Cards or Premium Empty State */}
-      <div className="flex-1 overflow-y-auto max-h-[360px] space-y-2.5 pr-1">
+      <div className={`flex-1 overflow-y-auto min-h-[140px] ${activePlays.length > 1 ? "grid grid-cols-1 sm:grid-cols-2 gap-2.5 space-y-0" : "space-y-2.5"} pr-1`}>
         <AnimatePresence mode="popLayout">
           {activePlays.map((play) => {
             const asset = SUPPORTED_ASSETS.find((a) => a.marketId === play.marketId);
@@ -204,14 +204,14 @@ export function LivePositions({
 
         {/* Premium Empty State */}
         {activePlays.length === 0 && (
-          <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-white/[0.1] bg-white/[0.01] p-6 text-center">
-            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-white/[0.04] text-slate-400 mb-2">
-              <Compass className="h-5 w-5 animate-pulse text-[#00f076]" />
+          <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-[var(--glass-panel-border-subtle)] bg-[var(--glass-card-bg)] py-7 px-4 text-center">
+            <div className="flex h-11 w-11 items-center justify-center rounded-full bg-[var(--glass-card-bg)] text-slate-400 mb-2.5 border border-[var(--glass-card-border)] shadow-sm">
+              <Compass className="h-5 w-5 animate-pulse text-[var(--ui-tint-color)]" />
             </div>
-            <h4 className="text-xs font-bold text-slate-200 uppercase tracking-wider">
+            <h4 className="text-xs font-bold text-[var(--ink)] uppercase tracking-wider">
               No Open Positions
             </h4>
-            <p className="mt-1 max-w-[260px] text-[11px] text-slate-400">
+            <p className="mt-1 max-w-[320px] text-[11px] text-[var(--ink-muted)]">
               Pick an asset, select UP or DOWN on the ticket, and let the 10-second Hyperliquid ticks decide.
             </p>
           </div>
@@ -219,12 +219,12 @@ export function LivePositions({
       </div>
 
       {/* On-chain bet record (verified from devnet transfers) */}
-      <div className="border-t border-white/[0.08] pt-3">
+      <div className="border-t border-[var(--glass-panel-border-subtle)] pt-3">
         <div className="flex items-center justify-between pb-2">
-          <div className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-slate-300">
-            <Receipt className="h-3.5 w-3.5 text-slate-400" />
+          <div className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-[var(--ink-secondary)]">
+            <Receipt className="h-3.5 w-3.5 text-[var(--ink-muted)]" />
             <span>Bet Record</span>
-            <span className="rounded-full bg-white/[0.05] border border-white/[0.08] px-1.5 py-px text-[10px] font-mono text-slate-400">
+            <span className="rounded-full bg-[var(--glass-card-bg)] border border-[var(--glass-card-border)] px-1.5 py-px text-[10px] font-mono text-[var(--ink-muted)]">
               on-chain
             </span>
           </div>
@@ -232,7 +232,7 @@ export function LivePositions({
             <button
               onClick={onRefreshHistory}
               disabled={historyLoading || !walletConnected}
-              className="flex items-center gap-1 rounded-md border border-white/[0.08] bg-white/[0.03] px-2 py-1 text-[10px] font-bold text-slate-300 hover:bg-white/[0.08] disabled:opacity-40"
+              className="flex items-center gap-1 rounded-md border border-[var(--glass-card-border)] bg-[var(--glass-card-bg)] px-2 py-1 text-[10px] font-bold text-[var(--ink-secondary)] hover:bg-[var(--glass-card-hover-bg)] hover:text-[var(--ink)] disabled:opacity-40"
               title="Reload bet record from devnet"
             >
               <RefreshCw className={`h-3 w-3 ${historyLoading ? "animate-spin" : ""}`} />
@@ -242,17 +242,17 @@ export function LivePositions({
         </div>
 
         {!walletConnected ? (
-          <p className="rounded-xl border border-dashed border-white/[0.1] bg-white/[0.01] px-3 py-3 text-center text-[11px] text-slate-500">
+          <p className="rounded-xl border border-dashed border-[var(--glass-card-border)] bg-[var(--glass-card-bg)] px-3 py-3 text-center text-[11px] text-[var(--ink-muted)]">
             Connect a wallet to load your verified on-chain bet record.
           </p>
         ) : enriched.length === 0 && claims.length === 0 ? (
-          <p className="rounded-xl border border-dashed border-white/[0.1] bg-white/[0.01] px-3 py-3 text-center text-[11px] text-slate-500">
+          <p className="rounded-xl border border-dashed border-[var(--glass-card-border)] bg-[var(--glass-card-bg)] px-3 py-3 text-center text-[11px] text-[var(--ink-muted)]">
             {historyLoading ? "Scanning devnet transfers…" : "No bets yet — your settled rounds will appear here with tx links."}
           </p>
         ) : (
           <div className="max-h-[220px] space-y-1.5 overflow-y-auto pr-1">
             {claims.length > 0 && (
-              <div className="rounded-lg border border-white/[0.06] bg-white/[0.02] px-2.5 py-1.5 text-[10px] font-mono text-slate-400">
+              <div className="rounded-lg border border-[var(--glass-card-border)] bg-[var(--glass-card-bg)] px-2.5 py-1.5 text-[10px] font-mono text-[var(--ink-muted)]">
                 Faucet: +{claimedTotal.toFixed(2)} tUSD across {claims.length} claim{claims.length === 1 ? "" : "s"}
               </div>
             )}
@@ -284,10 +284,10 @@ export function LivePositions({
                       >
                         {isSettling ? "settling" : profit ? "won" : "lost"}
                       </span>
-                      <span className="truncate font-bold text-white">
+                      <span className="truncate font-bold text-[var(--ink)]">
                         {b.symbol ? `${b.symbol} ${b.direction?.toUpperCase() ?? ""}` : "tUSD round"}
                       </span>
-                      <span className="font-mono text-slate-500">{timeAgo(t, now)}</span>
+                      <span className="font-mono text-[var(--ink-muted)]">{timeAgo(t, now)}</span>
                     </div>
                     <span
                       className={`font-mono font-extrabold ${
@@ -297,7 +297,7 @@ export function LivePositions({
                       {isSettling ? `−${b.stakeTokens} tUSD` : `${b.pnlTokens >= 0 ? "+" : "−"}${Math.abs(b.pnlTokens).toFixed(2)} tUSD`}
                     </span>
                   </div>
-                  <div className="mt-1 flex items-center justify-between gap-2 font-mono text-[10px] text-slate-400">
+                  <div className="mt-1 flex items-center justify-between gap-2 font-mono text-[10px] text-[var(--ink-muted)]">
                     <span>
                       stake {b.stakeTokens} → payout {isSettling ? "…" : b.payoutTokens.toFixed(2)}
                     </span>
@@ -306,7 +306,7 @@ export function LivePositions({
                         href={explorerTxUrl(b.stakeSignature)}
                         target="_blank"
                         rel="noreferrer"
-                        className="flex items-center gap-0.5 text-slate-400 hover:text-white"
+                        className="flex items-center gap-0.5 text-[var(--ink-muted)] hover:text-[var(--ink)]"
                         title="Stake transaction"
                       >
                         stake <ExternalLink className="h-2.5 w-2.5" />
@@ -316,7 +316,7 @@ export function LivePositions({
                           href={explorerTxUrl(b.payoutSignature)}
                           target="_blank"
                           rel="noreferrer"
-                          className="flex items-center gap-0.5 text-slate-400 hover:text-white"
+                          className="flex items-center gap-0.5 text-[var(--ink-muted)] hover:text-[var(--ink)]"
                           title="Payout transaction"
                         >
                           payout <ExternalLink className="h-2.5 w-2.5" />
