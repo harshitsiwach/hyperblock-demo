@@ -39,7 +39,10 @@ export function GameArena() {
       setSelectedMarketId(v);
       return;
     }
-    const saved = Number.parseInt(localStorage.getItem("lever:selectedMarketId") ?? "", 10);
+    const saved = Number.parseInt(
+      localStorage.getItem("hyperblock:selectedMarketId") ?? localStorage.getItem("lever:selectedMarketId") ?? "",
+      10,
+    );
     if (validIds.includes(saved)) {
       setSelectedMarketId(saved);
     }
@@ -47,7 +50,8 @@ export function GameArena() {
 
   useEffect(() => {
     if (typeof window !== "undefined") {
-      localStorage.setItem("lever:selectedMarketId", String(selectedMarketId));
+      localStorage.setItem("hyperblock:selectedMarketId", String(selectedMarketId));
+      localStorage.removeItem("lever:selectedMarketId");
       const url = new URL(window.location.href);
       url.searchParams.set("market", String(selectedMarketId));
       window.history.replaceState(null, "", url.toString());
@@ -205,7 +209,7 @@ export function GameArena() {
   if (!snapshot) {
     return (
       <main className="loading-screen">
-        <div className="loading-mark">lever</div>
+        <div className="loading-mark">hyperblock</div>
         <strong>{error ? "Live market unavailable" : "Loading market"}</strong>
         <p>{error ?? "Connecting to the live price feed…"}</p>
         {error ? <button onClick={() => void refresh()} type="button">Try again</button> : null}
@@ -296,15 +300,9 @@ export function GameArena() {
             </div>
             <h1 className="num">
               {hlCurrent ? `$${hlCurrent.price.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : `$${snapshot.currentPrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
-              <span style={{ fontSize: 11, color: "var(--up)", marginLeft: 8, fontWeight: 700 }}>
-                {hlCurrent ? `Hyperliquid · live · ${((Date.now() - hlCurrent.updatedAt) / 1000).toFixed(1)}s` : "snapshot"}
-              </span>
             </h1>
-            <span className="chg" style={{ color: "var(--mut)", fontWeight: 600 }}>10-second plays · 1000× · Hyperliquid per-second</span>
+            <span className="chg">10-second plays · 1000× · Hyperliquid per-second</span>
           </section>
-          <div style={{ fontSize: 11, color: "var(--mut)", marginTop: 4 }}>
-            Click any asset above → live 1s chart at <code>/assets/{selectedAsset?.symbol ?? "GOLD"}</code> · {selectedAsset?.label ?? ""} · {hlCurrent ? `${hlHistory.length} ticks` : "connecting…"}
-          </div>
           {/* Primary: @bklit/live-line-chart — hyperliquid live, WS-driven, smooth */}
           <LiveHyperliquidChart
             data={hlHistory.length ? hlHistory.map((h) => ({ time: h.t / 1000, value: h.p })) : snapshot.priceHistory.map((p) => ({ time: p.timestamp / 1000, value: p.price }))}

@@ -4,14 +4,7 @@ import React, { createContext, useContext, useEffect, useState, useMemo } from "
 
 export type ThemeMode = "dark" | "light";
 
-export type ThemeTint =
-  | "sky"
-  | "ice"
-  | "silver"
-  | "graphite"
-  | "violet"
-  | "green"
-  | "amber";
+export type ThemeTint = "orange";
 
 export interface TintConfig {
   id: ThemeTint;
@@ -25,67 +18,13 @@ export interface TintConfig {
 
 export const TINT_OPTIONS: TintConfig[] = [
   {
-    id: "sky",
-    label: "Sky Blue",
-    color: "#38bdf8",
-    rgb: "56, 189, 248",
-    subtleBg: "rgba(56, 189, 248, 0.08)",
-    borderColor: "rgba(56, 189, 248, 0.35)",
-    glowColor: "rgba(56, 189, 248, 0.2)",
-  },
-  {
-    id: "ice",
-    label: "Ice Blue",
-    color: "#7dd3fc",
-    rgb: "125, 211, 252",
-    subtleBg: "rgba(125, 211, 252, 0.08)",
-    borderColor: "rgba(125, 211, 252, 0.35)",
-    glowColor: "rgba(125, 211, 252, 0.2)",
-  },
-  {
-    id: "silver",
-    label: "Silver",
-    color: "#e2e8f0",
-    rgb: "226, 232, 240",
-    subtleBg: "rgba(226, 232, 240, 0.08)",
-    borderColor: "rgba(226, 232, 240, 0.35)",
-    glowColor: "rgba(226, 232, 240, 0.18)",
-  },
-  {
-    id: "graphite",
-    label: "Graphite",
-    color: "#94a3b8",
-    rgb: "148, 163, 184",
-    subtleBg: "rgba(148, 163, 184, 0.08)",
-    borderColor: "rgba(148, 163, 184, 0.35)",
-    glowColor: "rgba(148, 163, 184, 0.18)",
-  },
-  {
-    id: "violet",
-    label: "Soft Violet",
-    color: "#a78bfa",
-    rgb: "167, 139, 250",
-    subtleBg: "rgba(167, 139, 250, 0.08)",
-    borderColor: "rgba(167, 139, 250, 0.35)",
-    glowColor: "rgba(167, 139, 250, 0.2)",
-  },
-  {
-    id: "green",
-    label: "Soft Green",
-    color: "#34d399",
-    rgb: "52, 211, 153",
-    subtleBg: "rgba(52, 211, 153, 0.08)",
-    borderColor: "rgba(52, 211, 153, 0.35)",
-    glowColor: "rgba(52, 211, 153, 0.2)",
-  },
-  {
-    id: "amber",
-    label: "Soft Amber",
-    color: "#fbbf24",
-    rgb: "251, 191, 36",
-    subtleBg: "rgba(251, 191, 36, 0.08)",
-    borderColor: "rgba(251, 191, 36, 0.35)",
-    glowColor: "rgba(251, 191, 36, 0.2)",
+    id: "orange",
+    label: "Neon Orange",
+    color: "#FF5F1F",
+    rgb: "255, 95, 31",
+    subtleBg: "#FFF0EA",
+    borderColor: "rgba(255, 95, 31, 0.45)",
+    glowColor: "rgba(255, 95, 31, 0.18)",
   },
 ];
 
@@ -110,16 +49,16 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
         if (saved === "dark" || saved === "light") return saved;
       } catch {}
     }
-    return "dark";
+    return "light";
   });
   const [tint, setTintState] = useState<ThemeTint>(() => {
     if (typeof window !== "undefined") {
       try {
-        const saved = localStorage.getItem(STORAGE_KEY_TINT) as ThemeTint | null;
-        if (saved && TINT_OPTIONS.some((t) => t.id === saved)) return saved;
+        const saved = localStorage.getItem(STORAGE_KEY_TINT);
+        if (saved === "orange") return "orange";
       } catch {}
     }
-    return "sky";
+    return "orange";
   });
   const [mounted, setMounted] = useState(false);
 
@@ -161,20 +100,14 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
       root.classList.remove("dark");
     }
 
-    // Dynamic accent CSS variables
+    // Dynamic accent CSS variables (single neon-orange brand accent)
     root.style.setProperty("--ui-tint-color", activeTintConfig.color);
     root.style.setProperty("--ui-tint-rgb", activeTintConfig.rgb);
     root.style.setProperty("--ui-tint-bg", activeTintConfig.subtleBg);
     root.style.setProperty("--ui-tint-border", activeTintConfig.borderColor);
     root.style.setProperty("--ui-tint-glow", activeTintConfig.glowColor);
 
-    // Visibly rich atmospheric background tint that reflects the selected theme color
-    const isDark = mode === "dark";
-    root.style.setProperty("--ui-tint-ambient-high", `rgba(${activeTintConfig.rgb}, ${isDark ? 0.18 : 0.16})`);
-    root.style.setProperty("--ui-tint-ambient-mid", `rgba(${activeTintConfig.rgb}, ${isDark ? 0.12 : 0.11})`);
-    root.style.setProperty("--ui-tint-ambient-low", `rgba(${activeTintConfig.rgb}, ${isDark ? 0.07 : 0.06})`);
-    root.style.setProperty("--ui-tint-ambient-wash", `rgba(${activeTintConfig.rgb}, ${isDark ? 0.05 : 0.04})`);
-    root.style.setProperty("--ui-tint-ambient", `rgba(${activeTintConfig.rgb}, ${isDark ? 0.14 : 0.12})`);
+    // Flat system: no atmospheric background washes.
   }, [mode, tint, activeTintConfig]);
 
   const value = useMemo(

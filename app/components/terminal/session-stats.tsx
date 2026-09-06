@@ -1,24 +1,24 @@
 "use client";
 
 import { useMemo } from "react";
-import { Award, Flame, Target, TrendingDown, TrendingUp } from "lucide-react";
+import { Flame } from "lucide-react";
 import type { Play } from "@/app/lib/domain";
 import { TypewriterNumber } from "@/app/components/terminal/typewriter-number";
-import { useTheme } from "@/app/providers/theme-provider";
 
 interface SessionStatsProps {
   plays: Play[];
   streak: number;
   bestStreak: number;
   walletConnected?: boolean;
+  /** Render content without the outer card frame (for embedding in popovers). */
+  bare?: boolean;
 }
 
 function formatUsd(n: number) {
   return `$${Math.abs(n).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
 
-export function SessionStats({ plays, streak, bestStreak, walletConnected = true }: SessionStatsProps) {
-  const { activeTintConfig } = useTheme();
+export function SessionStats({ plays, streak, bestStreak, walletConnected = true, bare = false }: SessionStatsProps) {
   const wins = useMemo(() => plays.filter((p) => p.status === "won").length, [plays]);
   const losses = useMemo(() => plays.filter((p) => p.status === "lost").length, [plays]);
   const breakevens = useMemo(
@@ -34,14 +34,8 @@ export function SessionStats({ plays, streak, bestStreak, walletConnected = true
 
   const isPositive = totalPnL >= 0;
 
-  // Level & XP math: 3 wins per level
-  const level = Math.floor(wins / 3) + 1;
-  const winsInCurrentLevel = wins % 3;
-  const progressRatio = winsInCurrentLevel / 3;
-  const strokeDashoffset = 100 - progressRatio * 100;
-
   return (
-    <div className="terminal-card flex flex-col justify-between p-4 lg:p-5 h-full">
+    <div className={bare ? "flex flex-col justify-between" : "terminal-card flex flex-col justify-between p-4 lg:p-5 h-full"}>
       {/* Header */}
       <div className="flex items-start justify-between border-b border-[var(--glass-panel-border-subtle)] pb-3">
         <div>
@@ -49,40 +43,10 @@ export function SessionStats({ plays, streak, bestStreak, walletConnected = true
             Session Performance
           </span>
           <div className="flex items-center gap-2 mt-0.5">
-            <h4 className="text-sm font-extrabold text-[var(--ink)]">LEVEL {level}</h4>
-            <span className="rounded bg-[var(--glass-card-bg)] px-1.5 py-0.5 text-[10px] font-bold text-[var(--ink-secondary)] border border-[var(--glass-card-border)]">
-              {3 - winsInCurrentLevel} to Lvl {level + 1}
-            </span>
+            <h4 className="text-sm font-extrabold text-[var(--ink)]">
+              {totalSettled > 0 ? `${winRate}% win rate` : "No settled plays yet"}
+            </h4>
           </div>
-        </div>
-
-        {/* Circular Progress Ring */}
-        <div className="relative flex h-11 w-11 items-center justify-center">
-          <svg className="h-full w-full -rotate-90" viewBox="0 0 36 36">
-            <circle
-              cx="18"
-              cy="18"
-              r="14"
-              className="stroke-[var(--glass-card-border)]"
-              strokeWidth="3.5"
-              fill="none"
-            />
-            <circle
-              cx="18"
-              cy="18"
-              r="14"
-              style={{ stroke: activeTintConfig.color }}
-              className="transition-all duration-700 ease-out"
-              strokeWidth="3.5"
-              strokeDasharray="100"
-              strokeDashoffset={strokeDashoffset}
-              strokeLinecap="round"
-              fill="none"
-            />
-          </svg>
-          <span className="absolute font-mono text-xs font-extrabold text-[var(--ink)]">
-            {level}
-          </span>
         </div>
       </div>
 

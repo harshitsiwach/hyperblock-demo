@@ -14,9 +14,9 @@ interface AssetBrowserProps {
 }
 
 const CATEGORIES: { id: AssetCategory; label: string }[] = [
-  { id: "commodities", label: "Commodities" },
   { id: "crypto", label: "Crypto" },
   { id: "stocks", label: "Stocks" },
+  { id: "commodities", label: "Commodities" },
   { id: "forex", label: "Forex" },
 ];
 
@@ -32,8 +32,7 @@ export function AssetBrowser({
   prices,
 }: AssetBrowserProps) {
   const { activeTintConfig } = useTheme();
-  const selectedAsset = SUPPORTED_ASSETS.find((a) => a.marketId === selectedMarketId) ?? SUPPORTED_ASSETS[8];
-  const [activeCategory, setActiveCategory] = useState<AssetCategory>(selectedAsset.category);
+  const [activeCategory, setActiveCategory] = useState<AssetCategory>("crypto");
   const [searchQuery, setSearchQuery] = useState("");
 
   const visibleAssets = useMemo(() => {
@@ -50,9 +49,9 @@ export function AssetBrowser({
   }, [activeCategory, searchQuery]);
 
   return (
-    <div className="terminal-card flex flex-col p-3.5 space-y-2.5 flex-shrink-0">
+    <div className="terminal-card flex flex-col p-3.5 space-y-2.5 flex-1 min-h-[250px]">
       {/* Header & Search */}
-      <div className="space-y-2.5">
+      <div className="space-y-2">
         <div className="flex items-center justify-between">
           <h3 className="text-xs font-bold uppercase tracking-wider text-[var(--ink)]">
             Market Asset Browser
@@ -70,7 +69,7 @@ export function AssetBrowser({
             placeholder="Search markets (GOLD, BTC, NVDA…)"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full rounded-xl border border-[var(--glass-input-border)] bg-[var(--glass-input-bg)] py-2 pl-9 pr-8 text-xs font-medium text-[var(--ink)] placeholder:text-[var(--ink-muted)] focus:border-[var(--ui-tint-border)] outline-none transition-colors shadow-inner"
+            className="w-full rounded-lg border border-[var(--hair)] bg-[var(--card)] py-1.5 pl-8 pr-8 text-xs font-medium text-[var(--ink)] placeholder:text-[var(--ink-muted)] focus:border-[var(--color-neon-orange)] outline-none transition-colors"
           />
           {searchQuery && (
             <button
@@ -83,7 +82,7 @@ export function AssetBrowser({
         </div>
 
         {/* Category Filter Pills */}
-        <div className="flex gap-1.5 overflow-x-auto pb-1">
+        <div className="flex gap-1.5 overflow-x-auto pb-0.5">
           {CATEGORIES.map((cat) => {
             const isSelected = activeCategory === cat.id;
             return (
@@ -91,10 +90,10 @@ export function AssetBrowser({
                 key={cat.id}
                 type="button"
                 onClick={() => setActiveCategory(cat.id)}
-                className={`flex-shrink-0 rounded-lg px-2.5 py-1 text-[11px] font-bold tracking-wide transition-all ${
+                className={`flex-shrink-0 rounded-md px-2.5 py-1 text-[11px] font-bold tracking-wide transition-all ${
                   isSelected
-                    ? "bg-[var(--ink)] text-[var(--bg)] shadow-md font-extrabold"
-                    : "border border-[var(--glass-card-border)] bg-[var(--glass-card-bg)] text-[var(--ink-muted)] hover:bg-[var(--glass-card-hover-bg)] hover:text-[var(--ink)]"
+                    ? "bg-[var(--color-neon-orange-soft)] text-[var(--color-neon-orange)] border border-[var(--color-neon-orange)] font-extrabold"
+                    : "border border-[var(--hair)] bg-[var(--card)] text-[var(--ink-muted)] hover:text-[var(--ink)] hover:border-[var(--color-neon-orange)]"
                 }`}
               >
                 {cat.label}
@@ -104,8 +103,8 @@ export function AssetBrowser({
         </div>
       </div>
 
-      {/* Asset Cards Grid (2 columns on desktop) - height fixed to 4 rows so Commodities and Stocks match Crypto layout */}
-      <div className="grid grid-cols-2 gap-2 h-[352px] max-h-[352px] overflow-y-auto pr-1">
+      {/* Asset Cards Grid (2 columns on desktop) with internal scrolling */}
+      <div className="grid grid-cols-2 gap-2 h-[156px] max-h-[156px] overflow-y-auto pr-1">
         {visibleAssets.map((asset) => {
           const isSelected = asset.marketId === selectedMarketId;
           const hlPrice = prices.get(asset.symbol)?.price;
@@ -115,20 +114,11 @@ export function AssetBrowser({
               key={asset.symbol}
               type="button"
               onClick={() => onSelect(asset.marketId)}
-              className={`group flex flex-col justify-between rounded-xl p-2.5 text-left transition-all border ${
+              className={`group flex flex-col justify-between rounded-lg p-2.5 text-left transition-all border ${
                 isSelected
-                  ? "shadow-sm"
-                  : "border-[var(--glass-card-border)] bg-[var(--glass-card-bg)] hover:border-[var(--glass-card-hover-border)] hover:bg-[var(--glass-card-hover-bg)]"
+                  ? "bg-[var(--color-neon-orange-soft)] border-[var(--color-neon-orange)] shadow-sm"
+                  : "border-[var(--hair)] bg-[var(--card)] hover:border-[var(--color-neon-orange)] hover:bg-[var(--color-neon-orange-soft)]"
               }`}
-              style={
-                isSelected
-                  ? {
-                      borderColor: activeTintConfig.borderColor,
-                      backgroundColor: activeTintConfig.subtleBg,
-                      boxShadow: `0 0 16px ${activeTintConfig.glowColor}`,
-                    }
-                  : undefined
-              }
             >
               <div className="flex items-center justify-between w-full">
                 <div className="flex items-center gap-2">
@@ -139,7 +129,7 @@ export function AssetBrowser({
                     <div className="text-xs font-extrabold text-[var(--ink)] flex items-center gap-1">
                       {asset.symbol}
                       {isSelected && (
-                        <Check className="h-3 w-3" style={{ color: activeTintConfig.color }} />
+                        <Check className="h-3 w-3 text-[var(--color-neon-orange)]" />
                       )}
                     </div>
                     <div className="text-[10px] text-[var(--ink-muted)] truncate max-w-[85px]">
@@ -150,7 +140,7 @@ export function AssetBrowser({
               </div>
 
               {/* Live Price Tag */}
-              <div className="mt-2 flex items-baseline justify-between pt-1 border-t border-[var(--glass-card-border)]">
+              <div className="mt-2 flex items-baseline justify-between pt-1 border-t border-[var(--hair)]">
                 <span className="font-mono text-xs font-bold text-[var(--ink)]">
                   ${hlPrice ? formatPrice(hlPrice) : "—"}
                 </span>

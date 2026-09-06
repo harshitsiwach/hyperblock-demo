@@ -1,7 +1,7 @@
 "use client";
 
-import { useMemo, useState, type MouseEvent } from "react";
-import { ArrowDown, ArrowUp, Zap, Info } from "lucide-react";
+import { useMemo } from "react";
+import { ArrowDown, ArrowUp, Zap } from "lucide-react";
 import type { MarketInfo } from "@/app/lib/markets";
 import { TypewriterNumber } from "@/app/components/terminal/typewriter-number";
 
@@ -13,7 +13,8 @@ interface TradingTicketProps {
   disabled?: boolean;
   activeCount: number;
   maxPositions?: number;
-  betFlash: "up" | "down" | null;
+  /** Reserved: flash direction on bet (currently no visual effect; kept for API compat). */
+  betFlash?: "up" | "down" | null;
 }
 
 const PRESETS = [5, 10, 25, 100];
@@ -26,67 +27,42 @@ export function TradingTicket({
   disabled = false,
   activeCount,
   maxPositions = 8,
-  betFlash,
 }: TradingTicketProps) {
-  const [ripples, setRipples] = useState<{ id: number; x: number; y: number; dir: "up" | "down" }[]>([]);
-
   // 1000x capped profit math: capped at 5x before 10% fee = 4.5x
   const maxProfit = useMemo(() => amount * 5 * 0.9, [amount]);
   const maxReturn = useMemo(() => amount + maxProfit, [amount, maxProfit]);
 
-  const handleButtonClick = (e: MouseEvent<HTMLButtonElement>, dir: "up" | "down") => {
+  const handleButtonClick = (dir: "up" | "down") => {
     if (disabled || activeCount >= maxPositions) return;
-
-    // Create ripple at click coordinate
-    const rect = e.currentTarget.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
-    const id = Date.now();
-
-    setRipples((prev) => [...prev, { id, x, y, dir }]);
-    setTimeout(() => {
-      setRipples((prev) => prev.filter((r) => r.id !== id));
-    }, 600);
-
     onBet(dir);
   };
 
   return (
-    <div className="ticket-edge-shimmer relative rounded-2xl overflow-hidden group/ticket transition-all duration-300">
-      {/* Animated Rotating Laser Edge Beam masked strictly to 1.5px border */}
-      <div className="ticket-beam-mask">
-        <div className="ticket-border-beam" />
-      </div>
-
-      {/* Top Specular Glint that sweeps automatically every few seconds and on hover */}
-      <div className="ticket-specular-glint" />
-
-      {/* Inner Liquid Glass Card Body */}
-      <div className="terminal-card relative z-10 w-full h-full flex flex-col p-4 lg:p-4.5 space-y-3.5 rounded-[15.5px]">
+    <div className="relative rounded-lg border border-[var(--hair)] bg-[var(--card)] transition-colors flex-shrink-0 w-full shadow-sm">
+      {/* Inner Flat Card Body */}
+      <div className="relative z-10 w-full flex flex-col p-3.5 space-y-3 rounded-lg">
         {/* Top Header: Title & Info */}
-        <div className="flex items-center justify-between border-b border-[var(--glass-panel-border-subtle)] pb-2.5">
-        <div className="flex items-center gap-2">
-          <Zap className="h-4 w-4 text-amber-400" />
-          <h3 className="text-xs sm:text-sm font-extrabold tracking-tight text-[var(--ink)] uppercase flex items-center gap-1.5">
-            10-Second Order Ticket · <span className="text-[var(--ui-tint-color)] font-mono">{asset.symbol}</span>
-          </h3>
-          <span className="hidden sm:inline-block rounded-full bg-[var(--glass-card-bg)] px-2 py-0.5 text-[9px] font-bold text-[var(--ink-secondary)] border border-[var(--glass-card-border)]">
-            1000x Price Sensitivity · Capped Risk
+        <div className="flex items-center justify-between gap-2 border-b border-[var(--hair)] pb-2.5">
+          <div className="flex items-center gap-1.5 min-w-0">
+            <Zap className="h-4 w-4 text-[var(--color-neon-orange)] flex-shrink-0" />
+            <h3 className="text-xs sm:text-sm font-extrabold tracking-tight text-[var(--ink)] uppercase truncate flex items-center gap-1">
+              Order Ticket · <span className="text-[var(--color-neon-orange)] font-mono">{asset.symbol}</span>
+            </h3>
+            <span className="hidden xl:inline-block rounded-full bg-[var(--card)] px-2 py-0.5 text-[9px] font-bold text-[var(--ink-secondary)] border border-[var(--hair)] flex-shrink-0">
+              1000x · Capped
+            </span>
+          </div>
+
+          <span className="rounded-md border border-[var(--hair)] bg-[var(--card)] px-2 py-0.5 text-[10px] font-mono font-bold text-[var(--ink-secondary)] flex-shrink-0">
+            {activeCount}/{maxPositions} Active
           </span>
         </div>
 
-        <span className="rounded-lg border border-[var(--glass-card-border)] bg-[var(--glass-card-bg)] px-2.5 py-1 text-[10px] font-mono font-bold text-[var(--ink-secondary)]">
-          {activeCount}/{maxPositions} Active
-        </span>
-      </div>
-
-      {/* Main Console: Left Stake & Info + Right UP/DOWN Triggers */}
-      <div className="grid grid-cols-1 md:grid-cols-12 gap-3.5 items-center">
-        {/* Left Column: Stake Input & Presets & Metrics */}
-        <div className="md:col-span-7 flex flex-col gap-2.5">
-          {/* Stake Input & Quick Presets */}
-          <div className="flex flex-col sm:flex-row gap-2 sm:items-center">
-            <div className="relative flex-1 rounded-xl border border-[var(--glass-input-border)] bg-[var(--glass-input-bg)] px-3.5 py-2 focus-within:border-[var(--ui-tint-border)] transition-all shadow-inner">
+        {/* Main Console: stacked — stake, metrics, then UP/DOWN triggers */}
+        <div className="flex flex-col gap-2.5">
+          {/* Stake Input & Presets */}
+          <div className="flex flex-col gap-2">
+            <div className="relative rounded-lg border border-[var(--hair)] bg-[var(--card)] px-3.5 py-2 focus-within:border-[var(--color-neon-orange)] transition-colors">
               <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-xs font-bold text-[var(--ink-muted)]">$</span>
               <input
                 id="stake-amount"
@@ -100,16 +76,16 @@ export function TradingTicket({
               />
             </div>
 
-            <div className="flex gap-1.5 flex-shrink-0">
+            <div className="grid grid-cols-4 gap-1.5">
               {PRESETS.map((preset) => (
                 <button
                   key={preset}
                   type="button"
                   onClick={() => onAmountChange(preset)}
-                  className={`rounded-xl px-2.5 py-2 font-mono text-xs font-bold transition-all ${
+                  className={`rounded-lg px-2 py-1.5 font-mono text-xs font-bold transition-all ${
                     amount === preset
-                      ? "bg-[var(--ink)] text-[var(--bg)] shadow-md font-extrabold"
-                      : "border border-[var(--glass-card-border)] bg-[var(--glass-card-bg)] text-[var(--ink-secondary)] hover:bg-[var(--glass-card-hover-bg)] hover:text-[var(--ink)]"
+                      ? "bg-[var(--color-neon-orange-soft)] border border-[var(--color-neon-orange)] text-[var(--color-neon-orange)] font-extrabold"
+                      : "border border-[var(--hair)] bg-[var(--card)] text-[var(--ink-secondary)] hover:border-[var(--color-neon-orange)] hover:text-[var(--color-neon-orange)]"
                   }`}
                 >
                   ${preset}
@@ -119,78 +95,49 @@ export function TradingTicket({
           </div>
 
           {/* Return & Payout Estimation Strip */}
-          <div className="rounded-xl border border-[var(--glass-card-border)] bg-[var(--glass-card-bg)] px-3 py-2 text-xs flex items-center justify-between gap-2">
+          <div className="rounded-lg border border-[var(--hair)] bg-[var(--card)] px-3 py-2 text-xs flex items-center justify-between gap-x-2 gap-y-1 flex-wrap">
             <div className="flex items-center gap-1.5">
               <span className="text-[11px] text-[var(--ink-muted)]">Max Capped Profit:</span>
-              <TypewriterNumber value={maxProfit} prefix="+$" decimals={2} className="text-emerald-400 font-extrabold text-xs font-mono" />
+              <TypewriterNumber value={maxProfit} prefix="+$" decimals={2} className="text-[var(--up)] font-extrabold text-xs font-mono" />
             </div>
-            <div className="h-3 w-[1px] bg-[var(--glass-card-border)]" />
+            <div className="h-3 w-[1px] bg-[var(--hair)]" />
             <div className="flex items-center gap-1.5">
               <span className="text-[11px] text-[var(--ink-muted)]">Potential Return:</span>
               <TypewriterNumber value={maxReturn} prefix="$" decimals={2} className="text-[var(--ink)] font-extrabold text-xs font-mono" />
             </div>
           </div>
+
+          {/* Prominent UP / DOWN Trigger Buttons */}
+          <div className="grid grid-cols-2 gap-2.5 pt-0.5">
+            {/* UP BUTTON */}
+            <button
+              type="button"
+              onClick={() => handleButtonClick("up")}
+              disabled={disabled || activeCount >= maxPositions}
+              className="trigger-btn-up group h-12 rounded-lg flex items-center justify-center gap-2 font-extrabold text-sm tracking-wide uppercase disabled:opacity-35 disabled:cursor-not-allowed cursor-pointer transition-all border border-[var(--hair)] hover:border-[var(--up)]"
+            >
+              <ArrowUp className="h-5 w-5 text-[var(--up)] group-hover:scale-110 transition-transform" />
+              <span className="tracking-wider text-[var(--up)] font-black">UP</span>
+            </button>
+
+            {/* DOWN BUTTON */}
+            <button
+              type="button"
+              onClick={() => handleButtonClick("down")}
+              disabled={disabled || activeCount >= maxPositions}
+              className="trigger-btn-down group h-12 rounded-lg flex items-center justify-center gap-2 font-extrabold text-sm tracking-wide uppercase disabled:opacity-35 disabled:cursor-not-allowed cursor-pointer transition-all border border-[var(--hair)] hover:border-[var(--down)]"
+            >
+              <ArrowDown className="h-5 w-5 text-[var(--down)] group-hover:scale-110 transition-transform" />
+              <span className="tracking-wider text-[var(--down)] font-black">DOWN</span>
+            </button>
+          </div>
         </div>
 
-        {/* Right Column: Prominent UP / DOWN Trigger Buttons */}
-        <div className="md:col-span-5 grid grid-cols-2 gap-2.5">
-          {/* UP BUTTON */}
-          <button
-            type="button"
-            onClick={(e) => handleButtonClick(e, "up")}
-            disabled={disabled || activeCount >= maxPositions}
-            className="trigger-btn-up group h-14 sm:h-16 rounded-xl flex items-center justify-center gap-2 font-extrabold text-sm sm:text-base tracking-wide uppercase disabled:opacity-35 disabled:cursor-not-allowed cursor-pointer shadow-lg"
-          >
-            {/* Energy Sweep on Action */}
-            {betFlash === "up" && <span className="energy-beam-up" />}
-
-            {/* Click Ripples */}
-            {ripples
-              .filter((r) => r.dir === "up")
-              .map((r) => (
-                <span
-                  key={r.id}
-                  className="btn-ripple"
-                  style={{ left: r.x, top: r.y, width: 20, height: 20 }}
-                />
-              ))}
-
-            <ArrowUp className="h-5 w-5 transition-transform duration-200 group-hover:-translate-y-0.5 group-hover:scale-110" />
-            <span className="tracking-wider">UP</span>
-          </button>
-
-          {/* DOWN BUTTON */}
-          <button
-            type="button"
-            onClick={(e) => handleButtonClick(e, "down")}
-            disabled={disabled || activeCount >= maxPositions}
-            className="trigger-btn-down group h-14 sm:h-16 rounded-xl flex items-center justify-center gap-2 font-extrabold text-sm sm:text-base tracking-wide uppercase disabled:opacity-35 disabled:cursor-not-allowed cursor-pointer shadow-lg"
-          >
-            {/* Energy Sweep on Action */}
-            {betFlash === "down" && <span className="energy-beam-down" />}
-
-            {/* Click Ripples */}
-            {ripples
-              .filter((r) => r.dir === "down")
-              .map((r) => (
-                <span
-                  key={r.id}
-                  className="btn-ripple"
-                  style={{ left: r.x, top: r.y, width: 20, height: 20 }}
-                />
-              ))}
-
-            <ArrowDown className="h-5 w-5 transition-transform duration-200 group-hover:translate-y-0.5 group-hover:scale-110" />
-            <span className="tracking-wider">DOWN</span>
-          </button>
-        </div>
-      </div>
-
-      {activeCount >= maxPositions && (
-        <div className="rounded-lg bg-amber-400/10 border border-amber-400/20 px-3 py-1.5 text-center text-xs font-semibold text-amber-300">
-          Max {maxPositions} active positions reached. Awaiting settlement…
-        </div>
-      )}
+        {activeCount >= maxPositions && (
+          <div className="rounded-lg bg-[var(--wait-tint)] border border-[var(--wait)] px-3 py-1.5 text-center text-xs font-semibold text-[var(--wait)]">
+            Max {maxPositions} active positions reached. Awaiting settlement…
+          </div>
+        )}
       </div>
     </div>
   );

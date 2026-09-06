@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { Moon, Sun } from "lucide-react";
 import { BrandMark } from "@/app/components/brand-mark";
 import { RouteNav } from "@/app/components/route-nav";
 import { SessionIndicator } from "@/app/components/session-indicator";
@@ -8,6 +9,7 @@ import { useGameSession } from "@/app/hooks/use-game-session";
 import { useGameWallet } from "@/app/hooks/use-game-wallet";
 import { useLeaderboard } from "@/app/hooks/use-leaderboard";
 import { formatLeaderboardUsdc } from "@/app/lib/leaderboard";
+import { useTheme } from "@/app/providers/theme-provider";
 
 function compactAddress(address: string): string {
   return address.length > 12
@@ -19,6 +21,7 @@ export function LeaderboardPage() {
   const wallet = useGameWallet();
   const session = useGameSession();
   const leaderboard = useLeaderboard(wallet.address);
+  const { mode, setMode } = useTheme();
   const [search, setSearch] = useState("");
   const filteredEntries = leaderboard.entries.filter((e) => {
     if (!search.trim()) return true;
@@ -70,6 +73,15 @@ export function LeaderboardPage() {
             checking={session.busy && !session.ready}
             onRequestSetup={() => window.location.assign("/?session=setup")}
           />
+          <button
+            onClick={() => setMode(mode === "dark" ? "light" : "dark")}
+            className="flex h-8 w-8 items-center justify-center rounded-lg border border-[var(--hair)] bg-[var(--card)] text-[var(--ink-muted)] transition-colors hover:border-[var(--color-neon-orange)] hover:text-[var(--color-neon-orange)]"
+            aria-label={mode === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+            title={mode === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+            type="button"
+          >
+            {mode === "dark" ? <Sun className="h-3.5 w-3.5" /> : <Moon className="h-3.5 w-3.5" />}
+          </button>
           <button
             className="wallet"
             onClick={() => void wallet.connect()}
@@ -164,17 +176,16 @@ export function LeaderboardPage() {
               <p>Ranked by settled performance. {filteredEntries.length !== leaderboard.entries.length && `${filteredEntries.length} of ${leaderboard.entries.length}`}</p>
             </div>
             <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-              <div style={{ position: "relative" }}>
+              <div className="leaderboard-search">
                 <input
                   type="search"
                   placeholder="Search trader…"
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
                   aria-label="Search leaderboard traders"
-                  style={{ width: 200, padding: "8px 32px 8px 10px", borderRadius: 10, border: "1px solid var(--hair)", background: "var(--card)", fontSize: 13 }}
                 />
-                <span style={{ position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)", color: "var(--mut)", fontSize: 12 }}>⌕</span>
-                {search && <button onClick={() => setSearch("")} aria-label="Clear" style={{ position: "absolute", right: 26, top: "50%", transform: "translateY(-50%)", fontSize: 12 }} type="button">✕</button>}
+                <span className="leaderboard-search-icon" aria-hidden="true">⌕</span>
+                {search && <button onClick={() => setSearch("")} aria-label="Clear" className="leaderboard-search-clear" type="button">✕</button>}
               </div>
               <span className="leaderboard-period">All time</span>
             </div>
