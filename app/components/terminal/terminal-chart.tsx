@@ -639,39 +639,54 @@ export function TerminalChart({
         ctx.fillText(`$${formatPrice(cur)}`, plotW + rightMargin / 2, curY + 3.5);
       }
 
-      // Active Position Entry Rays Overlay
+      // Active Position Entry Markers: small glowing segment at the live edge.
+      // Green for UP bets, red for DOWN bets, pinned to the bet (entry) price.
       activePlays.forEach((p) => {
         const eY = getY(p.entryPrice);
+        if (eY < topMargin || eY > topMargin + plotH) return; // off-chart guard
         const isUp = p.direction === "up";
         const col = isUp ? "#00f076" : "#ff3358";
+        const segW = 120;
+        const x0 = plotW - segW;
 
-        ctx.setLineDash([2, 2]);
+        // Short glowing line segment
+        ctx.save();
+        ctx.shadowColor = col;
+        ctx.shadowBlur = 8;
         ctx.strokeStyle = col;
-        ctx.lineWidth = 1.4;
+        ctx.lineWidth = 2;
         ctx.beginPath();
-        ctx.moveTo(0, eY);
+        ctx.moveTo(x0, eY);
         ctx.lineTo(plotW, eY);
         ctx.stroke();
-        ctx.setLineDash([]);
+        ctx.restore();
 
-        // Small badge on entry line
-        const remainingSec = Math.max(0, (p.expiresAt - Date.now()) / 1000).toFixed(1);
-        ctx.fillStyle = isUp ? "rgba(0, 240, 118, 0.2)" : "rgba(255, 51, 88, 0.2)";
+        // Entry dot at the segment start
         ctx.beginPath();
-        ctx.roundRect(8, eY - 10, 130, 20, 4);
+        ctx.arc(x0, eY, 3, 0, Math.PI * 2);
+        ctx.fillStyle = col;
+        ctx.fill();
+        ctx.beginPath();
+        ctx.arc(x0, eY, 1.4, 0, Math.PI * 2);
+        ctx.fillStyle = "#ffffff";
         ctx.fill();
 
+        // Compact entry-price badge just left of the segment
+        const label = `${isUp ? "▲" : "▼"} $${formatPrice(p.entryPrice)}`;
+        ctx.font = "bold 10px sans-serif";
+        const tw = ctx.measureText(label).width;
+        const bx = Math.max(8, x0 - tw - 18);
+        ctx.fillStyle = isUp ? "rgba(0, 240, 118, 0.16)" : "rgba(255, 51, 88, 0.16)";
+        ctx.beginPath();
+        ctx.roundRect(bx, eY - 10, tw + 12, 20, 4);
+        ctx.fill();
         ctx.strokeStyle = col;
+        ctx.lineWidth = 1;
         ctx.stroke();
 
         ctx.fillStyle = "#ffffff";
-        ctx.font = "bold 10px sans-serif";
         ctx.textAlign = "left";
-        ctx.fillText(
-          `${isUp ? "▲ UP" : "▼ DOWN"} $${p.collateralUsd} · ${remainingSec}s left`,
-          14,
-          eY + 4
-        );
+        ctx.fillText(label, bx + 6, eY + 3.5);
       });
 
       // Interactive Crosshair & Tooltips

@@ -20,7 +20,7 @@ import { TradingTicket } from "@/app/components/terminal/trading-ticket";
 import { AssetBrowser } from "@/app/components/terminal/asset-browser";
 import { LivePositions } from "@/app/components/terminal/live-positions";
 import { BetRecordCard } from "@/app/components/terminal/bet-record-card";
-import { RecentActivity, type ActivityItem } from "@/app/components/terminal/recent-activity";
+import { RecentActivity, type ActivityItem, type BetDetail } from "@/app/components/terminal/recent-activity";
 import { WinCelebrationV2 } from "@/app/components/terminal/win-celebration-v2";
 import { MobileDock } from "@/app/components/terminal/mobile-dock";
 import type { MarketSnapshot, Play } from "@/app/lib/domain";
@@ -318,6 +318,14 @@ export function MockArena() {
         subtitle: `Stake: ${amount} tUSD · Entry: $${entryPrice.toFixed(2)}`,
         timestamp: Date.now(),
         highlight: dir === "up" ? "green" : "red",
+        detail: {
+          symbol: selectedAsset.symbol,
+          direction: dir,
+          stakeTokens: amount,
+          entryPrice,
+          status: "settling",
+          openedAt,
+        },
       },
       ...prev.slice(0, 19),
     ]);
@@ -340,6 +348,24 @@ export function MockArena() {
       setHistoryKey((k) => k + 1);
 
       const profit = settled.profitTokens ?? 0;
+      const settledAt = Date.now();
+      const pnlPct = amount > 0 ? (profit / amount) * 100 : 0;
+      const exitStr = settled.exitPrice !== undefined && settled.exitPrice !== null ? `$${settled.exitPrice.toFixed(2)}` : "—";
+      const betDetail: BetDetail = {
+        symbol: selectedAsset.symbol,
+        direction: dir,
+        stakeTokens: amount,
+        entryPrice,
+        exitPrice: settled.exitPrice ?? undefined,
+        payoutTokens: settled.payoutTokens ?? undefined,
+        profitTokens: profit,
+        feeTokens: settled.feeTokens ?? 0,
+        status: settled.status === "pending" ? "settling" : settled.status,
+        stakeSignature: settled.stakeSignature ?? undefined,
+        payoutSignature: settled.payoutSignature ?? undefined,
+        openedAt,
+        settledAt,
+      };
       if (settled.status === "won" && profit > 0) {
         const streakInfo = updateStreak(true);
         play.streak = streakInfo.streak;
@@ -350,9 +376,10 @@ export function MockArena() {
             id: `settle-${Date.now()}`,
             type: "settlement",
             title: `Won +${profit.toFixed(2)} tUSD on ${selectedAsset.symbol}`,
-            subtitle: `${dir.toUpperCase()} ${amount} tUSD · exit $${settled.exitPrice?.toFixed(2) ?? "—"}`,
+            subtitle: `Bet $${entryPrice.toFixed(2)} → Close ${exitStr} · P&L +$${profit.toFixed(2)} (+${pnlPct.toFixed(1)}%)`,
             timestamp: Date.now(),
             highlight: "green",
+            detail: { ...betDetail },
           },
           ...prev.slice(0, 19),
         ]);
@@ -374,9 +401,10 @@ export function MockArena() {
               settled.status === "won"
                 ? `Settled on ${selectedAsset.symbol}`
                 : `Lost -${amount} tUSD on ${selectedAsset.symbol}`,
-            subtitle: `${dir.toUpperCase()} · exit $${settled.exitPrice?.toFixed(2) ?? "—"} · ${settled.status}`,
+            subtitle: `Bet $${entryPrice.toFixed(2)} → Close ${exitStr} · P&L ${profit >= 0 ? "+" : "−"}$${Math.abs(profit).toFixed(2)} (${pnlPct >= 0 ? "+" : "−"}${Math.abs(pnlPct).toFixed(1)}%)`,
             timestamp: Date.now(),
             highlight: settled.status === "won" ? "green" : "red",
+            detail: { ...betDetail },
           },
           ...prev.slice(0, 19),
         ]);
@@ -563,7 +591,7 @@ export function MockArena() {
             <TerminalChart
               data={hlHistory}
               currentPrice={mock.currentPrice}
-              activePlays={mock.activePlays as Play[]}
+              activePlays={liveActivePlays}
               symbol={selectedAsset.symbol}
               height={620}
             />
