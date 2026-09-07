@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
-import { Activity, ArrowUpRight, CheckCircle, Clock, Radio, Zap, X, ExternalLink, ArrowUp, ArrowDown } from "lucide-react";
+import { Activity, CheckCircle, Clock, Radio, Zap, X, ExternalLink, ArrowUp, ArrowDown, Receipt } from "lucide-react";
 
 /** Structured per-bet data powering the stream rows + detail popup. */
 export interface BetDetail {
@@ -228,16 +228,11 @@ export function RecentActivity({ items }: RecentActivityProps) {
                 animate={{ opacity: isFresh ? 1 : 0.8, y: 0 }}
                 exit={{ opacity: 0 }}
                 transition={{ duration: 0.25, ease: "easeOut" }}
-                onClick={clickable ? () => setOpenDetail(d!) : undefined}
-                role={clickable ? "button" : undefined}
-                tabIndex={clickable ? 0 : undefined}
-                onKeyDown={clickable ? (e) => { if (e.key === "Enter") setOpenDetail(d!); } : undefined}
-                title={clickable ? "Click for full bet details" : undefined}
                 className={`flex items-start gap-2.5 rounded-lg border p-2 text-xs transition-colors ${
                   isFresh
                     ? "border-[var(--glass-card-hover-border)] bg-[var(--glass-card-hover-bg)]"
                     : "border-[var(--glass-card-border)] bg-[var(--glass-card-bg)]"
-                } ${clickable ? "cursor-pointer hover:border-[var(--glass-card-hover-border)]" : ""}`}
+                }`}
               >
                 {/* Indicator dot */}
                 <div className="mt-1 flex-shrink-0">
@@ -291,13 +286,20 @@ export function RecentActivity({ items }: RecentActivityProps) {
                         </div>
                       )}
                       {d.status === "settling" && (
-                        <div className="text-amber-300/90">Settling… tap for details</div>
+                        <div className="text-amber-300/90">Settling…</div>
                       )}
                     </div>
                   )}
                 </div>
                 {clickable && (
-                  <ArrowUpRight className="mt-1 h-3.5 w-3.5 flex-shrink-0 text-[var(--ink-muted)]" />
+                  <button
+                    onClick={() => setOpenDetail(d!)}
+                    className="mt-0.5 flex flex-shrink-0 items-center gap-1 rounded-md border border-white/[0.12] bg-white/[0.05] px-2 py-1 text-[10px] font-extrabold uppercase tracking-wide text-slate-200 hover:bg-white/[0.12] hover:text-white active:scale-95"
+                    title="Open bet slip"
+                  >
+                    <Receipt className="h-3 w-3" />
+                    Bet Slip
+                  </button>
                 )}
               </motion.div>
             );
