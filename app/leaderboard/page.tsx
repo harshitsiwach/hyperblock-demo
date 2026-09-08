@@ -1,5 +1,5 @@
-import { LeaderboardPage } from "@/app/components/leaderboard-page";
+import { MockArena } from "@/app/components/mock/MockArena";
 
 export default function LeaderboardRoute() {
-  return <LeaderboardPage />;
+  return <MockArena initialView="leaderboard" />;
 }

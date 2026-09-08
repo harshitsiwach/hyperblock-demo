@@ -2,16 +2,11 @@
 
 import { useEffect, useMemo, useRef, useState, type MouseEvent } from "react";
 import { 
-  BarChart2, 
   CandlestickChart as CandleIcon, 
   LineChart as LineIcon, 
   Maximize2, 
   Minimize2, 
-  Camera, 
-  Layers, 
-  Activity, 
-  Zap, 
-  Clock 
+  Camera 
 } from "lucide-react";
 import type { Play } from "@/app/lib/domain";
 import { useTheme } from "@/app/providers/theme-provider";
@@ -21,20 +16,8 @@ interface TerminalChartProps {
   currentPrice: number | null;
   activePlays: Play[];
   symbol: string;
-  height?: number;
+  height?: number | string;
 }
-
-const TIMEFRAMES = [
-  { id: "1s", label: "1s", sec: 20 },
-  { id: "5s", label: "5s", sec: 45 },
-  { id: "15s", label: "15s", sec: 90 },
-  { id: "1m", label: "1m", sec: 180 },
-  { id: "5m", label: "5m", sec: 300 },
-  { id: "15m", label: "15m", sec: 600 },
-  { id: "1h", label: "1h", sec: 1800 },
-  { id: "4h", label: "4h", sec: 3600 },
-  { id: "1D", label: "1D", sec: 7200 },
-];
 
 function formatTime(ts: number): string {
   const d = new Date(ts);
@@ -57,13 +40,15 @@ export function TerminalChart({
   const { mode, activeTintConfig } = useTheme();
 
   const [chartType, setChartType] = useState<"line" | "candle">("line");
-  const [activeTf, setActiveTf] = useState<string>("5s");
   const [isFullscreen, setIsFullscreen] = useState(false);
-  const [showIndicators, setShowIndicators] = useState(true);
   const [hoverData, setHoverData] = useState<{ x: number; y: number; price: number; time: number } | null>(null);
 
   const containerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
+
+  // Smooth lerp refs to prevent vertical price snapping and scale jitter
+  const lerpPriceRef = useRef<number>(currentPrice ?? 100);
+  const lerpScaleRef = useRef<{ min: number; max: number } | null>(null);
 
   // Flow animation controller when switching tokens or toggling chart types (line vs candle)
   const flowProgressRef = useRef(1);
@@ -96,13 +81,13 @@ export function TerminalChart({
     }
   }, [symbol, chartType]);
 
-  // Selected timeframe window duration
-  const activeWindowSec = TIMEFRAMES.find((tf) => tf.id === activeTf)?.sec ?? 45;
+  // Realtime streaming window: 45 seconds continuous glide
+  const activeWindowSec = 45;
 
   // Synthesize realistic, high-polish OHLC bars if in candle mode
   const candles = useMemo(() => {
     if (data.length === 0) return [];
-    const bucketMs = Math.max(1500, (activeWindowSec * 1000) / 28);
+    const bucketMs = 2500; // 2.5s per candle bar
     const map = new Map<number, { time: number; open: number; high: number; low: number; close: number; vol: number }>();
 
     data.forEach((pt) => {
@@ -121,9 +106,6 @@ export function TerminalChart({
     const raw = Array.from(map.values()).sort((a, b) => a.time - b.time);
     if (raw.length === 0) return [];
 
-    // Ensure authentic financial candle anatomy:
-    // 1. Each candle opens at the previous candle's close
-    // 2. Add natural upper and lower shadow wicks so candles don't look like flat horizontal slits
     const smoothed: typeof raw = [];
     for (let i = 0; i < raw.length; i++) {
       const c = raw[i];
@@ -147,7 +129,7 @@ export function TerminalChart({
     }
 
     return smoothed;
-  }, [data, activeWindowSec]);
+  }, [data]);
 
   // Fullscreen toggle handler
   const toggleFullscreen = () => {
@@ -222,26 +204,49 @@ export function TerminalChart({
       // Margins - optimized to maximize drawable canvas space
       const topMargin = 14;
       const bottomMargin = 26;
-      const rightMargin = 66; // for Y-axis scale
+      const rightMargin = 68; // for Y-axis scale
       const plotW = width - rightMargin;
       const plotH = cHeight - topMargin - bottomMargin;
 
-      // Determine price scale range
-      const prices = data.map((d) => d.p);
-      const cur = currentPrice ?? (data[data.length - 1]?.p || 100);
-      let minP = prices.length ? Math.min(...prices, cur) : cur * 0.995;
-      let maxP = prices.length ? Math.max(...prices, cur) : cur * 1.005;
+      // Continuous time parameters: sub-pixel gliding horizontal coordinate
+      const windowMs = activeWindowSec * 1000;
+      const tNow = Date.now();
+      const tStart = tNow - windowMs;
+      const getX = (t: number) => ((t - tStart) / windowMs) * plotW;
 
-      // Include active position entry prices in scale so lines are never clipped
+      // Smoothly lerp the live price tip so vertical jumps are completely eliminated
+      const targetPrice = currentPrice ?? (data[data.length - 1]?.p || 100);
+      if (!lerpPriceRef.current || isNaN(lerpPriceRef.current)) {
+        lerpPriceRef.current = targetPrice;
+      } else {
+        lerpPriceRef.current += (targetPrice - lerpPriceRef.current) * 0.12;
+      }
+      const livePrice = lerpPriceRef.current;
+
+      // Determine price scale range from visible points, live lerp price and active plays
+      const visiblePts = data.filter((d) => d.t >= tStart - 3000);
+      const prices = visiblePts.map((d) => d.p);
+      let minP = prices.length ? Math.min(...prices, livePrice) : livePrice * 0.995;
+      let maxP = prices.length ? Math.max(...prices, livePrice) : livePrice * 1.005;
+
+      // Include active position entry prices in scale so order tickets and strike rays are never clipped
       activePlays.forEach((p) => {
         minP = Math.min(minP, p.entryPrice);
         maxP = Math.max(maxP, p.entryPrice);
       });
 
-      const span = maxP - minP || 1;
-      const padding = span * 0.07;
-      const yMin = minP - padding;
-      const yMax = maxP + padding;
+      // Lerp the Y-scale slightly to eliminate jitter during price expansion
+      if (!lerpScaleRef.current) {
+        lerpScaleRef.current = { min: minP, max: maxP };
+      } else {
+        lerpScaleRef.current.min += (minP - lerpScaleRef.current.min) * 0.08;
+        lerpScaleRef.current.max += (maxP - lerpScaleRef.current.max) * 0.08;
+      }
+
+      const span = lerpScaleRef.current.max - lerpScaleRef.current.min || 1;
+      const padding = span * 0.08;
+      const yMin = lerpScaleRef.current.min - padding;
+      const yMax = lerpScaleRef.current.max + padding;
 
       const getY = (val: number) => topMargin + plotH - ((val - yMin) / (yMax - yMin)) * plotH;
 
@@ -276,17 +281,13 @@ export function TerminalChart({
         ctx.lineTo(x, topMargin + plotH);
         ctx.stroke();
 
-        const tLabel = formatTime(Date.now() - (1 - i / timeTicks) * (activeWindowSec * 1000));
+        const tLabel = formatTime(tNow - (1 - i / timeTicks) * windowMs);
         ctx.textAlign = "center";
         ctx.fillText(tLabel, x, cHeight - 12);
       }
 
-      // Render data points slice
-      const pts = data.slice(-Math.min(data.length, 120));
-
-      // Render Candlesticks or Smooth Line with Flow Animation
+      // Flow progress for switching tokens or toggling chart type
       const flow = Math.max(0.01, Math.min(1, flowProgressRef.current));
-      const tNow = Date.now();
 
       // =========================================================================
       // BOTTOM VISUALIZATION:
@@ -307,7 +308,7 @@ export function TerminalChart({
           // Multi-frequency wave simulation with live price tick reactivity
           const wave1 = Math.sin(i * 0.38 + tNow * 0.0022);
           const wave2 = Math.cos(i * 0.15 - tNow * 0.0015);
-          const wave3 = Math.sin((i + (pts.length % 20)) * 0.5 + tNow * 0.004);
+          const wave3 = Math.sin((i + (data.length % 20)) * 0.5 + tNow * 0.004);
           const combined = Math.max(0.1, (wave1 * 0.45 + wave2 * 0.35 + wave3 * 0.2 + 1) / 2);
 
           // Staggered entry spring surge
@@ -318,7 +319,7 @@ export function TerminalChart({
           // Hover detection
           const isHovered = hoverData && hoverData.x >= bx && hoverData.x <= bx + barW;
 
-          // Vertical gradient for each bar - futuristic silver-ice translucent bars matching Image 1
+          // Vertical gradient for each bar
           const barGrad = ctx.createLinearGradient(0, volBaseY, 0, volBaseY - barH);
           if (isUp) {
             barGrad.addColorStop(0, "rgba(220, 235, 255, 0.02)");
@@ -433,13 +434,11 @@ export function TerminalChart({
       // =========================================================================
       // MAIN CHART VISUALIZATION:
       // - Candlestick View with laser sweep entry & rounded dual-gradient bodies
-      // - Line View with fluid wave comet flow
+      // - Continuous Realtime Smooth Spline Line with Comet Tip (NO SNAPPING)
       // =========================================================================
-      if (chartType === "candle" && candles.length > 1) {
-        const candleCount = candles.length;
-        const slotW = plotW / candleCount;
-        const candleW = Math.max(4, Math.min(15, slotW * 0.62));
-        const maxCandleIdx = Math.floor(flow * candleCount);
+      if (chartType === "candle" && candles.length > 0) {
+        const bucketMs = 2500;
+        const candleW = Math.max(5, Math.min(18, (bucketMs / windowMs) * plotW * 0.65));
 
         // Cool Laser Scanline Sweep on Entry Animation
         if (flow < 0.98) {
@@ -464,35 +463,29 @@ export function TerminalChart({
         }
 
         candles.forEach((c, idx) => {
-          if (idx > maxCandleIdx) return;
-          const cx = slotW * idx + slotW / 2;
+          const cx = getX(c.time + bucketMs / 2);
+          if (cx < -candleW || cx > plotW + candleW) return;
+          if (cx > plotW * flow) return;
+
+          const isLatest = idx === candles.length - 1;
+          const closePrice = isLatest ? livePrice : c.close;
           const openY = getY(c.open);
-          const closeY = getY(c.close);
-          const highY = getY(c.high);
-          const lowY = getY(c.low);
-          const isUp = c.close >= c.open;
-          const isLatest = idx === candleCount - 1;
+          const closeY = getY(closePrice);
+          const highY = getY(isLatest ? Math.max(c.high, closePrice) : c.high);
+          const lowY = getY(isLatest ? Math.min(c.low, closePrice) : c.low);
+          const isUp = closePrice >= c.open;
 
-          // Scaling factor as the entry wave hits this candle
-          const candleEntryProgress = Math.max(0.05, Math.min(1, (flow - (idx / candleCount) * 0.8) * 3));
-
-          // 1. High-Precision Centered Wick (Shadow)
-          const midY = (openY + closeY) / 2;
-          const scaledHighY = midY - (midY - highY) * candleEntryProgress;
-          const scaledLowY = midY + (lowY - midY) * candleEntryProgress;
-
+          // 1. Shadow Wick
           ctx.beginPath();
-          ctx.moveTo(cx, scaledHighY);
-          ctx.lineTo(cx, scaledLowY);
+          ctx.moveTo(cx, highY);
+          ctx.lineTo(cx, lowY);
           ctx.strokeStyle = isUp ? "rgba(0, 240, 118, 0.85)" : "rgba(255, 51, 88, 0.85)";
           ctx.lineWidth = 1.5;
           ctx.stroke();
 
-          // 2. High-Polish Candlestick Body with subtle rounded corners & dual-stop gradient
-          const rawTop = Math.min(openY, closeY);
-          const rawH = Math.abs(closeY - openY);
-          const bodyH = Math.max(3, rawH) * candleEntryProgress;
-          const top = midY - bodyH / 2;
+          // 2. Candlestick Body with subtle rounded corners & dual-stop gradient
+          const top = Math.min(openY, closeY);
+          const bodyH = Math.max(3, Math.abs(closeY - openY));
           const bodyX = cx - candleW / 2;
 
           const cGrad = ctx.createLinearGradient(0, top, 0, top + bodyH);
@@ -519,7 +512,6 @@ export function TerminalChart({
           ctx.fillStyle = cGrad;
           ctx.fill();
 
-          // Crisp neon border stroke
           ctx.strokeStyle = isUp ? "#00f076" : "#ff3358";
           ctx.lineWidth = 1.2;
           ctx.stroke();
@@ -540,82 +532,97 @@ export function TerminalChart({
             ctx.fill();
           }
         });
-      } else if (pts.length > 1) {
-        // Line & Glowing Gradient Area with Flowing Wave Animation
-        const stepX = plotW / (pts.length - 1);
-        const maxTarget = (pts.length - 1) * flow;
-        const maxIdx = Math.min(pts.length - 2, Math.floor(maxTarget));
-        const frac = maxTarget - maxIdx;
+      } else {
+        // LINE MODE: Continuous Sub-pixel Horizontal Glide + Quadratic Spline Curve
+        // Collect visible history points mapped to continuous time coordinates
+        const ptsToDraw: { x: number; y: number }[] = [];
 
-        const pA = pts[maxIdx];
-        const pB = pts[Math.min(pts.length - 1, maxIdx + 1)];
-        const headX = (maxIdx + frac) * stepX;
-        const headY = getY(pA.p + (pB.p - pA.p) * frac);
-
-        // Fill area up to current flowing headX
-        const grad = ctx.createLinearGradient(0, topMargin, 0, topMargin + plotH);
-        grad.addColorStop(0, activeTintConfig.subtleBg.replace("0.08", "0.22"));
-        grad.addColorStop(0.6, activeTintConfig.subtleBg);
-        grad.addColorStop(1, "transparent");
-
-        ctx.beginPath();
-        ctx.moveTo(0, getY(pts[0].p));
-        for (let idx = 1; idx <= maxIdx; idx++) {
-          ctx.lineTo(idx * stepX, getY(pts[idx].p));
+        for (const pt of visiblePts) {
+          ptsToDraw.push({ x: getX(pt.t), y: getY(pt.p) });
         }
-        ctx.lineTo(headX, headY);
-        ctx.lineTo(headX, topMargin + plotH);
-        ctx.lineTo(0, topMargin + plotH);
-        ctx.closePath();
-        ctx.fillStyle = grad;
-        ctx.fill();
 
-        // Stroke line up to current flowing headX
-        ctx.beginPath();
-        ctx.moveTo(0, getY(pts[0].p));
-        for (let idx = 1; idx <= maxIdx; idx++) {
-          ctx.lineTo(idx * stepX, getY(pts[idx].p));
+        // Live head point seamlessly anchored to livePrice at current frame
+        ptsToDraw.push({ x: plotW, y: getY(livePrice) });
+
+        // Ensure drawing starts at or before x = 0 so left edge has no gap
+        if (ptsToDraw.length > 0 && ptsToDraw[0].x > 0) {
+          ptsToDraw.unshift({ x: 0, y: ptsToDraw[0].y });
         }
-        ctx.lineTo(headX, headY);
-        ctx.strokeStyle = activeTintConfig.color;
-        ctx.lineWidth = 2.6;
-        ctx.shadowColor = activeTintConfig.color;
-        ctx.shadowBlur = 12;
-        ctx.stroke();
-        ctx.shadowBlur = 0;
 
-        // Flowing Comet Head / Energy Tip
-        const pulse = Math.sin(Date.now() * 0.005) * 4 + 10;
-        const radial = ctx.createRadialGradient(headX, headY, 1, headX, headY, pulse * (flow < 0.98 ? 1.4 : 1));
-        radial.addColorStop(0, activeTintConfig.color);
-        radial.addColorStop(0.5, activeTintConfig.subtleBg);
-        radial.addColorStop(1, "transparent");
+        // Trim or interpolate based on entry flow
+        const maxFlowX = plotW * flow;
+        const screenPts = ptsToDraw.filter((p) => p.x <= maxFlowX);
+        if (screenPts.length > 0 && maxFlowX < plotW) {
+          screenPts.push({ x: maxFlowX, y: ptsToDraw[ptsToDraw.length - 1]?.y ?? getY(livePrice) });
+        }
 
-        ctx.beginPath();
-        ctx.arc(headX, headY, pulse * (flow < 0.98 ? 1.4 : 1), 0, Math.PI * 2);
-        ctx.fillStyle = radial;
-        ctx.fill();
+        if (screenPts.length > 1) {
+          const headPt = screenPts[screenPts.length - 1];
 
-        // Solid core
-        ctx.beginPath();
-        ctx.arc(headX, headY, 3, 0, Math.PI * 2);
-        ctx.fillStyle = "#ffffff";
-        ctx.fill();
+          // Fill smooth area gradient
+          const grad = ctx.createLinearGradient(0, topMargin, 0, topMargin + plotH);
+          grad.addColorStop(0, activeTintConfig.subtleBg.replace("0.08", "0.26"));
+          grad.addColorStop(0.6, activeTintConfig.subtleBg);
+          grad.addColorStop(1, "transparent");
 
-        // Flow wave ripple while actively flowing
-        if (flow < 0.98) {
-          ctx.strokeStyle = activeTintConfig.borderColor;
-          ctx.lineWidth = 1.5;
           ctx.beginPath();
-          ctx.arc(headX, headY, pulse * 1.8, 0, Math.PI * 2);
+          ctx.moveTo(screenPts[0].x, topMargin + plotH);
+          ctx.lineTo(screenPts[0].x, screenPts[0].y);
+
+          for (let i = 0; i < screenPts.length - 1; i++) {
+            const p0 = screenPts[i];
+            const p1 = screenPts[i + 1];
+            const midX = (p0.x + p1.x) / 2;
+            const midY = (p0.y + p1.y) / 2;
+            ctx.quadraticCurveTo(p0.x, p0.y, midX, midY);
+          }
+          ctx.lineTo(headPt.x, headPt.y);
+          ctx.lineTo(headPt.x, topMargin + plotH);
+          ctx.closePath();
+          ctx.fillStyle = grad;
+          ctx.fill();
+
+          // Stroke silky quadratic spline curve
+          ctx.beginPath();
+          ctx.moveTo(screenPts[0].x, screenPts[0].y);
+          for (let i = 0; i < screenPts.length - 1; i++) {
+            const p0 = screenPts[i];
+            const p1 = screenPts[i + 1];
+            const midX = (p0.x + p1.x) / 2;
+            const midY = (p0.y + p1.y) / 2;
+            ctx.quadraticCurveTo(p0.x, p0.y, midX, midY);
+          }
+          ctx.lineTo(headPt.x, headPt.y);
+          ctx.strokeStyle = activeTintConfig.color;
+          ctx.lineWidth = 2.6;
+          ctx.shadowColor = activeTintConfig.color;
+          ctx.shadowBlur = 12;
           ctx.stroke();
+          ctx.shadowBlur = 0;
+
+          // Flowing Comet Head / Energy Tip at the live tip
+          const pulse = Math.sin(tNow * 0.005) * 3 + 8;
+          const radial = ctx.createRadialGradient(headPt.x, headPt.y, 1, headPt.x, headPt.y, pulse * 1.5);
+          radial.addColorStop(0, activeTintConfig.color);
+          radial.addColorStop(0.5, activeTintConfig.subtleBg);
+          radial.addColorStop(1, "transparent");
+
+          ctx.beginPath();
+          ctx.arc(headPt.x, headPt.y, pulse * 1.5, 0, Math.PI * 2);
+          ctx.fillStyle = radial;
+          ctx.fill();
+
+          // Solid core dot
+          ctx.beginPath();
+          ctx.arc(headPt.x, headPt.y, 3.2, 0, Math.PI * 2);
+          ctx.fillStyle = "#ffffff";
+          ctx.fill();
         }
       }
 
-      // Current Price Horizontal Dotted Ray & Live Badge on Y-axis (Fades in as flow completes)
-      if (cur) {
-        const curY = getY(cur);
-        const rayAlpha = Math.min(1, flow * 1.2);
+      // Current Price Horizontal Dotted Ray & Live Badge on Y-axis
+      if (livePrice) {
+        const curY = getY(livePrice);
 
         ctx.setLineDash([4, 4]);
         ctx.strokeStyle = activeTintConfig.borderColor;
@@ -629,64 +636,177 @@ export function TerminalChart({
         // Glowing price badge on the right axis
         ctx.fillStyle = activeTintConfig.color;
         ctx.beginPath();
-        ctx.roundRect(plotW + 2, curY - 11, rightMargin - 4, 22, 5);
+        if (typeof ctx.roundRect === "function") {
+          ctx.roundRect(plotW + 2, curY - 11, rightMargin - 4, 22, 5);
+        } else {
+          ctx.rect(plotW + 2, curY - 11, rightMargin - 4, 22);
+        }
         ctx.fill();
 
         // Price text inside badge
         ctx.fillStyle = mode === "dark" ? "#07090e" : "#ffffff";
         ctx.font = "bold 10px ui-monospace, monospace";
         ctx.textAlign = "center";
-        ctx.fillText(`$${formatPrice(cur)}`, plotW + rightMargin / 2, curY + 3.5);
+        ctx.fillText(`$${formatPrice(livePrice)}`, plotW + rightMargin / 2, curY + 3.5);
       }
 
-      // Active Position Entry Markers: small glowing segment at the live edge.
-      // Green for UP bets, red for DOWN bets, pinned to the bet (entry) price.
+      // =========================================================================
+      // ACTIVE ORDER TICKET MARKERS (ON BOTH LINE AND CANDLE CHARTS)
+      // Real money ticket design with radar ping, strike ray, live badge & fade animations
+      // =========================================================================
       activePlays.forEach((p) => {
-        const eY = getY(p.entryPrice);
-        if (eY < topMargin || eY > topMargin + plotH) return; // off-chart guard
         const isUp = p.direction === "up";
-        const col = isUp ? "#00f076" : "#ff3358";
-        const segW = 120;
-        const x0 = plotW - segW;
+        const color = isUp ? "#00f076" : "#ff3358";
+        const borderCol = isUp ? "rgba(0, 240, 118, 0.85)" : "rgba(255, 51, 88, 0.85)";
 
-        // Short glowing line segment
+        // Timers and smooth fade-in / fade-out transitions
+        const ageMs = tNow - p.openedAt;
+        const remMs = p.expiresAt - tNow;
+        
+        // Fade in during first 450ms, fade out during last 600ms
+        const fadeIn = Math.min(1, Math.max(0, ageMs / 450));
+        const fadeOut = Math.min(1, Math.max(0, remMs / 600));
+        const alpha = Math.min(fadeIn, fadeOut);
+
+        if (alpha <= 0.01) return;
+
+        const rawX = getX(p.openedAt);
+        // Keep the ticket beacon comfortably within view so the user can always inspect it
+        const markerX = Math.max(32, Math.min(plotW - 24, rawX));
+        const entryY = getY(p.entryPrice);
+        const markerY = Math.max(topMargin + 20, Math.min(topMargin + plotH - 20, entryY));
+
         ctx.save();
-        ctx.shadowColor = col;
+        ctx.globalAlpha = alpha;
+
+        // 1. Horizontal Dashed Strike Ray projecting to the right edge
+        ctx.setLineDash([4, 3]);
+        ctx.strokeStyle = color;
+        ctx.lineWidth = 1.3;
+        ctx.shadowColor = color;
         ctx.shadowBlur = 8;
-        ctx.strokeStyle = col;
-        ctx.lineWidth = 2;
         ctx.beginPath();
-        ctx.moveTo(x0, eY);
-        ctx.lineTo(plotW, eY);
+        ctx.moveTo(markerX, markerY);
+        ctx.lineTo(plotW, markerY);
         ctx.stroke();
-        ctx.restore();
+        ctx.shadowBlur = 0;
+        ctx.setLineDash([]);
 
-        // Entry dot at the segment start
+        // 2. Right price axis strike badge
+        ctx.fillStyle = color;
         ctx.beginPath();
-        ctx.arc(x0, eY, 3, 0, Math.PI * 2);
-        ctx.fillStyle = col;
+        if (typeof ctx.roundRect === "function") {
+          ctx.roundRect(plotW + 2, markerY - 8, rightMargin - 4, 16, 3);
+        } else {
+          ctx.rect(plotW + 2, markerY - 8, rightMargin - 4, 16);
+        }
         ctx.fill();
+        ctx.fillStyle = "#07090e";
+        ctx.font = "bold 9px ui-monospace, monospace";
+        ctx.textAlign = "center";
+        ctx.fillText(`$${formatPrice(p.entryPrice)}`, plotW + rightMargin / 2, markerY + 3.5);
+
+        // 3. Expanding Radar Ping Ripple at entry dot
+        const pingCycle = (tNow % 1300) / 1300;
+        const pingRadius = 5 + pingCycle * 16;
+        const pingAlpha = (1 - pingCycle) * 0.75 * alpha;
         ctx.beginPath();
-        ctx.arc(x0, eY, 1.4, 0, Math.PI * 2);
+        ctx.arc(markerX, markerY, pingRadius, 0, Math.PI * 2);
+        ctx.strokeStyle = color;
+        ctx.lineWidth = 1.5;
+        ctx.globalAlpha = pingAlpha;
+        ctx.stroke();
+        ctx.globalAlpha = alpha;
+
+        // 4. Luminous Central Beacon Dot
+        ctx.beginPath();
+        ctx.arc(markerX, markerY, 5, 0, Math.PI * 2);
+        ctx.fillStyle = color;
+        ctx.shadowColor = color;
+        ctx.shadowBlur = 10;
+        ctx.fill();
+        ctx.shadowBlur = 0;
+
+        ctx.beginPath();
+        ctx.arc(markerX, markerY, 2.2, 0, Math.PI * 2);
         ctx.fillStyle = "#ffffff";
         ctx.fill();
 
-        // Compact entry-price badge just left of the segment
-        const label = `${isUp ? "▲" : "▼"} $${formatPrice(p.entryPrice)}`;
-        ctx.font = "bold 10px sans-serif";
-        const tw = ctx.measureText(label).width;
-        const bx = Math.max(8, x0 - tw - 18);
-        ctx.fillStyle = isUp ? "rgba(0, 240, 118, 0.16)" : "rgba(255, 51, 88, 0.16)";
+        // 5. "Real Money Ticket" Info Card
+        const cardW = 160;
+        const cardH = 46;
+        const placeAbove = markerY > topMargin + cardH + 18;
+        const cardY = placeAbove ? markerY - cardH - 12 : markerY + 12;
+        const cardX = Math.max(8, Math.min(plotW - cardW - 8, markerX - cardW / 2));
+
+        // Connecting stem line
         ctx.beginPath();
-        ctx.roundRect(bx, eY - 10, tw + 12, 20, 4);
+        ctx.setLineDash([2, 2]);
+        ctx.strokeStyle = borderCol;
+        ctx.lineWidth = 1.2;
+        ctx.moveTo(markerX, placeAbove ? markerY - 5 : markerY + 5);
+        ctx.lineTo(markerX, placeAbove ? cardY + cardH : cardY);
+        ctx.stroke();
+        ctx.setLineDash([]);
+
+        // Ticket card body with glassmorphic dark fill and glowing neon border
+        ctx.fillStyle = mode === "dark" ? "rgba(11, 15, 23, 0.94)" : "rgba(255, 255, 255, 0.96)";
+        ctx.shadowColor = color;
+        ctx.shadowBlur = 12;
+        ctx.beginPath();
+        if (typeof ctx.roundRect === "function") {
+          ctx.roundRect(cardX, cardY, cardW, cardH, 7);
+        } else {
+          ctx.rect(cardX, cardY, cardW, cardH);
+        }
         ctx.fill();
-        ctx.strokeStyle = col;
-        ctx.lineWidth = 1;
+        ctx.shadowBlur = 0;
+
+        ctx.strokeStyle = borderCol;
+        ctx.lineWidth = 1.2;
         ctx.stroke();
 
-        ctx.fillStyle = "#ffffff";
+        // Left neon accent bar inside card
+        ctx.fillStyle = color;
+        ctx.beginPath();
+        if (typeof ctx.roundRect === "function") {
+          ctx.roundRect(cardX + 2, cardY + 2, 3.5, cardH - 4, 2);
+        } else {
+          ctx.rect(cardX + 2, cardY + 2, 3.5, cardH - 4);
+        }
+        ctx.fill();
+
+        // Card Content - Top Row: Direction, Stake, and Live Countdown
         ctx.textAlign = "left";
-        ctx.fillText(label, bx + 6, eY + 3.5);
+        ctx.font = "bold 10.5px sans-serif";
+        ctx.fillStyle = color;
+        ctx.fillText(isUp ? "▲ UP" : "▼ DOWN", cardX + 10, cardY + 16);
+
+        ctx.font = "bold 10.5px ui-monospace, monospace";
+        ctx.fillStyle = mode === "dark" ? "#ffffff" : "#090d16";
+        ctx.fillText(`$${p.collateralUsd}`, cardX + 54, cardY + 16);
+
+        // Live Countdown Badge on top-right of card
+        const secondsLeft = Math.max(0, Math.ceil(remMs / 1000));
+        const timerStr = `⏱ ${secondsLeft}s`;
+        ctx.font = "bold 9.5px ui-monospace, monospace";
+        ctx.textAlign = "right";
+        ctx.fillStyle = secondsLeft <= 3 ? "#ff3358" : "#fbbf24";
+        ctx.fillText(timerStr, cardX + cardW - 8, cardY + 16);
+
+        // Card Content - Bottom Row: Entry Strike & Real Ticket Label
+        ctx.textAlign = "left";
+        ctx.font = "10px ui-monospace, monospace";
+        ctx.fillStyle = mode === "dark" ? "#94a3b8" : "#475569";
+        ctx.fillText(`@ $${formatPrice(p.entryPrice)}`, cardX + 10, cardY + 34);
+
+        // "1000x" / "TICKET" Pill
+        ctx.textAlign = "right";
+        ctx.font = "extrabold 8.5px sans-serif";
+        ctx.fillStyle = color;
+        ctx.fillText("1000x TICKET", cardX + cardW - 8, cardY + 34);
+
+        ctx.restore();
       });
 
       // Interactive Crosshair & Tooltips
@@ -711,7 +831,11 @@ export function TerminalChart({
         // Hover price pill on Y-axis
         ctx.fillStyle = mode === "dark" ? "#0f172a" : "#ffffff";
         ctx.beginPath();
-        ctx.roundRect(plotW + 2, hoverData.y - 10, rightMargin - 4, 20, 4);
+        if (typeof ctx.roundRect === "function") {
+          ctx.roundRect(plotW + 2, hoverData.y - 10, rightMargin - 4, 20, 4);
+        } else {
+          ctx.rect(plotW + 2, hoverData.y - 10, rightMargin - 4, 20);
+        }
         ctx.fill();
         ctx.strokeStyle = mode === "dark" ? "rgba(255, 255, 255, 0.25)" : "rgba(0, 0, 0, 0.15)";
         ctx.stroke();
@@ -741,14 +865,15 @@ export function TerminalChart({
           ? "fixed inset-0 z-50 rounded-none h-screen"
           : "min-h-[460px] sm:min-h-[520px] lg:min-h-[590px]"
       }`}
-      style={{ height: isFullscreen ? "100vh" : height }}
+      style={{
+        height: isFullscreen ? "100vh" : typeof height === "number" ? `${height}px` : height,
+      }}
     >
       {/* Chart Top Toolbar */}
       <div className="flex flex-wrap items-center justify-between border-b border-[var(--glass-card-border)] px-3 py-2 bg-[var(--glass-card-bg)] backdrop-blur-md">
-        {/* Left Toolbar Items: Type Toggle & Timeframes */}
-        <div className="flex items-center gap-1.5 overflow-x-auto py-0.5">
-          {/* Chart Type (Line / Candle) */}
-          <div className="flex items-center rounded-lg border border-[var(--glass-card-border)] bg-[var(--glass-card-bg)] p-0.5 mr-2">
+        {/* Left Toolbar: Chart Type Toggle (Line / Candle) */}
+        <div className="flex items-center gap-1.5 py-0.5">
+          <div className="flex items-center rounded-lg border border-[var(--glass-card-border)] bg-[var(--glass-card-bg)] p-0.5">
             <button
               onClick={() => setChartType("line")}
               title="Line Chart"
@@ -772,63 +897,22 @@ export function TerminalChart({
               <CandleIcon className="h-3.5 w-3.5" />
             </button>
           </div>
-
-          {/* Timeframe Buttons */}
-          <div className="flex items-center gap-1">
-            {TIMEFRAMES.map((tf) => {
-              const isSelected = activeTf === tf.id;
-              return (
-                <button
-                  key={tf.id}
-                  onClick={() => setActiveTf(tf.id)}
-                  className={`rounded-lg px-2.5 py-1 text-[11px] font-bold tracking-wide transition-all border ${
-                    isSelected
-                      ? "shadow-sm"
-                      : "border-transparent text-[var(--ink-muted)] hover:text-[var(--ink)] hover:bg-[var(--glass-card-hover-bg)]"
-                  }`}
-                  style={
-                    isSelected
-                      ? {
-                          backgroundColor: activeTintConfig.subtleBg,
-                          color: activeTintConfig.color,
-                          borderColor: activeTintConfig.borderColor,
-                        }
-                      : undefined
-                  }
-                >
-                  {tf.label}
-                </button>
-              );
-            })}
-          </div>
         </div>
 
-        {/* Right Toolbar Items: Indicators, Screenshot, Fullscreen */}
-        <div className="flex items-center gap-1.5 ml-auto">
-          <button
-            onClick={() => setShowIndicators(!showIndicators)}
-            className={`flex h-7 items-center gap-1.5 rounded-lg px-2.5 text-[11px] font-semibold transition-all border ${
-              showIndicators
-                ? "bg-[var(--glass-card-hover-bg)] text-[var(--ink)] border-[var(--glass-card-hover-border)] shadow-sm"
-                : "border-transparent text-[var(--ink-muted)] hover:text-[var(--ink)] hover:bg-[var(--glass-card-hover-bg)]"
-            }`}
-          >
-            <Layers className="h-3 w-3" />
-            <span className="hidden sm:inline">Indicators</span>
-          </button>
-
+        {/* Right Toolbar Items: Screenshot (Camera with blink & glow on hover), Fullscreen (Scale with scale-up & glow on hover) */}
+        <div className="flex items-center gap-2 ml-auto">
           <button
             onClick={handleScreenshot}
             title="Download Chart Snapshot"
-            className="flex h-7 w-7 items-center justify-center rounded-lg text-[var(--ink-muted)] hover:bg-[var(--glass-card-hover-bg)] hover:text-[var(--ink)] transition-colors"
+            className="group flex h-7 w-7 items-center justify-center rounded-lg text-[var(--ink-muted)] hover:text-[var(--color-neon-orange)] hover:bg-[var(--glass-card-hover-bg)] hover:border hover:border-[var(--color-neon-orange)] hover:shadow-[0_0_14px_rgba(255,95,31,0.65)] transition-all cursor-pointer"
           >
-            <Camera className="h-3.5 w-3.5" />
+            <Camera className="h-3.5 w-3.5 transition-transform group-hover:animate-pulse" />
           </button>
 
           <button
             onClick={toggleFullscreen}
             title="Toggle Fullscreen"
-            className="flex h-7 w-7 items-center justify-center rounded-lg text-[var(--ink-muted)] hover:bg-[var(--glass-card-hover-bg)] hover:text-[var(--ink)] transition-colors"
+            className="flex h-7 w-7 items-center justify-center rounded-lg text-[var(--ink-muted)] hover:text-[var(--color-neon-orange)] hover:bg-[var(--glass-card-hover-bg)] hover:scale-110 hover:border hover:border-[var(--color-neon-orange)] hover:shadow-[0_0_14px_rgba(255,95,31,0.65)] transition-all duration-200 cursor-pointer"
           >
             {isFullscreen ? <Minimize2 className="h-3.5 w-3.5" /> : <Maximize2 className="h-3.5 w-3.5" />}
           </button>
@@ -877,8 +961,9 @@ export function TerminalChart({
 
         <div className="flex items-center gap-2">
           {activePlays.length > 0 ? (
-            <span className="rounded-lg bg-emerald-500/10 px-2.5 py-0.5 font-bold text-emerald-400 border border-emerald-500/20">
-              {activePlays.length} Active Positions Projected
+            <span className="rounded-lg bg-emerald-500/10 px-2.5 py-0.5 font-bold text-emerald-400 border border-emerald-500/20 flex items-center gap-1.5">
+              <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-ping" />
+              {activePlays.length} Active Position{activePlays.length > 1 ? "s" : ""} Projected
             </span>
           ) : (
             <span className="text-[var(--ink-muted)]">Ready for order placement</span>

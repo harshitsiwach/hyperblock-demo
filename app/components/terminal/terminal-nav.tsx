@@ -21,6 +21,9 @@ import {
   Radio,
   Sliders,
   Sparkles,
+  Eye,
+  EyeOff,
+  User,
 } from "lucide-react";
 import type { MarketSnapshot, Play } from "@/app/lib/domain";
 import { SessionStats } from "@/app/components/terminal/session-stats";
@@ -40,11 +43,13 @@ interface TerminalNavProps {
   plays: Play[];
   streak: number;
   bestStreak: number;
+  activeTab?: "demo" | "leaderboard";
+  onTabChange?: (tab: "demo" | "leaderboard") => void;
 }
 
 const NAV_TABS = [
-  { id: "trade", label: "Trade", href: null as string | null },
-  { id: "leaderboard", label: "Leaderboard", href: "/leaderboard" as string | null },
+  { id: "demo" as const, label: "Demo", href: "/demo" },
+  { id: "leaderboard" as const, label: "Leaderboard", href: "/leaderboard" },
 ];
 
 function formatUsd(n: number) {
@@ -65,6 +70,8 @@ export function TerminalNav({
   plays,
   streak,
   bestStreak,
+  activeTab = "demo",
+  onTabChange,
 }: TerminalNavProps) {
   const { activeTintConfig, mode, setMode } = useTheme();
   const router = useRouter();
@@ -75,6 +82,9 @@ export function TerminalNav({
 
   // Dropdown states (mutually exclusive)
   const [activeDropdown, setActiveDropdown] = useState<"notifications" | "settings" | "pnl" | null>(null);
+
+  // Balance visibility toggle
+  const [hideBalance, setHideBalance] = useState(false);
 
   // Settings states
   const [soundEnabled, setSoundEnabled] = useState(true);
@@ -146,109 +156,148 @@ export function TerminalNav({
   };
 
   return (
-    <div className="sticky top-0 z-40 w-full px-3 sm:px-4 lg:px-6 pt-3 sm:pt-4 pointer-events-none">
-      <header className="mx-auto flex h-14 max-w-[1720px] items-center justify-between px-4 lg:px-5 rounded-lg border border-[var(--hair)] bg-[var(--card)] pointer-events-auto">
+    <div className="fixed top-0 inset-x-0 mx-auto w-full max-w-[1680px] z-40 px-2 sm:px-4 pointer-events-none">
+      <header className="pointer-events-auto w-full flex h-12 sm:h-13 items-center justify-between px-3.5 sm:px-4 lg:px-5 rounded-b-xl sm:rounded-b-2xl border-b border-x border-[var(--hair)] bg-[var(--card)]/95 backdrop-blur-xl shadow-md">
         {/* Left Section: Brand & Nav Tabs */}
         <div className="flex items-center gap-6">
           <BrandMark />
 
-          {/* Navigation Tabs (Trade = current view, Leaderboard navigates) */}
-          <nav className="hidden items-center gap-1 md:flex" aria-label="Main Navigation">
+          {/* Navigation Tabs (iOS Liquid Water Segmented Control with Rotating Glowing Border) */}
+          <nav className="hidden items-center p-0.5 rounded-xl bg-[var(--card)] border border-[var(--hair)] md:flex shadow-inner" aria-label="Main Navigation">
             {NAV_TABS.map((tab) => {
-              const isActive = tab.id === "trade";
+              const isActive = (activeTab ?? "demo") === tab.id;
               return (
                 <button
                   key={tab.id}
                   onClick={() => {
-                    if (tab.href) router.push(tab.href);
+                    if (onTabChange) {
+                      onTabChange(tab.id);
+                    } else if (tab.href) {
+                      router.push(tab.href);
+                    }
                   }}
+                  type="button"
                   aria-current={isActive ? "page" : undefined}
-                  className={`relative px-3.5 py-1.5 text-xs font-semibold tracking-wide transition-colors ${
-                    isActive ? "text-[var(--color-neon-orange)]" : "text-[var(--ink-muted)] hover:text-[var(--color-neon-orange)]"
-                  }`}
+                  className="relative px-4 py-1.5 text-xs font-bold transition-colors select-none focus:outline-none flex items-center justify-center"
                 >
-                  {tab.label}
                   {isActive && (
                     <motion.div
-                      layoutId="active-nav-pill"
-                      className="absolute inset-0 rounded-lg bg-[var(--color-neon-orange-soft)] border border-[var(--color-neon-orange)]"
-                      transition={{ type: "spring", stiffness: 450, damping: 35 }}
-                    />
+                      layoutId="active-nav-water-pill"
+                      className="absolute inset-0 rounded-[9px] pointer-events-none"
+                      transition={{
+                        type: "spring",
+                        stiffness: 380,
+                        damping: 28,
+                        mass: 0.6,
+                      }}
+                    >
+                      {/* Masked Border Beam strictly on 1.5px border track */}
+                      <div className="border-beam-ring rounded-[9px]">
+                        <span className="rotating-glow-border" />
+                      </div>
+
+                      {/* Solid inner background — no gradient bleed */}
+                      <span
+                        className="absolute inset-0 rounded-[9px] border border-[var(--color-neon-orange)]/40 -z-10 shadow-[0_0_12px_rgba(255,95,31,0.25)]"
+                        style={{ backgroundColor: "#0c0f17" }}
+                      />
+                    </motion.div>
                   )}
+                  <span
+                    className={`relative z-10 transition-colors duration-200 ${
+                      isActive
+                        ? "text-[var(--ink)] font-black"
+                        : "text-[var(--ink-muted)] hover:text-[var(--ink)] font-semibold"
+                    }`}
+                  >
+                    {tab.label}
+                  </span>
                 </button>
               );
             })}
           </nav>
         </div>
 
-        {/* Right Section: Stats, Wallet, Claim, Actions */}
+        {/* Right Section: Stats, Wallet, Notifications, Settings, Theme */}
         <div ref={dropdownRef} className="relative flex items-center gap-2 sm:gap-2.5">
-          {/* P&L Chip — opens the full performance card */}
+          {/* P&L / Profile Button — opens full performance card, scales & glows on hover */}
           <button
             onClick={() =>
               setActiveDropdown((prev) => (prev === "pnl" ? null : "pnl"))
             }
-            className={`flex items-center gap-1.5 rounded-lg border px-2.5 py-1 transition-colors ${
+            className={`group flex items-center gap-1.5 rounded-xl border px-2.5 py-1 transition-all duration-200 hover:scale-105 hover:shadow-[0_0_12px_rgba(255,95,31,0.35)] hover:border-[var(--color-neon-orange)] ${
               activeDropdown === "pnl"
-                ? "bg-[var(--color-neon-orange-soft)] text-[var(--color-neon-orange)] border-[var(--color-neon-orange)]"
-                : "border-[var(--hair)] bg-[var(--card)] hover:border-[var(--color-neon-orange)]"
+                ? "bg-[var(--color-neon-orange-soft)] text-[var(--color-neon-orange)] border-[var(--color-neon-orange)] shadow-[0_0_10px_rgba(255,95,31,0.25)]"
+                : "border-[var(--hair)] bg-[var(--card)] text-[var(--ink)]"
             }`}
-            aria-label="Session performance"
-            title="Session performance"
+            aria-label="Profile and session performance"
+            title="Profile & Session Performance"
             type="button"
           >
+            <div className="flex h-4 w-4 items-center justify-center rounded-full bg-[var(--color-neon-orange)] text-white group-hover:scale-110 group-hover:shadow-[0_0_8px_rgba(255,95,31,0.6)] transition-all">
+              <User className="h-2.5 w-2.5" />
+            </div>
             <ChartLine className={`h-3 w-3 ${pnlPositive ? "text-[var(--up)]" : "text-[var(--down)]"}`} />
             <span className={`font-mono text-[11px] font-extrabold ${pnlPositive ? "text-[var(--up)]" : "text-[var(--down)]"}`}>
               {pnlLabel}
             </span>
           </button>
 
-          {/* Balance Display (wallet-gated) */}
+          {/* Balance Display with Anticlockwise Rotating Glow and Eye Hide Toggle */}
           {walletConnected ? (
-          <div
-            className={`flex items-center gap-2 rounded-lg border border-[var(--hair)] bg-[var(--card)] px-2.5 py-1 ${
-              balanceBump ? "scale-[1.04] border-[var(--color-neon-orange)] bg-[var(--color-neon-orange-soft)]" : ""
-            }`}
-          >
-            <span className="text-[9px] font-bold uppercase tracking-wider text-[var(--ink-muted)]">Balance</span>
-            <span className="font-mono text-[11px] font-extrabold text-[var(--ink)] sm:text-xs">
-              {formatUsd(balance)}
-            </span>
-          </div>
-          ) : null}
+            <div className="relative inline-flex items-center justify-center rounded-xl">
+              {/* Masked Border Beam strictly on border ring — anticlockwise */}
+              <div className="border-beam-ring rounded-xl">
+                <span className="rotating-glow-border-anticlockwise" />
+              </div>
 
-          {/* + Claim Button (always visible, disabled until wallet + cooldown) */}
-          <button
-            onClick={onClaim}
-            disabled={!walletConnected || !canClaim || claimBusy}
-            className={`relative overflow-hidden rounded-lg px-3 py-1 text-[11px] font-bold tracking-wide transition-colors border ${
-              canClaim && !claimBusy
-                ? "bg-[var(--color-neon-orange)] hover:bg-[var(--color-neon-orange-pressed)] text-white border-[var(--color-neon-orange)] active:scale-95"
-                : "bg-[var(--card)] opacity-40 text-[var(--ink-muted)] cursor-not-allowed border-[var(--hair)]"
-            } ${claimPulse ? "scale-105" : ""}`}
-          >
-            <div className="flex items-center gap-1">
-              <Zap className="h-3 w-3" />
-              <span>{claimBusy ? "Claiming…" : claimLabel ?? (canClaim ? "+ Claim $10k" : `${cooldownSec}s`)}</span>
+              <div
+                className={`relative z-10 flex items-center gap-1.5 rounded-xl border border-[var(--color-neon-orange)]/35 px-2.5 py-1 text-[11px] font-bold text-[var(--ink)] transition-transform ${
+                  balanceBump ? "scale-[1.04]" : ""
+                }`}
+                style={{ backgroundColor: "#0c0f17" }}
+              >
+                <span className="text-[9px] font-bold uppercase tracking-wider text-[var(--ink-muted)]">
+                  Balance
+                </span>
+                <span className="font-mono text-[11px] font-extrabold text-[var(--ink)] sm:text-xs min-w-[50px] text-center">
+                  {hideBalance ? "••••••" : formatUsd(balance)}
+                </span>
+                <button
+                  onClick={() => setHideBalance((v) => !v)}
+                  type="button"
+                  className="text-[var(--ink-muted)] hover:text-[var(--color-neon-orange)] p-0.5 rounded transition-colors flex items-center justify-center"
+                  title={hideBalance ? "Show balance" : "Hide balance"}
+                  aria-label={hideBalance ? "Show balance" : "Hide balance"}
+                >
+                  {hideBalance ? <EyeOff className="h-3 w-3" /> : <Eye className="h-3 w-3" />}
+                </button>
+              </div>
             </div>
-          </button>
+          ) : null}
 
           {/* Solana Wallet Button (click address for info card) */}
           <WalletButton showStats variant="compact" snapshot={snapshot} />
 
-          {/* Notifications Trigger Button */}
+          {/* Notifications Trigger Button — shakes & glows on hover */}
           <button
             onClick={() =>
               setActiveDropdown((prev) => (prev === "notifications" ? null : "notifications"))
             }
-            className={`relative flex h-8 w-8 items-center justify-center rounded-lg border transition-colors ${
+            className={`hover-bell-shake relative flex h-8 w-8 items-center justify-center rounded-lg border transition-all duration-200 hover:scale-105 hover:shadow-[0_0_12px_rgba(255,95,31,0.4)] hover:border-[var(--color-neon-orange)] ${
               activeDropdown === "notifications"
-                ? "bg-[var(--color-neon-orange-soft)] text-[var(--color-neon-orange)] border-[var(--color-neon-orange)]"
-                : "border-[var(--hair)] bg-[var(--card)] text-[var(--ink-muted)] hover:border-[var(--color-neon-orange)] hover:text-[var(--color-neon-orange)]"
+                ? "bg-[var(--color-neon-orange-soft)] text-[var(--color-neon-orange)] border-[var(--color-neon-orange)] shadow-[0_0_10px_rgba(255,95,31,0.3)]"
+                : "border-[var(--hair)] bg-[var(--card)] text-[var(--ink-muted)] hover:text-[var(--color-neon-orange)]"
             }`}
             aria-label="Terminal Notifications"
           >
             <Bell className="h-3.5 w-3.5" />
+            {unreadCount > 0 && (
+              <span
+                className="absolute right-1.5 top-1.5 h-1.5 w-1.5 rounded-full animate-ping"
+                style={{ backgroundColor: activeTintConfig.color }}
+              />
+            )}
             {unreadCount > 0 && (
               <span
                 className="absolute right-1.5 top-1.5 h-1.5 w-1.5 rounded-full"
@@ -257,29 +306,44 @@ export function TerminalNav({
             )}
           </button>
 
-          {/* Settings Trigger Button */}
+          {/* Settings Trigger Button — rotates gear & glows on hover */}
           <button
             onClick={() =>
               setActiveDropdown((prev) => (prev === "settings" ? null : "settings"))
             }
-            className={`flex h-8 w-8 items-center justify-center rounded-lg border transition-colors ${
+            className={`hover-gear-spin relative flex h-8 w-8 items-center justify-center rounded-lg border transition-all duration-200 hover:scale-105 hover:shadow-[0_0_12px_rgba(255,95,31,0.4)] hover:border-[var(--color-neon-orange)] ${
               activeDropdown === "settings"
-                ? "bg-[var(--color-neon-orange-soft)] text-[var(--color-neon-orange)] border-[var(--color-neon-orange)]"
-                : "border-[var(--hair)] bg-[var(--card)] text-[var(--ink-muted)] hover:border-[var(--color-neon-orange)] hover:text-[var(--color-neon-orange)]"
+                ? "bg-[var(--color-neon-orange-soft)] text-[var(--color-neon-orange)] border-[var(--color-neon-orange)] shadow-[0_0_10px_rgba(255,95,31,0.3)]"
+                : "border-[var(--hair)] bg-[var(--card)] text-[var(--ink-muted)] hover:text-[var(--color-neon-orange)]"
             }`}
             aria-label="Terminal Settings"
           >
             <Settings className="h-3.5 w-3.5" />
           </button>
 
-          {/* Light / Dark Mode Toggle */}
+          {/* Light / Dark Mode Toggle — rotates, scales and glows on hover & click animation */}
           <button
             onClick={() => setMode(mode === "dark" ? "light" : "dark")}
-            className="flex h-8 w-8 items-center justify-center rounded-lg border border-[var(--hair)] bg-[var(--card)] text-[var(--ink-muted)] transition-colors hover:border-[var(--color-neon-orange)] hover:text-[var(--color-neon-orange)]"
+            className="relative flex h-8 w-8 items-center justify-center rounded-lg border border-[var(--hair)] bg-[var(--card)] text-[var(--ink-muted)] transition-all duration-200 hover:scale-110 hover:border-[var(--color-neon-orange)] hover:text-[var(--color-neon-orange)] hover:shadow-[0_0_12px_rgba(255,95,31,0.4)] active:scale-90"
             aria-label={mode === "dark" ? "Switch to light mode" : "Switch to dark mode"}
             title={mode === "dark" ? "Switch to light mode" : "Switch to dark mode"}
           >
-            {mode === "dark" ? <Sun className="h-3.5 w-3.5" /> : <Moon className="h-3.5 w-3.5" />}
+            <AnimatePresence mode="wait" initial={false}>
+              <motion.div
+                key={mode}
+                initial={{ rotate: -90, scale: 0.3, opacity: 0 }}
+                animate={{ rotate: 0, scale: 1, opacity: 1 }}
+                exit={{ rotate: 90, scale: 0.3, opacity: 0 }}
+                transition={{ duration: 0.22, ease: "easeOut" }}
+                className="flex items-center justify-center"
+              >
+                {mode === "dark" ? (
+                  <Sun className="h-3.5 w-3.5 text-amber-400 drop-shadow-[0_0_6px_rgba(251,191,36,0.6)]" />
+                ) : (
+                  <Moon className="h-3.5 w-3.5 text-cyan-400 drop-shadow-[0_0_6px_rgba(34,211,238,0.6)]" />
+                )}
+              </motion.div>
+            </AnimatePresence>
           </button>
 
           {/* ========================================================================= */}
@@ -292,14 +356,14 @@ export function TerminalNav({
                 animate={{ opacity: 1, scale: 1, y: 0 }}
                 exit={{ opacity: 0, scale: 0.95, y: 4 }}
                 transition={{ duration: 0.15, ease: "easeOut" }}
-                className="absolute right-0 top-11 z-50 w-80 sm:w-96 rounded-lg border border-[var(--hair)] nav-dropdown p-4"
+                className="absolute right-0 top-11 z-50 w-80 sm:w-96 rounded-xl border border-[var(--hair)] nav-dropdown p-4 shadow-xl"
               >
                 {/* Header */}
                 <div className="flex items-center justify-between pb-3 border-b border-[var(--hair)]">
                   <div className="flex items-center gap-2">
                     <span className="h-2 w-2 rounded-full bg-[var(--color-neon-orange)]" />
                     <h4 className="text-xs font-bold uppercase tracking-wider text-[var(--ink)]">
-                      System Alerts
+                      Notification Center
                     </h4>
                     {unreadCount > 0 && (
                       <span className="rounded-full bg-[var(--color-neon-orange-soft)] border border-[var(--color-neon-orange)] px-2 py-0.5 text-[10px] font-extrabold text-[var(--color-neon-orange)]">
@@ -323,6 +387,36 @@ export function TerminalNav({
                       <X className="h-3.5 w-3.5" />
                     </button>
                   </div>
+                </div>
+
+                {/* Claim tUSD Card at top of Notification Center */}
+                <div className="mt-3 rounded-xl border border-[var(--color-neon-orange)]/40 bg-[var(--color-neon-orange-soft)] p-3 flex items-center justify-between gap-3 shadow-[0_0_15px_rgba(255,95,31,0.15)]">
+                  <div className="flex items-center gap-2.5">
+                    <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[var(--color-neon-orange)] text-white shadow-sm flex-shrink-0">
+                      <Zap className="h-4 w-4" />
+                    </div>
+                    <div>
+                      <div className="text-xs font-extrabold text-[var(--ink)]">
+                        Demo Faucet Claim
+                      </div>
+                      <div className="text-[10px] text-[var(--ink-muted)]">
+                        {canClaim && !claimBusy ? "Instant 100 tUSD replenishment" : `Cooldown: ${cooldownSec}s`}
+                      </div>
+                    </div>
+                  </div>
+
+                  <button
+                    onClick={onClaim}
+                    disabled={!walletConnected || !canClaim || claimBusy}
+                    type="button"
+                    className={`relative overflow-hidden rounded-lg px-3 py-1.5 text-xs font-extrabold tracking-wide transition-all border ${
+                      canClaim && !claimBusy
+                        ? "bg-[var(--color-neon-orange)] hover:bg-[var(--color-neon-orange-pressed)] text-white border-[var(--color-neon-orange)] active:scale-95 shadow-[0_0_10px_rgba(255,95,31,0.3)]"
+                        : "bg-[var(--card)] opacity-50 text-[var(--ink-muted)] cursor-not-allowed border-[var(--hair)]"
+                    }`}
+                  >
+                    {claimBusy ? "Claiming…" : claimLabel ?? (canClaim ? "+ Claim 100 tUSD" : `${cooldownSec}s`)}
+                  </button>
                 </div>
 
                 {/* Alerts List */}

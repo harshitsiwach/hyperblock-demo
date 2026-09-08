@@ -71,12 +71,12 @@ const STOCK_SVG_MAP: Record<string, { svg: string; hex: string }> = {
 
 export function AssetIcon({
   symbol,
-  category,
+  category = "crypto",
   size = 36,
   className = "",
 }: {
   symbol: string;
-  category: AssetCategory;
+  category?: AssetCategory;
   size?: number;
   className?: string;
 }) {

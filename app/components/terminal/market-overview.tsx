@@ -80,7 +80,7 @@ export function MarketOverview({
   const recommendedMarkets = MARKETS.filter((m) => RECOMMENDED_SYMBOLS.includes(m.symbol));
 
   return (
-    <div className="terminal-card flex flex-col gap-2.5 p-3.5 flex-shrink-0">
+    <div className="terminal-card flex flex-col justify-between gap-2.5 p-3.5 flex-1 h-full">
       {/* Header: Asset Badge & WATCHING indicator */}
       <div className="flex items-center justify-between border-b border-[var(--hair)] pb-2">
         <div className="flex items-center gap-2.5">

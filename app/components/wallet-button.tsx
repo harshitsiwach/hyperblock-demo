@@ -37,18 +37,29 @@ export function WalletButton({ variant = "pill", showStats = false, snapshot }: 
 
   return (
     <div style={{ position: "relative" }}>
-      <button
-        className="wallet"
-        onClick={handleClick}
-        disabled={wallet.connecting}
-        type="button"
-        title={wallet.address ? `Connected: ${wallet.address} — click for balances` : "Connect Solana wallet (Phantom, Solflare, Ledger, Torus)"}
-        style={variant === "compact" ? { minHeight: 32, padding: "0 10px", fontSize: 12 } : undefined}
-      >
-        <span className={`dot ${wallet.address ? "is-connected" : ""}`} />
-        <span className="wallet-label">{label}</span>
-        {wallet.address && showStats && <span style={{ fontSize: 10, marginLeft: 2 }}>{open ? "▴" : "▾"}</span>}
-      </button>
+      <div className="relative inline-flex items-center justify-center rounded-xl transition-transform duration-200 hover:scale-105">
+        {/* Masked Border Beam — strictly confined to 1.5px border track */}
+        <div className="border-beam-ring rounded-xl">
+          <span className="rotating-glow-border" />
+        </div>
+
+        <button
+          onClick={handleClick}
+          disabled={wallet.connecting}
+          type="button"
+          title={wallet.address ? `Connected: ${wallet.address} — click for balances` : "Connect Solana wallet (Phantom, Solflare, Ledger, Torus)"}
+          className="relative z-10 flex items-center gap-1.5 rounded-xl border border-[var(--color-neon-orange)]/35 px-3 py-1 text-xs font-bold text-[var(--ink)] hover:bg-[var(--card-hover)] transition-all focus:outline-none"
+          style={{
+            backgroundColor: "#0c0f17",
+            minHeight: variant === "compact" ? 30 : undefined,
+            fontSize: 12,
+          }}
+        >
+          <span className={`h-2 w-2 rounded-full flex-shrink-0 ${wallet.address ? "bg-emerald-400 shadow-[0_0_6px_#34d399]" : "bg-[var(--ink-muted)] animate-pulse"}`} />
+          <span className="font-mono font-extrabold text-[var(--ink)]">{label}</span>
+          {wallet.address && showStats && <span className="text-[10px] text-[var(--ink-muted)] ml-0.5">{open ? "▴" : "▾"}</span>}
+        </button>
+      </div>
       {open && wallet.address && showStats && (
         <>
           <div onClick={() => setOpen(false)} style={{ position: "fixed", inset: 0, zIndex: 40 }} aria-hidden />

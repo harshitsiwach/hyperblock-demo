@@ -2,7 +2,23 @@
 
 import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
-import { Activity, CheckCircle, Clock, Radio, Zap, X, ExternalLink, ArrowUp, ArrowDown, Receipt } from "lucide-react";
+import {
+  Activity,
+  CheckCircle,
+  Clock,
+  Radio,
+  Zap,
+  X,
+  ExternalLink,
+  ArrowUp,
+  ArrowDown,
+  Receipt,
+  Maximize2,
+  Minimize2,
+  Terminal,
+  ChevronDown,
+  ChevronUp,
+} from "lucide-react";
 
 /** Structured per-bet data powering the stream rows + detail popup. */
 export interface BetDetail {
@@ -33,6 +49,7 @@ export interface ActivityItem {
 
 interface RecentActivityProps {
   items: ActivityItem[];
+  defaultExpanded?: boolean;
 }
 
 function formatTime(ts: number): string {
@@ -196,121 +213,236 @@ function BetDetailModal({ detail, onClose }: { detail: BetDetail; onClose: () =>
   );
 }
 
-export function RecentActivity({ items }: RecentActivityProps) {
+export function RecentActivity({ items, defaultExpanded = false }: RecentActivityProps) {
   const [openDetail, setOpenDetail] = useState<BetDetail | null>(null);
+  const [isExpanded, setIsExpanded] = useState(defaultExpanded);
+
+  // In rest mode (collapsed): show exactly 5 events. In expanded mode: show all available events with scrolling.
+  const displayItems = isExpanded ? items : items.slice(0, 5);
 
   return (
-    <div className="terminal-card flex flex-col p-4 lg:p-5 h-full space-y-3">
-      {/* Header */}
-      <div className="flex items-center justify-between border-b border-[var(--glass-panel-border-subtle)] pb-2.5">
-        <div className="flex items-center gap-2">
-          <Activity className="h-3.5 w-3.5 text-[var(--ink-secondary)]" />
-          <h3 className="text-xs font-bold uppercase tracking-wider text-[var(--ink)]">
-            Recent Terminal Stream
-          </h3>
-        </div>
-        <span className="live-pulse-dot" />
-      </div>
+    <>
+      {/* Backdrop overlay when expanded so user can click outside to collapse */}
+      <AnimatePresence>
+        {isExpanded && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => setIsExpanded(false)}
+            className="fixed inset-0 z-30 bg-black/50 backdrop-blur-[2px] transition-opacity"
+            aria-hidden="true"
+          />
+        )}
+      </AnimatePresence>
 
-      {/* Activity List */}
-      <div className="flex-1 overflow-y-auto max-h-[360px] space-y-2 pr-1">
-        <AnimatePresence initial={false}>
-          {items.slice(0, 10).map((item, index) => {
-            const isFresh = index === 0;
-            const d = item.detail;
-            const pct = d ? betPnlPct(d) : null;
-            const clickable = !!d;
+      {/* Docked Bottom Notch (0 space to the bottom, overlaps on expand with physics spring animation) */}
+      <div className="fixed bottom-0 inset-x-0 mx-auto w-full max-w-[1680px] z-40 px-2 sm:px-4 pointer-events-none">
+        <motion.div
+          initial={false}
+          animate={{
+            height: isExpanded ? 520 : 210,
+            borderColor: isExpanded ? "rgba(255, 95, 31, 0.45)" : "var(--hair)",
+            boxShadow: isExpanded
+              ? "0 -16px 50px -10px rgba(255, 95, 31, 0.3), 0 0 0 1px rgba(255, 95, 31, 0.4)"
+              : "0 -4px 20px -4px rgba(0, 0, 0, 0.5), 0 0 0 1px var(--hair)",
+          }}
+          transition={{
+            type: "spring",
+            stiffness: 280,
+            damping: 26,
+            mass: 0.9,
+          }}
+          className="pointer-events-auto w-full rounded-t-xl sm:rounded-t-2xl border-t border-x bg-[var(--card)]/95 backdrop-blur-xl flex flex-col overflow-hidden relative"
+        >
+          {/* Glowing Top Laser Beam Sweep across notch border when expanded */}
+          {isExpanded && (
+            <motion.div
+              initial={{ x: "-100%" }}
+              animate={{ x: "200%" }}
+              transition={{ repeat: Infinity, duration: 2.8, ease: "linear" }}
+              className="absolute top-0 left-0 w-1/3 h-[2px] bg-gradient-to-r from-transparent via-[var(--color-neon-orange)] to-transparent pointer-events-none z-20"
+            />
+          )}
 
-            return (
-              <motion.div
-                key={item.id}
-                initial={{ opacity: 0, y: -10 }}
-                animate={{ opacity: isFresh ? 1 : 0.8, y: 0 }}
-                exit={{ opacity: 0 }}
-                transition={{ duration: 0.25, ease: "easeOut" }}
-                className={`flex items-start gap-2.5 rounded-lg border p-2 text-xs transition-colors ${
-                  isFresh
-                    ? "border-[var(--glass-card-hover-border)] bg-[var(--glass-card-hover-bg)]"
-                    : "border-[var(--glass-card-border)] bg-[var(--glass-card-bg)]"
-                }`}
-              >
-                {/* Indicator dot */}
-                <div className="mt-1 flex-shrink-0">
-                  <span
-                    className={`inline-block h-2 w-2 rounded-full ${
-                      item.highlight === "green"
-                        ? "bg-[#00f076] shadow-[0_0_6px_#00f076]"
-                        : item.highlight === "red"
-                        ? "bg-[#ff3358] shadow-[0_0_6px_#ff3358]"
-                        : "bg-[var(--ink-muted)]"
+          {/* Sleek Center Grab Bar with Pulse Glow on Expand */}
+          <div
+            onClick={() => setIsExpanded((prev) => !prev)}
+            className="flex justify-center pt-2 pb-0.5 cursor-pointer select-none"
+          >
+            <motion.div
+              animate={{
+                width: isExpanded ? 56 : 36,
+                backgroundColor: isExpanded ? "var(--color-neon-orange)" : "var(--hair)",
+                boxShadow: isExpanded ? "0 0 10px rgba(255, 95, 31, 0.85)" : "none",
+              }}
+              transition={{ duration: 0.25 }}
+              className="h-1 rounded-full"
+            />
+          </div>
+
+          {/* Notch Header Bar */}
+          <div
+            onClick={() => setIsExpanded((prev) => !prev)}
+            className="flex items-center justify-between border-b border-[var(--hair)] px-3 sm:px-4 py-2 cursor-pointer select-none hover:bg-[var(--card)]/60 transition-colors"
+          >
+            <div className="flex items-center gap-2.5">
+              <div className="flex h-5 w-5 items-center justify-center rounded bg-[var(--card)] border border-[var(--hair)]">
+                <Terminal className="h-3 w-3 text-[var(--color-neon-orange)]" />
+              </div>
+              <h3 className="text-xs font-bold uppercase tracking-wider text-[var(--ink)] flex items-center gap-2">
+                <span>Recent Terminal Stream</span>
+                <span className="live-pulse-dot" />
+              </h3>
+              <span className="hidden sm:inline-flex items-center rounded bg-[var(--card)] border border-[var(--hair)] px-2 py-0.5 text-[9px] font-mono font-bold text-[var(--ink-secondary)]">
+                {isExpanded ? `${items.length} logs · scroll all` : `Rest Mode (${displayItems.length}/5)`}
+              </span>
+            </div>
+
+            {/* Top-Right Expand / Collapse Button */}
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                setIsExpanded((prev) => !prev);
+              }}
+              id="terminal-expand-button"
+              aria-label={isExpanded ? "Collapse terminal stream" : "Expand terminal stream"}
+              className="flex items-center gap-1.5 rounded-md border border-[var(--hair)] bg-[var(--card)] px-2.5 py-1 text-[11px] font-bold text-[var(--ink)] hover:text-[var(--color-neon-orange)] hover:border-[var(--color-neon-orange)] transition-colors shadow-sm cursor-pointer"
+            >
+              {isExpanded ? (
+                <>
+                  <Minimize2 className="h-3 w-3 text-[var(--ink-secondary)]" />
+                  <span>Collapse</span>
+                  <ChevronDown className="h-3 w-3 text-[var(--ink-muted)]" />
+                </>
+              ) : (
+                <>
+                  <Maximize2 className="h-3 w-3 text-[var(--color-neon-orange)]" />
+                  <span>Expand</span>
+                  <ChevronUp className="h-3 w-3 text-[var(--ink-muted)]" />
+                </>
+              )}
+            </button>
+          </div>
+
+          {/* Activity Log Items Container */}
+          <div
+            className={`flex-1 space-y-1.5 p-2.5 pr-3 ${
+              isExpanded ? "overflow-y-auto" : "overflow-hidden"
+            }`}
+          >
+            <AnimatePresence initial={false}>
+              {displayItems.map((item, index) => {
+                const isFresh = index === 0;
+                const d = item.detail;
+                const pct = d ? betPnlPct(d) : null;
+                const clickable = !!d;
+
+                return (
+                  <motion.div
+                    key={item.id}
+                    initial={{ opacity: 0, y: 14, scale: 0.98 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.98 }}
+                    transition={{
+                      duration: 0.22,
+                      delay: isExpanded ? Math.min(index * 0.025, 0.28) : 0,
+                      ease: "easeOut",
+                    }}
+                    className={`flex items-center gap-2.5 rounded-lg border px-3 py-1.5 text-xs transition-colors ${
+                      isFresh
+                        ? "border-[var(--hair)] bg-[var(--card)] shadow-sm"
+                        : "border-[var(--hair)] bg-[var(--card)]/60 hover:bg-[var(--card)]"
                     }`}
-                  />
-                </div>
+                  >
+                    {/* Indicator dot */}
+                    <div className="flex-shrink-0">
+                      <span
+                        className={`inline-block h-2 w-2 rounded-full ${
+                          item.highlight === "green"
+                            ? "bg-[#00f076] shadow-[0_0_6px_#00f076]"
+                            : item.highlight === "red"
+                            ? "bg-[#ff3358] shadow-[0_0_6px_#ff3358]"
+                            : "bg-[var(--ink-muted)]"
+                        }`}
+                      />
+                    </div>
 
-                {/* Content */}
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-baseline justify-between gap-1">
-                    <span
-                      className={`font-semibold truncate ${
-                        item.highlight === "green"
-                          ? "text-[#00f076]"
-                          : item.highlight === "red"
-                          ? "text-[#ff3358]"
-                          : "text-[var(--ink)]"
-                      }`}
-                    >
-                      {item.title}
-                    </span>
-                    <span className="text-[10px] font-mono text-[var(--ink-muted)] flex-shrink-0">
-                      {formatTime(item.timestamp)}
-                    </span>
-                  </div>
-                  <p className="text-[11px] text-[var(--ink-muted)] truncate mt-0.5">
-                    {item.subtitle}
-                  </p>
-                  {d && (
-                    <div className="mt-1 space-y-0.5 font-mono text-[10px] leading-relaxed">
-                      <div className="flex justify-between gap-2 text-[var(--ink-muted)]">
-                        <span>Bet <span className="text-[var(--ink)]">${formatPrice(d.entryPrice)}</span></span>
-                        <span>
-                          Close{" "}
-                          <span className="text-[var(--ink)]">
-                            {d.exitPrice !== undefined ? `$${formatPrice(d.exitPrice)}` : "…"}
-                          </span>
+                    {/* Content */}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between gap-2">
+                        <span
+                          className={`font-semibold text-xs truncate ${
+                            item.highlight === "green"
+                              ? "text-[#00f076]"
+                              : item.highlight === "red"
+                              ? "text-[#ff3358]"
+                              : "text-[var(--ink)]"
+                          }`}
+                        >
+                          {item.title}
+                        </span>
+                        <span className="text-[10px] font-mono text-[var(--ink-muted)] flex-shrink-0">
+                          {formatTime(item.timestamp)}
                         </span>
                       </div>
-                      {pct !== null && d.profitTokens !== undefined && (
-                        <div className={`flex justify-between gap-2 font-bold ${d.profitTokens >= 0 ? "text-[#00f076]" : "text-[#ff3358]"}`}>
-                          <span>P&L {d.profitTokens >= 0 ? "+" : "−"}${Math.abs(d.profitTokens).toFixed(2)}</span>
-                          <span>({pct >= 0 ? "+" : "−"}{Math.abs(pct).toFixed(1)}%)</span>
+                      <p className="text-[11px] text-[var(--ink-muted)] truncate mt-0.5">
+                        {item.subtitle}
+                      </p>
+                      {d && (
+                        <div className="mt-1 space-y-0.5 font-mono text-[10px] leading-relaxed">
+                          <div className="flex justify-between gap-2 text-[var(--ink-muted)]">
+                            <span>Bet <span className="text-[var(--ink)]">${formatPrice(d.entryPrice)}</span></span>
+                            <span>
+                              Close{" "}
+                              <span className="text-[var(--ink)]">
+                                {d.exitPrice !== undefined ? `$${formatPrice(d.exitPrice)}` : "…"}
+                              </span>
+                            </span>
+                          </div>
+                          {pct !== null && d.profitTokens !== undefined && (
+                            <div className={`flex justify-between gap-2 font-bold ${d.profitTokens >= 0 ? "text-[#00f076]" : "text-[#ff3358]"}`}>
+                              <span>P&L {d.profitTokens >= 0 ? "+" : "−"}${Math.abs(d.profitTokens).toFixed(2)}</span>
+                              <span>({pct >= 0 ? "+" : "−"}{Math.abs(pct).toFixed(1)}%)</span>
+                            </div>
+                          )}
+                          {d.status === "settling" && (
+                            <div className="text-amber-300/90">Settling…</div>
+                          )}
                         </div>
                       )}
-                      {d.status === "settling" && (
-                        <div className="text-amber-300/90">Settling…</div>
-                      )}
                     </div>
-                  )}
-                </div>
-                {clickable && (
-                  <button
-                    onClick={() => setOpenDetail(d!)}
-                    className="mt-0.5 flex flex-shrink-0 items-center gap-1 rounded-md border border-white/[0.12] bg-white/[0.05] px-2 py-1 text-[10px] font-extrabold uppercase tracking-wide text-slate-200 hover:bg-white/[0.12] hover:text-white active:scale-95"
-                    title="Open bet slip"
-                  >
-                    <Receipt className="h-3 w-3" />
-                    Bet Slip
-                  </button>
-                )}
-              </motion.div>
-            );
-          })}
-        </AnimatePresence>
+                    {clickable && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setOpenDetail(d!);
+                        }}
+                        className="mt-0.5 flex flex-shrink-0 items-center gap-1 rounded-md border border-white/[0.12] bg-white/[0.05] px-2 py-1 text-[10px] font-extrabold uppercase tracking-wide text-slate-200 hover:bg-white/[0.12] hover:text-white active:scale-95"
+                        title="Open bet slip"
+                      >
+                        <Receipt className="h-3 w-3" />
+                        Bet Slip
+                      </button>
+                    )}
+                  </motion.div>
+                );
+              })}
+            </AnimatePresence>
+
+            {displayItems.length === 0 && (
+              <div className="p-3 text-center text-xs text-[var(--ink-muted)]">
+                No activity logged yet.
+              </div>
+            )}
+          </div>
+        </motion.div>
       </div>
 
       {/* Bet detail popup */}
       <AnimatePresence>
         {openDetail && <BetDetailModal detail={openDetail} onClose={() => setOpenDetail(null)} />}
       </AnimatePresence>
-    </div>
+    </>
   );
 }

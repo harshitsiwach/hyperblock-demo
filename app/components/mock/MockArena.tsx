@@ -23,13 +23,15 @@ import { BetRecordCard } from "@/app/components/terminal/bet-record-card";
 import { RecentActivity, type ActivityItem, type BetDetail } from "@/app/components/terminal/recent-activity";
 import { WinCelebrationV2 } from "@/app/components/terminal/win-celebration-v2";
 import { MobileDock } from "@/app/components/terminal/mobile-dock";
+import { TerminalLeaderboard } from "@/app/components/terminal/terminal-leaderboard";
+import { TerminalNotification, type BetNotificationData } from "@/app/components/terminal/terminal-notification";
 import type { MarketSnapshot, Play } from "@/app/lib/domain";
 
 function formatUsd(n: number) {
   return `$${n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
 
-export function MockArena() {
+export function MockArena({ initialView = "demo" }: { initialView?: "demo" | "leaderboard" } = {}) {
   // Selected Market ID (Default: GOLD (XAU) - marketId 9)
   const [selectedMarketId, setSelectedMarketId] = useState<number>(() => {
     const valid = SUPPORTED_ASSETS.map((a) => a.marketId);
@@ -41,6 +43,9 @@ export function MockArena() {
     }
     return 9; // default GOLD
   });
+
+  // Arena View: "demo" (trading workspace) | "leaderboard" (arena rankings)
+  const [arenaView, setArenaView] = useState<"demo" | "leaderboard">(initialView);
 
   const selectedAsset = useMemo(
     () => SUPPORTED_ASSETS.find((a) => a.marketId === selectedMarketId) ?? SUPPORTED_ASSETS[8],
@@ -77,6 +82,7 @@ export function MockArena() {
   const [claimPulse, setClaimPulse] = useState(false);
   const [betFlash, setBetFlash] = useState<"up" | "down" | null>(null);
   const [toast, setToast] = useState<string | null>(null);
+  const [betNotification, setBetNotification] = useState<BetNotificationData | null>(null);
   const [celebrate, setCelebrate] = useState<{ profit: number; id: string; streak?: number; isMega?: boolean } | null>(null);
   const [mounted, setMounted] = useState(false);
   const [displayBalance, setDisplayBalance] = useState(0);
@@ -108,6 +114,30 @@ export function MockArena() {
       timestamp: Date.now() - 45000,
       highlight: "neutral",
     },
+    {
+      id: "init-3",
+      type: "system",
+      title: "10-Sec Fast Rounds Active",
+      subtitle: "Instant settlement on Hyperliquid tick prices",
+      timestamp: Date.now() - 30000,
+      highlight: "green",
+    },
+    {
+      id: "init-4",
+      type: "system",
+      title: "Solana Devnet Oracle Verified",
+      subtitle: "High-precision onchain consensus router standby",
+      timestamp: Date.now() - 20000,
+      highlight: "neutral",
+    },
+    {
+      id: "init-5",
+      type: "system",
+      title: "Market Engine Online",
+      subtitle: "Crypto, Stocks, Commodities & Forex available",
+      timestamp: Date.now() - 10000,
+      highlight: "green",
+    },
   ]);
 
   useEffect(() => {
@@ -131,7 +161,7 @@ export function MockArena() {
         timestamp: Date.now(),
         highlight: "neutral",
       },
-      ...prev.slice(0, 19),
+      ...prev.slice(0, 199),
     ]);
   }, [selectedMarketId, selectedAsset.symbol, selectedAsset.label]);
 
@@ -245,7 +275,7 @@ export function MockArena() {
           timestamp: Date.now(),
           highlight: "green",
         },
-        ...prev.slice(0, 19),
+        ...prev.slice(0, 199),
       ]);
 
       try {
@@ -293,7 +323,7 @@ export function MockArena() {
     setBetFlash(dir);
     setTimeout(() => setBetFlash(null), 600);
     setSettling(true);
-    setToast(`Bet sent · settling ~10s onchain…`);
+
     // Visible Active Order while the round settles (engine ignores "submitting").
     const openedAt = Date.now();
     setPendingPlay({
@@ -309,6 +339,36 @@ export function MockArena() {
       priceMovePercent: 0,
       liveProfitUsd: 0,
     });
+
+    // 1. Animated Bet Placement Notification
+    setBetNotification({
+      id: `bet-${openedAt}`,
+      type: "placed",
+      symbol: selectedAsset.symbol,
+      direction: dir,
+      stake: amount,
+      entryPrice,
+      durationMs: 10000,
+      timestamp: openedAt,
+    });
+
+    // Transition to settling notification as round locks
+    const settlingTimer = setTimeout(() => {
+      setBetNotification((curr) => {
+        if (curr && curr.type === "placed") {
+          return {
+            id: `settle-${Date.now()}`,
+            type: "settling",
+            symbol: selectedAsset.symbol,
+            direction: dir,
+            stake: amount,
+            entryPrice,
+            timestamp: Date.now(),
+          };
+        }
+        return curr;
+      });
+    }, 8500);
 
     setActivityItems((prev) => [
       {
@@ -327,7 +387,7 @@ export function MockArena() {
           openedAt,
         },
       },
-      ...prev.slice(0, 19),
+      ...prev.slice(0, 199),
     ]);
 
     try {
@@ -341,6 +401,8 @@ export function MockArena() {
         betAmount: amount,
         currentPrice: entryPrice,
       });
+      clearTimeout(settlingTimer);
+
       const play: any = settledBetToPlay(settled, selectedMarketId);
       const next = [play, ...getMockPlays()].slice(0, 50);
       setMockPlays(next);
@@ -366,11 +428,27 @@ export function MockArena() {
         openedAt,
         settledAt,
       };
+
       if (settled.status === "won" && profit > 0) {
         const streakInfo = updateStreak(true);
         play.streak = streakInfo.streak;
         const isMega = profit >= amount * 5 * 0.9 - 1e-9;
         setCelebrate({ profit, id: play.id, streak: play.streak, isMega });
+
+        // 2. Animated Victory Result Notification
+        setBetNotification({
+          id: `won-${Date.now()}`,
+          type: "won",
+          symbol: selectedAsset.symbol,
+          direction: dir,
+          stake: amount,
+          entryPrice,
+          exitPrice: settled.exitPrice ?? undefined,
+          profit,
+          pnlPct,
+          timestamp: Date.now(),
+        });
+
         setActivityItems((prev) => [
           {
             id: `settle-${Date.now()}`,
@@ -381,18 +459,29 @@ export function MockArena() {
             highlight: "green",
             detail: { ...betDetail },
           },
-          ...prev.slice(0, 19),
+          ...prev.slice(0, 199),
         ]);
         const t = setTimeout(() => setCelebrate(null), isMega ? 3600 : 2800);
         void t;
       } else {
         updateStreak(false);
-        const label =
-          settled.status === "refunded" || settled.status === "breakeven"
-            ? `Trade ${settled.status} · stake returned`
-            : `Trade Settled · -${amount} tUSD`;
-        setToast(label);
-        setTimeout(() => setToast(null), 2600);
+        const isRefund = settled.status === "refunded" || settled.status === "breakeven";
+
+        // 3. Animated Loss or Refund Result Notification
+        setBetNotification({
+          id: `result-${Date.now()}`,
+          type: isRefund ? "refunded" : "lost",
+          symbol: selectedAsset.symbol,
+          direction: dir,
+          stake: amount,
+          entryPrice,
+          exitPrice: settled.exitPrice ?? undefined,
+          profit: isRefund ? 0 : -amount,
+          pnlPct: isRefund ? 0 : -100,
+          message: isRefund ? "Trade settled breakeven · stake refunded" : undefined,
+          timestamp: Date.now(),
+        });
+
         setActivityItems((prev) => [
           {
             id: `settle-${Date.now()}`,
@@ -406,15 +495,21 @@ export function MockArena() {
             highlight: settled.status === "won" ? "green" : "red",
             detail: { ...betDetail },
           },
-          ...prev.slice(0, 19),
+          ...prev.slice(0, 199),
         ]);
         try {
           navigator.vibrate?.([20, 40]);
         } catch {}
       }
     } catch (e) {
-      setToast(e instanceof Error ? e.message : "Bet failed");
-      setTimeout(() => setToast(null), 3500);
+      clearTimeout(settlingTimer);
+      setBetNotification({
+        id: `err-${Date.now()}`,
+        type: "info",
+        symbol: selectedAsset.symbol,
+        message: e instanceof Error ? e.message : "Bet failed",
+        timestamp: Date.now(),
+      });
     } finally {
       setPendingPlay(null);
       setSettling(false);
@@ -452,6 +547,19 @@ export function MockArena() {
       const isMega = mock.lastSettlement.profit >= play.collateralUsd * 5 * 0.9 - 1e-9;
       setCelebrate({ profit: mock.lastSettlement.profit, id: play.id, streak: play.streak, isMega });
 
+      setBetNotification({
+        id: `won-${Date.now()}`,
+        type: "won",
+        symbol: selectedAsset.symbol,
+        direction: play.direction,
+        stake: play.collateralUsd,
+        entryPrice: play.entryPrice,
+        exitPrice: play.exitPrice ?? mock.currentPrice ?? undefined,
+        profit: mock.lastSettlement.profit,
+        pnlPct: (mock.lastSettlement.profit / play.collateralUsd) * 100,
+        timestamp: Date.now(),
+      });
+
       // Add to activity stream
       setActivityItems((prev) => [
         {
@@ -462,7 +570,7 @@ export function MockArena() {
           timestamp: Date.now(),
           highlight: "green",
         },
-        ...prev.slice(0, 19),
+        ...prev.slice(0, 199),
       ]);
 
       const t = setTimeout(() => setCelebrate(null), isMega ? 3600 : 2800);
@@ -471,8 +579,19 @@ export function MockArena() {
 
     if (mock.lastSettlement && mock.lastSettlement.profit < 0) {
       const play: any = mock.lastSettlement.play as any;
-      setToast(`Trade Settled · -$${play.collateralUsd}`);
-      setTimeout(() => setToast(null), 2400);
+
+      setBetNotification({
+        id: `lost-${Date.now()}`,
+        type: "lost",
+        symbol: selectedAsset.symbol,
+        direction: play.direction,
+        stake: play.collateralUsd,
+        entryPrice: play.entryPrice,
+        exitPrice: play.exitPrice ?? mock.currentPrice ?? undefined,
+        profit: -play.collateralUsd,
+        pnlPct: -100,
+        timestamp: Date.now(),
+      });
 
       // Add to activity stream
       setActivityItems((prev) => [
@@ -484,14 +603,14 @@ export function MockArena() {
           timestamp: Date.now(),
           highlight: "red",
         },
-        ...prev.slice(0, 19),
+        ...prev.slice(0, 199),
       ]);
 
       try {
         navigator.vibrate?.([20, 40]);
       } catch {}
     }
-  }, [mock.lastSettlement, selectedAsset.symbol]);
+  }, [mock.lastSettlement, selectedAsset.symbol, mock.currentPrice]);
 
   // Snapshot for Solana wallet button
   const mockSnapshot: MarketSnapshot = useMemo(() => {
@@ -530,7 +649,7 @@ export function MockArena() {
 
   return (
     <div className="min-h-screen text-[var(--ink)] flex flex-col font-sans terminal-grid-bg relative bg-[var(--bg)] transition-colors">
-      {/* Top Terminal Navigation */}
+      {/* Top Terminal Navigation (Flush top notch, max-w-[1680px]) */}
       <TerminalNav
         balance={displayBalance}
         balanceBump={balanceBump}
@@ -545,60 +664,31 @@ export function MockArena() {
         plays={mock.plays as Play[]}
         streak={streak}
         bestStreak={bestStreak}
+        activeTab={arenaView}
+        onTabChange={setArenaView}
       />
 
-      {/* Main Trading Terminal Workspace */}
-      <main className="mx-auto flex-1 w-full max-w-[1720px] px-3 sm:px-4 lg:px-6 pt-3 sm:pt-4 space-y-4 lg:space-y-5 pb-20 lg:pb-8">
-        {/* Upper Workspace: 3-Column Grid — browser left, graph middle, betting UI + positions right */}
-        <div className="grid grid-cols-1 gap-4 lg:grid-cols-12 lg:gap-4 items-start">
-          {/* Column 1: Market Overview (Top) & Asset Browser (Below) */}
-          <div className="lg:col-span-3 flex flex-col gap-3.5 order-3 lg:order-1">
-            <MarketOverview
-              asset={selectedAsset}
-              currentPrice={mock.currentPrice}
-              priceHistory={hlHistory}
-              latencyMs={22}
-            />
-            {needsApproval && (
-              <div className="rounded-lg border border-[var(--color-neon-orange)] bg-[var(--color-neon-orange-soft)] px-3.5 py-2.5 text-[11px] text-[var(--ink)]">
-                <div className="font-bold">One-time tUSD approval</div>
-                <div className="mt-0.5 text-[var(--ink-muted)]">Authorize the house wallet as SPL delegate once — bets after that need no popup.</div>
-                <button
-                  onClick={() => void account.approve().then(() => setToast("Approved · you can bet now")).catch((e) => setToast(e instanceof Error ? e.message : "Approval failed"))}
-                  disabled={account.approving}
-                  className="mt-2 w-full rounded-lg bg-[var(--color-neon-orange)] text-white px-3 py-1.5 text-[11px] font-extrabold hover:bg-[var(--color-neon-orange-pressed)] disabled:opacity-50 transition-colors"
-                >
-                  {account.approving ? "Approving…" : "Approve tUSD"}
-                </button>
-              </div>
-            )}
-            {settling && (
-              <div className="rounded-lg border border-[var(--wait)] bg-[var(--wait-tint)] px-3.5 py-2.5 text-[11px] font-bold text-[var(--wait)]">
-                Settling onchain… stake pulled, waiting ~10s for Hyperliquid exit price.
-              </div>
-            )}
-
-            {/* Market Asset Browser */}
-            <AssetBrowser
-              selectedMarketId={selectedMarketId}
-              onSelect={(id) => setSelectedMarketId(id)}
-              prices={mock.prices}
-            />
-          </div>
-
-          {/* Column 2: Graph (Middle Column) */}
-          <div className="lg:col-span-5 flex flex-col gap-3.5 order-1 lg:order-2">
+      {/* Main Trading Terminal Workspace (User's Exact 2-Row Wireframe / Leaderboard) */}
+      <main className="mx-auto w-full max-w-[1680px] px-2.5 sm:px-4 lg:px-6 pt-14 sm:pt-16 pb-32 sm:pb-36 flex flex-col gap-3.5">
+        {arenaView === "leaderboard" ? (
+          <TerminalLeaderboard onBackToDemo={() => setArenaView("demo")} />
+        ) : (
+          <>
+            {/* Row 1: Chart (Left) + Order Ticket & Bets (Right) */}
+            <div className="grid grid-cols-1 gap-3.5 lg:grid-cols-12 lg:gap-4 items-start">
+          {/* Chart (Spans 8 cols on lg, 9 cols on xl) */}
+          <div className="lg:col-span-8 xl:col-span-9 flex flex-col lg:h-[585px]">
             <TerminalChart
               data={hlHistory}
               currentPrice={mock.currentPrice}
               activePlays={liveActivePlays}
               symbol={selectedAsset.symbol}
-              height={620}
+              height="100%"
             />
           </div>
 
-          {/* Column 3: Bet Console (Top) & Unified Active Orders / Bet Record (Below) */}
-          <div className="lg:col-span-4 flex flex-col gap-3.5 order-2 lg:order-3">
+          {/* Right Column: Order Ticket (Top) + Bets (Below) */}
+          <div className="lg:col-span-4 xl:col-span-3 flex flex-col gap-3.5 lg:h-[585px]">
             {/* 10-Second Bet Ticket */}
             <TradingTicket
               asset={selectedAsset}
@@ -609,6 +699,9 @@ export function MockArena() {
               activeCount={liveActivePlays.length}
               maxPositions={8}
               betFlash={betFlash}
+              needsApproval={needsApproval}
+              onApprove={() => void account.approve().then(() => setToast("Approved · you can bet now")).catch((e) => setToast(e instanceof Error ? e.message : "Approval failed"))}
+              approving={account.approving}
             />
 
             {/* Active Orders & On-chain Record */}
@@ -620,15 +713,38 @@ export function MockArena() {
               historyLoading={history.loading}
               walletConnected={!!account.address}
               onRefreshHistory={() => void history.refresh()}
+              settling={settling}
             />
           </div>
         </div>
 
-        {/* Recent Terminal Stream — full width below everything */}
-        <div className="mt-4 lg:mt-5">
-          <RecentActivity items={activityItems} />
+        {/* Row 2: Coin (Market Overview) & Assets (Asset Browser) Side-by-Side */}
+        <div className="grid grid-cols-1 gap-3.5 lg:grid-cols-12 lg:gap-4 items-stretch">
+          {/* Left: Coin (MarketOverview) */}
+          <div className="lg:col-span-5 xl:col-span-4 flex flex-col">
+            <MarketOverview
+              asset={selectedAsset}
+              currentPrice={mock.currentPrice}
+              priceHistory={hlHistory}
+              latencyMs={22}
+            />
+          </div>
+
+          {/* Right: Assets (Asset Browser) */}
+          <div className="lg:col-span-7 xl:col-span-8 flex flex-col">
+            <AssetBrowser
+              selectedMarketId={selectedMarketId}
+              onSelect={(id) => setSelectedMarketId(id)}
+              prices={mock.prices}
+            />
+          </div>
         </div>
+          </>
+        )}
       </main>
+
+      {/* Recent Terminal Stream — docked bottom notch with overlapping expand */}
+      <RecentActivity items={activityItems} defaultExpanded={false} />
 
       {/* Floating Victory Celebration */}
       <WinCelebrationV2
@@ -639,8 +755,14 @@ export function MockArena() {
         onDone={() => setCelebrate(null)}
       />
 
-      {/* Flat toast notification */}
-      {toast && (
+      {/* Terminal HUD Bet & Settlement Notification */}
+      <TerminalNotification
+        notification={betNotification}
+        onDismiss={() => setBetNotification(null)}
+      />
+
+      {/* Flat toast fallback notification */}
+      {toast && !betNotification && (
         <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 rounded-lg border border-[var(--hair)] bg-[var(--card)] px-4 py-2.5 text-xs font-bold text-[var(--ink)]">
           {toast}
         </div>

@@ -19,6 +19,7 @@ interface LivePositionsProps {
   onRefreshHistory?: () => void;
   /** Reserved for backward compatibility */
   showBetRecord?: boolean;
+  settling?: boolean;
 }
 
 function formatPrice(val: number): string {
@@ -55,6 +56,7 @@ export function LivePositions({
   historyLoading = false,
   walletConnected = false,
   onRefreshHistory,
+  settling = false,
 }: LivePositionsProps) {
   const [tab, setTab] = useState<"active" | "history">("active");
 
@@ -92,7 +94,7 @@ export function LivePositions({
   const claimedTotal = useMemo(() => claims.reduce((s, c) => s + c.amountTokens, 0), [claims]);
 
   return (
-    <div className="terminal-card flex flex-col p-3.5 space-y-2.5 flex-1 min-h-[310px]">
+    <div className="terminal-card flex flex-col p-3.5 space-y-2.5 flex-1 min-h-0 overflow-hidden">
       {/* Header with Navigation Tabs */}
       <div className="flex items-center justify-between border-b border-[var(--hair)] pb-2.5">
         <div className="flex items-center gap-1">
@@ -144,9 +146,27 @@ export function LivePositions({
         )}
       </div>
 
+      {/* Bet Settling Notification Banner inside LivePositions */}
+      <AnimatePresence>
+        {settling && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: "auto" }}
+            exit={{ opacity: 0, height: 0 }}
+            transition={{ duration: 0.2, ease: "easeOut" }}
+            className="overflow-hidden flex-shrink-0"
+          >
+            <div className="rounded-lg border border-[var(--wait)] bg-[var(--wait-tint)] px-3 py-2 text-xs font-bold text-[var(--wait)] flex items-center gap-2 shadow-sm animate-pulse">
+              <span className="h-2 w-2 rounded-full bg-[var(--wait)] animate-ping flex-shrink-0" />
+              <span className="truncate">Settling onchain… waiting ~10s for exit price.</span>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* Main Content Area */}
       {tab === "active" ? (
-        <div className={`flex-1 overflow-y-auto min-h-[190px] max-h-[250px] ${activePlays.length > 1 ? "grid grid-cols-1 sm:grid-cols-2 gap-2.5 space-y-0" : "space-y-2.5"} pr-1`}>
+        <div className={`flex-1 min-h-0 overflow-y-auto ${activePlays.length > 1 ? "grid grid-cols-1 sm:grid-cols-2 gap-2.5 space-y-0" : "space-y-2.5"} pr-1`}>
           <AnimatePresence mode="popLayout">
             {activePlays.map((play) => {
               const asset = SUPPORTED_ASSETS.find((a) => a.marketId === play.marketId);
@@ -275,7 +295,7 @@ export function LivePositions({
         </div>
       ) : (
         /* Bet Record History View */
-        <div className="flex-1 overflow-y-auto min-h-[140px] max-h-[220px] space-y-1.5 pr-1">
+        <div className="flex-1 min-h-0 overflow-y-auto space-y-1.5 pr-1">
           {!walletConnected ? (
             <p className="rounded-lg border border-dashed border-[var(--hair)] bg-[var(--card)] px-3 py-6 text-center text-[11px] text-[var(--ink-muted)]">
               Connect a wallet to load your verified on-chain bet record.

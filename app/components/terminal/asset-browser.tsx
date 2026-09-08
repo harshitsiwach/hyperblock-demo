@@ -49,62 +49,69 @@ export function AssetBrowser({
   }, [activeCategory, searchQuery]);
 
   return (
-    <div className="terminal-card flex flex-col p-3.5 space-y-2.5 flex-1 min-h-[250px]">
-      {/* Header & Search */}
-      <div className="space-y-2">
-        <div className="flex items-center justify-between">
-          <h3 className="text-xs font-bold uppercase tracking-wider text-[var(--ink)]">
-            Market Asset Browser
-          </h3>
+    <div className="terminal-card flex flex-col p-3.5 gap-2.5 h-full flex-1">
+      {/* Header & Controls */}
+      <div className="flex flex-col gap-2.5 flex-shrink-0">
+        <div className="flex items-center justify-between border-b border-[var(--hair)] pb-2">
+          <div className="flex items-center gap-2">
+            <h3 className="text-sm font-extrabold tracking-tight text-[var(--ink)]">
+              MARKET ASSET BROWSER
+            </h3>
+            <span className="rounded bg-[var(--card)] px-1.5 py-0.5 text-[9px] font-bold text-[var(--ink-secondary)] border border-[var(--hair)]">
+              EXPLORE
+            </span>
+          </div>
           <span className="text-[11px] font-mono text-[var(--ink-muted)]">
             {visibleAssets.length} Available
           </span>
         </div>
 
-        {/* Search Input */}
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-[var(--ink-muted)]" />
-          <input
-            type="text"
-            placeholder="Search markets (GOLD, BTC, NVDA…)"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full rounded-lg border border-[var(--hair)] bg-[var(--card)] py-1.5 pl-8 pr-8 text-xs font-medium text-[var(--ink)] placeholder:text-[var(--ink-muted)] focus:border-[var(--color-neon-orange)] outline-none transition-colors"
-          />
-          {searchQuery && (
-            <button
-              onClick={() => setSearchQuery("")}
-              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[var(--ink-muted)] hover:text-[var(--ink)]"
-            >
-              <X className="h-3.5 w-3.5" />
-            </button>
-          )}
-        </div>
-
-        {/* Category Filter Pills */}
-        <div className="flex gap-1.5 overflow-x-auto pb-0.5">
-          {CATEGORIES.map((cat) => {
-            const isSelected = activeCategory === cat.id;
-            return (
+        {/* Search Input & Category Filter Pills */}
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-[var(--ink-muted)]" />
+            <input
+              type="text"
+              placeholder="Search markets (GOLD, BTC, NVDA…)"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full rounded-lg border border-[var(--hair)] bg-[var(--card)] py-1.5 pl-8 pr-8 text-xs font-medium text-[var(--ink)] placeholder:text-[var(--ink-muted)] focus:border-[var(--color-neon-orange)] outline-none transition-colors"
+            />
+            {searchQuery && (
               <button
-                key={cat.id}
-                type="button"
-                onClick={() => setActiveCategory(cat.id)}
-                className={`flex-shrink-0 rounded-md px-2.5 py-1 text-[11px] font-bold tracking-wide transition-all ${
-                  isSelected
-                    ? "bg-[var(--color-neon-orange-soft)] text-[var(--color-neon-orange)] border border-[var(--color-neon-orange)] font-extrabold"
-                    : "border border-[var(--hair)] bg-[var(--card)] text-[var(--ink-muted)] hover:text-[var(--ink)] hover:border-[var(--color-neon-orange)]"
-                }`}
+                onClick={() => setSearchQuery("")}
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[var(--ink-muted)] hover:text-[var(--ink)]"
               >
-                {cat.label}
+                <X className="h-3.5 w-3.5" />
               </button>
-            );
-          })}
+            )}
+          </div>
+
+          {/* Category Filter Pills */}
+          <div className="flex gap-1.5 overflow-x-auto pb-0.5 flex-shrink-0">
+            {CATEGORIES.map((cat) => {
+              const isSelected = activeCategory === cat.id;
+              return (
+                <button
+                  key={cat.id}
+                  type="button"
+                  onClick={() => setActiveCategory(cat.id)}
+                  className={`flex-shrink-0 rounded-md px-2.5 py-1 text-[11px] font-bold tracking-wide transition-all ${
+                    isSelected
+                      ? "bg-[var(--color-neon-orange-soft)] text-[var(--color-neon-orange)] border border-[var(--color-neon-orange)] font-extrabold"
+                      : "border border-[var(--hair)] bg-[var(--card)] text-[var(--ink-muted)] hover:text-[var(--ink)] hover:border-[var(--color-neon-orange)]"
+                  }`}
+                >
+                  {cat.label}
+                </button>
+              );
+            })}
+          </div>
         </div>
       </div>
 
-      {/* Asset Cards Grid (2 columns on desktop) with internal scrolling */}
-      <div className="grid grid-cols-2 gap-2 h-[156px] max-h-[156px] overflow-y-auto pr-1">
+      {/* Asset Cards Grid with responsive columns - fills remaining space */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-2 flex-1 min-h-0 overflow-y-auto pr-1">
         {visibleAssets.map((asset) => {
           const isSelected = asset.marketId === selectedMarketId;
           const hlPrice = prices.get(asset.symbol)?.price;

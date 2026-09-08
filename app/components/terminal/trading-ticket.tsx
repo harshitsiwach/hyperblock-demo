@@ -15,6 +15,9 @@ interface TradingTicketProps {
   maxPositions?: number;
   /** Reserved: flash direction on bet (currently no visual effect; kept for API compat). */
   betFlash?: "up" | "down" | null;
+  needsApproval?: boolean;
+  onApprove?: () => void;
+  approving?: boolean;
 }
 
 const PRESETS = [5, 10, 25, 100];
@@ -27,6 +30,9 @@ export function TradingTicket({
   disabled = false,
   activeCount,
   maxPositions = 8,
+  needsApproval = false,
+  onApprove,
+  approving = false,
 }: TradingTicketProps) {
   // 1000x capped profit math: capped at 5x before 10% fee = 4.5x
   const maxProfit = useMemo(() => amount * 5 * 0.9, [amount]);
@@ -107,30 +113,47 @@ export function TradingTicket({
             </div>
           </div>
 
-          {/* Prominent UP / DOWN Trigger Buttons */}
-          <div className="grid grid-cols-2 gap-2.5 pt-0.5">
-            {/* UP BUTTON */}
-            <button
-              type="button"
-              onClick={() => handleButtonClick("up")}
-              disabled={disabled || activeCount >= maxPositions}
-              className="trigger-btn-up group h-12 rounded-lg flex items-center justify-center gap-2 font-extrabold text-sm tracking-wide uppercase disabled:opacity-35 disabled:cursor-not-allowed cursor-pointer transition-all border border-[var(--hair)] hover:border-[var(--up)]"
-            >
-              <ArrowUp className="h-5 w-5 text-[var(--up)] group-hover:scale-110 transition-transform" />
-              <span className="tracking-wider text-[var(--up)] font-black">UP</span>
-            </button>
+          {/* Prominent UP / DOWN Trigger Buttons or One-time Approval Prompt */}
+          {needsApproval ? (
+            <div className="rounded-lg border border-[var(--color-neon-orange)] bg-[var(--color-neon-orange-soft)] px-3 py-1.5 text-[11px] text-[var(--ink)] flex items-center justify-between gap-2 shadow-sm h-12">
+              <div className="flex flex-col min-w-0">
+                <span className="font-extrabold text-[var(--color-neon-orange)] text-xs">tUSD Approval Required</span>
+                <span className="text-[10px] text-[var(--ink-muted)] truncate">Authorize house wallet SPL delegate</span>
+              </div>
+              <button
+                type="button"
+                onClick={onApprove}
+                disabled={approving}
+                className="rounded-lg bg-[var(--color-neon-orange)] text-white px-3 py-1.5 text-xs font-extrabold hover:bg-[var(--color-neon-orange-pressed)] disabled:opacity-50 transition-colors shadow-sm flex-shrink-0 cursor-pointer"
+              >
+                {approving ? "Approving…" : "Approve"}
+              </button>
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 gap-2.5 pt-0.5">
+              {/* UP BUTTON */}
+              <button
+                type="button"
+                onClick={() => handleButtonClick("up")}
+                disabled={disabled || activeCount >= maxPositions}
+                className="trigger-btn-up group h-12 rounded-lg flex items-center justify-center gap-2 font-extrabold text-sm tracking-wide uppercase disabled:opacity-35 disabled:cursor-not-allowed cursor-pointer transition-all border border-[var(--hair)] hover:border-[var(--up)]"
+              >
+                <ArrowUp className="h-5 w-5 text-[var(--up)] group-hover:scale-110 transition-transform" />
+                <span className="tracking-wider text-[var(--up)] font-black">UP</span>
+              </button>
 
-            {/* DOWN BUTTON */}
-            <button
-              type="button"
-              onClick={() => handleButtonClick("down")}
-              disabled={disabled || activeCount >= maxPositions}
-              className="trigger-btn-down group h-12 rounded-lg flex items-center justify-center gap-2 font-extrabold text-sm tracking-wide uppercase disabled:opacity-35 disabled:cursor-not-allowed cursor-pointer transition-all border border-[var(--hair)] hover:border-[var(--down)]"
-            >
-              <ArrowDown className="h-5 w-5 text-[var(--down)] group-hover:scale-110 transition-transform" />
-              <span className="tracking-wider text-[var(--down)] font-black">DOWN</span>
-            </button>
-          </div>
+              {/* DOWN BUTTON */}
+              <button
+                type="button"
+                onClick={() => handleButtonClick("down")}
+                disabled={disabled || activeCount >= maxPositions}
+                className="trigger-btn-down group h-12 rounded-lg flex items-center justify-center gap-2 font-extrabold text-sm tracking-wide uppercase disabled:opacity-35 disabled:cursor-not-allowed cursor-pointer transition-all border border-[var(--hair)] hover:border-[var(--down)]"
+              >
+                <ArrowDown className="h-5 w-5 text-[var(--down)] group-hover:scale-110 transition-transform" />
+                <span className="tracking-wider text-[var(--down)] font-black">DOWN</span>
+              </button>
+            </div>
+          )}
         </div>
 
         {activeCount >= maxPositions && (
