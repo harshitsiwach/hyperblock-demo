@@ -321,23 +321,40 @@ export function TerminalChart({
 
           // Vertical gradient for each bar
           const barGrad = ctx.createLinearGradient(0, volBaseY, 0, volBaseY - barH);
-          if (isUp) {
-            barGrad.addColorStop(0, "rgba(220, 235, 255, 0.02)");
-            barGrad.addColorStop(0.7, isHovered ? "rgba(180, 230, 255, 0.45)" : "rgba(200, 225, 255, 0.22)");
-            barGrad.addColorStop(1, isHovered ? "rgba(255, 255, 255, 0.85)" : "rgba(220, 240, 255, 0.45)");
+          if (mode === "dark") {
+            if (isUp) {
+              barGrad.addColorStop(0, "rgba(0, 240, 118, 0.02)");
+              barGrad.addColorStop(0.7, isHovered ? "rgba(0, 240, 118, 0.45)" : "rgba(0, 240, 118, 0.22)");
+              barGrad.addColorStop(1, isHovered ? "rgba(0, 240, 118, 0.9)" : "rgba(0, 240, 118, 0.55)");
+            } else {
+              barGrad.addColorStop(0, "rgba(255, 51, 88, 0.02)");
+              barGrad.addColorStop(0.7, isHovered ? "rgba(255, 51, 88, 0.45)" : "rgba(255, 51, 88, 0.22)");
+              barGrad.addColorStop(1, isHovered ? "rgba(255, 51, 88, 0.9)" : "rgba(255, 51, 88, 0.55)");
+            }
           } else {
-            barGrad.addColorStop(0, "rgba(255, 180, 200, 0.02)");
-            barGrad.addColorStop(0.7, isHovered ? "rgba(255, 100, 130, 0.45)" : "rgba(255, 120, 150, 0.22)");
-            barGrad.addColorStop(1, isHovered ? "rgba(255, 220, 230, 0.85)" : "rgba(255, 140, 170, 0.45)");
+            if (isUp) {
+              barGrad.addColorStop(0, "rgba(22, 163, 74, 0.04)");
+              barGrad.addColorStop(0.7, isHovered ? "rgba(22, 163, 74, 0.4)" : "rgba(22, 163, 74, 0.2)");
+              barGrad.addColorStop(1, isHovered ? "rgba(22, 163, 74, 0.85)" : "rgba(22, 163, 74, 0.5)");
+            } else {
+              barGrad.addColorStop(0, "rgba(225, 29, 72, 0.04)");
+              barGrad.addColorStop(0.7, isHovered ? "rgba(225, 29, 72, 0.4)" : "rgba(225, 29, 72, 0.2)");
+              barGrad.addColorStop(1, isHovered ? "rgba(225, 29, 72, 0.85)" : "rgba(225, 29, 72, 0.5)");
+            }
           }
 
           ctx.fillStyle = barGrad;
           ctx.fillRect(bx, volBaseY - barH, barW, barH);
 
           // Luminous Laser Cap at the tip of each volume bar
-          ctx.fillStyle = isUp ? "rgba(210, 240, 255, 0.95)" : "rgba(255, 140, 170, 0.95)";
-          ctx.shadowColor = isUp ? "rgba(140, 210, 255, 0.8)" : "rgba(255, 90, 120, 0.8)";
-          ctx.shadowBlur = isHovered ? 8 : 4;
+          if (mode === "dark") {
+            ctx.fillStyle = isUp ? "#00f076" : "#ff3358";
+            ctx.shadowColor = isUp ? "rgba(0, 240, 118, 0.8)" : "rgba(255, 51, 88, 0.8)";
+          } else {
+            ctx.fillStyle = isUp ? "#16a34a" : "#e11d48";
+            ctx.shadowColor = isUp ? "rgba(22, 163, 74, 0.4)" : "rgba(225, 29, 72, 0.4)";
+          }
+          ctx.shadowBlur = isHovered ? 6 : 2;
           ctx.fillRect(bx, volBaseY - barH, barW, 2);
           ctx.shadowBlur = 0;
         }
@@ -559,11 +576,17 @@ export function TerminalChart({
         if (screenPts.length > 1) {
           const headPt = screenPts[screenPts.length - 1];
 
-          // Fill smooth area gradient
+          // Fill smooth area gradient (clean fading orange with zero alpha, no dirty black artifacts)
           const grad = ctx.createLinearGradient(0, topMargin, 0, topMargin + plotH);
-          grad.addColorStop(0, activeTintConfig.subtleBg.replace("0.08", "0.26"));
-          grad.addColorStop(0.6, activeTintConfig.subtleBg);
-          grad.addColorStop(1, "transparent");
+          if (mode === "dark") {
+            grad.addColorStop(0, "rgba(255, 95, 31, 0.26)");
+            grad.addColorStop(0.6, "rgba(255, 95, 31, 0.06)");
+            grad.addColorStop(1, "rgba(255, 95, 31, 0.0)");
+          } else {
+            grad.addColorStop(0, "rgba(255, 95, 31, 0.18)");
+            grad.addColorStop(0.6, "rgba(255, 95, 31, 0.03)");
+            grad.addColorStop(1, "rgba(255, 95, 31, 0.0)");
+          }
 
           ctx.beginPath();
           ctx.moveTo(screenPts[0].x, topMargin + plotH);
@@ -595,8 +618,13 @@ export function TerminalChart({
           ctx.lineTo(headPt.x, headPt.y);
           ctx.strokeStyle = activeTintConfig.color;
           ctx.lineWidth = 2.6;
-          ctx.shadowColor = activeTintConfig.color;
-          ctx.shadowBlur = 12;
+          if (mode === "dark") {
+            ctx.shadowColor = activeTintConfig.color;
+            ctx.shadowBlur = 12;
+          } else {
+            ctx.shadowColor = "rgba(255, 95, 31, 0.35)";
+            ctx.shadowBlur = 4;
+          }
           ctx.stroke();
           ctx.shadowBlur = 0;
 
@@ -604,8 +632,8 @@ export function TerminalChart({
           const pulse = Math.sin(tNow * 0.005) * 3 + 8;
           const radial = ctx.createRadialGradient(headPt.x, headPt.y, 1, headPt.x, headPt.y, pulse * 1.5);
           radial.addColorStop(0, activeTintConfig.color);
-          radial.addColorStop(0.5, activeTintConfig.subtleBg);
-          radial.addColorStop(1, "transparent");
+          radial.addColorStop(0.5, "rgba(255, 95, 31, 0.25)");
+          radial.addColorStop(1, "rgba(255, 95, 31, 0.0)");
 
           ctx.beginPath();
           ctx.arc(headPt.x, headPt.y, pulse * 1.5, 0, Math.PI * 2);
@@ -732,79 +760,68 @@ export function TerminalChart({
         ctx.fillStyle = "#ffffff";
         ctx.fill();
 
-        // 5. "Real Money Ticket" Info Card
-        const cardW = 160;
-        const cardH = 46;
-        const placeAbove = markerY > topMargin + cardH + 18;
-        const cardY = placeAbove ? markerY - cardH - 12 : markerY + 12;
+        // 5. "Real Money Ticket" Sleek Modern Info Badge
+        const cardW = 136;
+        const cardH = 34;
+        const placeAbove = markerY > topMargin + cardH + 16;
+        const cardY = placeAbove ? markerY - cardH - 10 : markerY + 10;
         const cardX = Math.max(8, Math.min(plotW - cardW - 8, markerX - cardW / 2));
 
         // Connecting stem line
         ctx.beginPath();
         ctx.setLineDash([2, 2]);
         ctx.strokeStyle = borderCol;
-        ctx.lineWidth = 1.2;
-        ctx.moveTo(markerX, placeAbove ? markerY - 5 : markerY + 5);
+        ctx.lineWidth = 1;
+        ctx.moveTo(markerX, placeAbove ? markerY - 4 : markerY + 4);
         ctx.lineTo(markerX, placeAbove ? cardY + cardH : cardY);
         ctx.stroke();
         ctx.setLineDash([]);
 
-        // Ticket card body with glassmorphic dark fill and glowing neon border
-        ctx.fillStyle = mode === "dark" ? "rgba(11, 15, 23, 0.94)" : "rgba(255, 255, 255, 0.96)";
+        // Ticket card body with dark glass fill and crisp subtle neon border
+        ctx.fillStyle = mode === "dark" ? "rgba(10, 14, 22, 0.90)" : "rgba(255, 255, 255, 0.94)";
         ctx.shadowColor = color;
-        ctx.shadowBlur = 12;
+        ctx.shadowBlur = 6;
         ctx.beginPath();
         if (typeof ctx.roundRect === "function") {
-          ctx.roundRect(cardX, cardY, cardW, cardH, 7);
+          ctx.roundRect(cardX, cardY, cardW, cardH, 6);
         } else {
           ctx.rect(cardX, cardY, cardW, cardH);
         }
         ctx.fill();
         ctx.shadowBlur = 0;
 
-        ctx.strokeStyle = borderCol;
-        ctx.lineWidth = 1.2;
+        ctx.strokeStyle = isUp ? "rgba(0, 240, 118, 0.55)" : "rgba(255, 51, 88, 0.55)";
+        ctx.lineWidth = 1;
         ctx.stroke();
 
-        // Left neon accent bar inside card
-        ctx.fillStyle = color;
-        ctx.beginPath();
-        if (typeof ctx.roundRect === "function") {
-          ctx.roundRect(cardX + 2, cardY + 2, 3.5, cardH - 4, 2);
-        } else {
-          ctx.rect(cardX + 2, cardY + 2, 3.5, cardH - 4);
-        }
-        ctx.fill();
-
-        // Card Content - Top Row: Direction, Stake, and Live Countdown
+        // Card Content - Row 1: Direction pill, Stake, and Countdown Timer
         ctx.textAlign = "left";
-        ctx.font = "bold 10.5px sans-serif";
+        ctx.font = "bold 9.5px sans-serif";
         ctx.fillStyle = color;
-        ctx.fillText(isUp ? "▲ UP" : "▼ DOWN", cardX + 10, cardY + 16);
+        ctx.fillText(isUp ? "▲ UP" : "▼ DOWN", cardX + 8, cardY + 13);
 
-        ctx.font = "bold 10.5px ui-monospace, monospace";
+        ctx.font = "bold 9.5px ui-monospace, monospace";
         ctx.fillStyle = mode === "dark" ? "#ffffff" : "#090d16";
-        ctx.fillText(`$${p.collateralUsd}`, cardX + 54, cardY + 16);
+        ctx.fillText(`$${p.collateralUsd}`, cardX + 46, cardY + 13);
 
-        // Live Countdown Badge on top-right of card
+        // Live Countdown Badge
         const secondsLeft = Math.max(0, Math.ceil(remMs / 1000));
         const timerStr = `⏱ ${secondsLeft}s`;
-        ctx.font = "bold 9.5px ui-monospace, monospace";
+        ctx.font = "bold 8.5px ui-monospace, monospace";
         ctx.textAlign = "right";
         ctx.fillStyle = secondsLeft <= 3 ? "#ff3358" : "#fbbf24";
-        ctx.fillText(timerStr, cardX + cardW - 8, cardY + 16);
+        ctx.fillText(timerStr, cardX + cardW - 8, cardY + 13);
 
-        // Card Content - Bottom Row: Entry Strike & Real Ticket Label
+        // Card Content - Row 2: Entry Strike & 1000x Ticket
         ctx.textAlign = "left";
-        ctx.font = "10px ui-monospace, monospace";
+        ctx.font = "8.5px ui-monospace, monospace";
         ctx.fillStyle = mode === "dark" ? "#94a3b8" : "#475569";
-        ctx.fillText(`@ $${formatPrice(p.entryPrice)}`, cardX + 10, cardY + 34);
+        ctx.fillText(`@ $${formatPrice(p.entryPrice)}`, cardX + 8, cardY + 26.5);
 
-        // "1000x" / "TICKET" Pill
         ctx.textAlign = "right";
-        ctx.font = "extrabold 8.5px sans-serif";
+        ctx.font = "bold 8px ui-monospace, monospace";
         ctx.fillStyle = color;
-        ctx.fillText("1000x TICKET", cardX + cardW - 8, cardY + 34);
+        ctx.fillText("1000x TICKET", cardX + cardW - 8, cardY + 26.5);
 
         ctx.restore();
       });

@@ -48,16 +48,16 @@ export function WalletButton({ variant = "pill", showStats = false, snapshot }: 
           disabled={wallet.connecting}
           type="button"
           title={wallet.address ? `Connected: ${wallet.address} — click for balances` : "Connect Solana wallet (Phantom, Solflare, Ledger, Torus)"}
-          className="relative z-10 flex items-center gap-1.5 rounded-xl border border-[var(--color-neon-orange)]/35 px-3 py-1 text-xs font-bold text-[var(--ink)] hover:bg-[var(--card-hover)] transition-all focus:outline-none"
+          className="relative z-10 flex items-center gap-1.5 rounded-xl border border-[var(--color-neon-orange)]/35 px-3 py-1 text-xs font-bold text-white hover:bg-white/[0.08] transition-all focus:outline-none"
           style={{
             backgroundColor: "#0c0f17",
             minHeight: variant === "compact" ? 30 : undefined,
             fontSize: 12,
           }}
         >
-          <span className={`h-2 w-2 rounded-full flex-shrink-0 ${wallet.address ? "bg-emerald-400 shadow-[0_0_6px_#34d399]" : "bg-[var(--ink-muted)] animate-pulse"}`} />
-          <span className="font-mono font-extrabold text-[var(--ink)]">{label}</span>
-          {wallet.address && showStats && <span className="text-[10px] text-[var(--ink-muted)] ml-0.5">{open ? "▴" : "▾"}</span>}
+          <span className={`h-2 w-2 rounded-full flex-shrink-0 ${wallet.address ? "bg-emerald-400 shadow-[0_0_6px_#34d399]" : "bg-slate-400 animate-pulse"}`} />
+          <span className="font-mono font-extrabold text-white">{label}</span>
+          {wallet.address && showStats && <span className="text-[10px] text-slate-300 ml-0.5">{open ? "▴" : "▾"}</span>}
         </button>
       </div>
       {open && wallet.address && showStats && (

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { MARKETS as SUPPORTED_ASSETS, BASE_PRICES, type MarketInfo } from "@/app/lib/markets";
 import { useMockTrading } from "@/app/hooks/use-mock-trading";
 import { useHyperblockAccount } from "@/app/hooks/use-hyperblock-account";
@@ -83,6 +83,9 @@ export function MockArena({ initialView = "demo" }: { initialView?: "demo" | "le
   const [betFlash, setBetFlash] = useState<"up" | "down" | null>(null);
   const [toast, setToast] = useState<string | null>(null);
   const [betNotification, setBetNotification] = useState<BetNotificationData | null>(null);
+  const handleDismissNotification = useCallback(() => {
+    setBetNotification(null);
+  }, []);
   const [celebrate, setCelebrate] = useState<{ profit: number; id: string; streak?: number; isMega?: boolean } | null>(null);
   const [mounted, setMounted] = useState(false);
   const [displayBalance, setDisplayBalance] = useState(0);
@@ -758,7 +761,7 @@ export function MockArena({ initialView = "demo" }: { initialView?: "demo" | "le
       {/* Terminal HUD Bet & Settlement Notification */}
       <TerminalNotification
         notification={betNotification}
-        onDismiss={() => setBetNotification(null)}
+        onDismiss={handleDismissNotification}
       />
 
       {/* Flat toast fallback notification */}

@@ -374,9 +374,9 @@ export function RecentActivity({ items, defaultExpanded = false }: RecentActivit
                         <span
                           className={`font-semibold text-xs truncate ${
                             item.highlight === "green"
-                              ? "text-[#00f076]"
+                              ? "text-emerald-600 dark:text-[#00f076]"
                               : item.highlight === "red"
-                              ? "text-[#ff3358]"
+                              ? "text-rose-600 dark:text-[#ff3358]"
                               : "text-[var(--ink)]"
                           }`}
                         >

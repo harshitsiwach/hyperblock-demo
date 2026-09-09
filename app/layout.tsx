@@ -16,8 +16,14 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="en" className={`${figtree.variable} ${inter.variable} ${jetbrainsMono.variable}`} data-theme="light" data-tint="orange">
-      <body>
+    <html
+      lang="en"
+      className={`${figtree.variable} ${inter.variable} ${jetbrainsMono.variable}`}
+      data-theme="light"
+      data-tint="orange"
+      suppressHydrationWarning
+    >
+      <body suppressHydrationWarning>
         <ThemeProvider>
           <SolanaProvider>{children}</SolanaProvider>
         </ThemeProvider>

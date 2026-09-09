@@ -24,6 +24,10 @@ import {
   Eye,
   EyeOff,
   User,
+  ExternalLink,
+  Maximize2,
+  Minimize2,
+  GripHorizontal,
 } from "lucide-react";
 import type { MarketSnapshot, Play } from "@/app/lib/domain";
 import { SessionStats } from "@/app/components/terminal/session-stats";
@@ -83,8 +87,15 @@ export function TerminalNav({
   // Dropdown states (mutually exclusive)
   const [activeDropdown, setActiveDropdown] = useState<"notifications" | "settings" | "pnl" | null>(null);
 
+  // Mounted flag for hydration-safe rendering
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
   // Balance visibility toggle
   const [hideBalance, setHideBalance] = useState(false);
+  const [pnlPoppedOut, setPnlPoppedOut] = useState(false);
 
   // Settings states
   const [soundEnabled, setSoundEnabled] = useState(true);
@@ -199,14 +210,16 @@ export function TerminalNav({
                       {/* Solid inner background — no gradient bleed */}
                       <span
                         className="absolute inset-0 rounded-[9px] border border-[var(--color-neon-orange)]/40 -z-10 shadow-[0_0_12px_rgba(255,95,31,0.25)]"
-                        style={{ backgroundColor: "#0c0f17" }}
+                        style={{ backgroundColor: mode === "dark" ? "#0c0f17" : "#ffffff" }}
                       />
                     </motion.div>
                   )}
                   <span
                     className={`relative z-10 transition-colors duration-200 ${
                       isActive
-                        ? "text-[var(--ink)] font-black"
+                        ? mode === "dark"
+                          ? "text-white font-black"
+                          : "text-[var(--color-neon-orange)] font-black"
                         : "text-[var(--ink-muted)] hover:text-[var(--ink)] font-semibold"
                     }`}
                   >
@@ -252,21 +265,21 @@ export function TerminalNav({
               </div>
 
               <div
-                className={`relative z-10 flex items-center gap-1.5 rounded-xl border border-[var(--color-neon-orange)]/35 px-2.5 py-1 text-[11px] font-bold text-[var(--ink)] transition-transform ${
+                className={`relative z-10 flex items-center gap-1.5 rounded-xl border border-[var(--color-neon-orange)]/35 px-2.5 py-1 text-[11px] font-bold transition-transform ${
                   balanceBump ? "scale-[1.04]" : ""
                 }`}
-                style={{ backgroundColor: "#0c0f17" }}
+                style={{ backgroundColor: mode === "dark" ? "#0c0f17" : "#ffffff" }}
               >
                 <span className="text-[9px] font-bold uppercase tracking-wider text-[var(--ink-muted)]">
                   Balance
                 </span>
-                <span className="font-mono text-[11px] font-extrabold text-[var(--ink)] sm:text-xs min-w-[50px] text-center">
+                <span className={`font-mono text-[11px] font-extrabold sm:text-xs min-w-[50px] text-center ${mode === "dark" ? "text-white" : "text-slate-900"}`}>
                   {hideBalance ? "••••••" : formatUsd(balance)}
                 </span>
                 <button
                   onClick={() => setHideBalance((v) => !v)}
                   type="button"
-                  className="text-[var(--ink-muted)] hover:text-[var(--color-neon-orange)] p-0.5 rounded transition-colors flex items-center justify-center"
+                  className="text-[var(--ink-muted)] hover:text-[var(--color-neon-orange)] p-0.5 rounded transition-colors flex items-center justify-center cursor-pointer"
                   title={hideBalance ? "Show balance" : "Hide balance"}
                   aria-label={hideBalance ? "Show balance" : "Hide balance"}
                 >
@@ -286,23 +299,18 @@ export function TerminalNav({
             }
             className={`hover-bell-shake relative flex h-8 w-8 items-center justify-center rounded-lg border transition-all duration-200 hover:scale-105 hover:shadow-[0_0_12px_rgba(255,95,31,0.4)] hover:border-[var(--color-neon-orange)] ${
               activeDropdown === "notifications"
-                ? "bg-[var(--color-neon-orange-soft)] text-[var(--color-neon-orange)] border-[var(--color-neon-orange)] shadow-[0_0_10px_rgba(255,95,31,0.3)]"
+                ? "bg-[var(--color-neon-orange-soft)] text-[var(--color-neon-orange)] border-[var(--color-neon-orange)] shadow-[0_0_10px_rgba(255,95,31,0.25)]"
                 : "border-[var(--hair)] bg-[var(--card)] text-[var(--ink-muted)] hover:text-[var(--color-neon-orange)]"
             }`}
-            aria-label="Terminal Notifications"
+            aria-label="Notification Center"
+            title="Notification Center"
+            type="button"
           >
             <Bell className="h-3.5 w-3.5" />
             {unreadCount > 0 && (
-              <span
-                className="absolute right-1.5 top-1.5 h-1.5 w-1.5 rounded-full animate-ping"
-                style={{ backgroundColor: activeTintConfig.color }}
-              />
-            )}
-            {unreadCount > 0 && (
-              <span
-                className="absolute right-1.5 top-1.5 h-1.5 w-1.5 rounded-full"
-                style={{ backgroundColor: activeTintConfig.color }}
-              />
+              <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-[var(--color-neon-orange)] text-[9px] font-black text-white shadow-[0_0_8px_rgba(255,95,31,0.8)]">
+                {unreadCount}
+              </span>
             )}
           </button>
 
@@ -313,10 +321,12 @@ export function TerminalNav({
             }
             className={`hover-gear-spin relative flex h-8 w-8 items-center justify-center rounded-lg border transition-all duration-200 hover:scale-105 hover:shadow-[0_0_12px_rgba(255,95,31,0.4)] hover:border-[var(--color-neon-orange)] ${
               activeDropdown === "settings"
-                ? "bg-[var(--color-neon-orange-soft)] text-[var(--color-neon-orange)] border-[var(--color-neon-orange)] shadow-[0_0_10px_rgba(255,95,31,0.3)]"
+                ? "bg-[var(--color-neon-orange-soft)] text-[var(--color-neon-orange)] border-[var(--color-neon-orange)] shadow-[0_0_10px_rgba(255,95,31,0.25)]"
                 : "border-[var(--hair)] bg-[var(--card)] text-[var(--ink-muted)] hover:text-[var(--color-neon-orange)]"
             }`}
             aria-label="Terminal Settings"
+            title="Terminal Settings"
+            type="button"
           >
             <Settings className="h-3.5 w-3.5" />
           </button>
@@ -328,45 +338,51 @@ export function TerminalNav({
             aria-label={mode === "dark" ? "Switch to light mode" : "Switch to dark mode"}
             title={mode === "dark" ? "Switch to light mode" : "Switch to dark mode"}
           >
-            <AnimatePresence mode="wait" initial={false}>
-              <motion.div
-                key={mode}
-                initial={{ rotate: -90, scale: 0.3, opacity: 0 }}
-                animate={{ rotate: 0, scale: 1, opacity: 1 }}
-                exit={{ rotate: 90, scale: 0.3, opacity: 0 }}
-                transition={{ duration: 0.22, ease: "easeOut" }}
-                className="flex items-center justify-center"
-              >
-                {mode === "dark" ? (
-                  <Sun className="h-3.5 w-3.5 text-amber-400 drop-shadow-[0_0_6px_rgba(251,191,36,0.6)]" />
-                ) : (
-                  <Moon className="h-3.5 w-3.5 text-cyan-400 drop-shadow-[0_0_6px_rgba(34,211,238,0.6)]" />
-                )}
-              </motion.div>
-            </AnimatePresence>
+            {mounted ? (
+              <AnimatePresence mode="wait" initial={false}>
+                <motion.div
+                  key={mode}
+                  initial={{ rotate: -90, scale: 0.3, opacity: 0 }}
+                  animate={{ rotate: 0, scale: 1, opacity: 1 }}
+                  exit={{ rotate: 90, scale: 0.3, opacity: 0 }}
+                  transition={{ duration: 0.22, ease: "easeOut" }}
+                  className="flex items-center justify-center"
+                >
+                  {mode === "dark" ? (
+                    <Sun className="h-3.5 w-3.5 text-amber-400 drop-shadow-[0_0_6px_rgba(251,191,36,0.6)]" />
+                  ) : (
+                    <Moon className="h-3.5 w-3.5 text-cyan-600 drop-shadow-[0_0_6px_rgba(8,145,178,0.4)]" />
+                  )}
+                </motion.div>
+              </AnimatePresence>
+            ) : (
+              <div className="h-3.5 w-3.5" />
+            )}
           </button>
-
           {/* ========================================================================= */}
-          {/* Notifications Flyout Dropdown */}
+          {/* NOTIFICATION CENTER DROPDOWN PANEL */}
           {/* ========================================================================= */}
           <AnimatePresence>
             {activeDropdown === "notifications" && (
               <motion.div
-                initial={{ opacity: 0, scale: 0.95, y: 4 }}
+                initial={{ opacity: 0, scale: 0.96, y: 6 }}
                 animate={{ opacity: 1, scale: 1, y: 0 }}
-                exit={{ opacity: 0, scale: 0.95, y: 4 }}
-                transition={{ duration: 0.15, ease: "easeOut" }}
-                className="absolute right-0 top-11 z-50 w-80 sm:w-96 rounded-xl border border-[var(--hair)] nav-dropdown p-4 shadow-xl"
+                exit={{ opacity: 0, scale: 0.96, y: 6 }}
+                transition={{ duration: 0.16, ease: "easeOut" }}
+                className="absolute right-0 top-11 z-50 w-80 sm:w-96 rounded-2xl border border-white/10 bg-[#0b0e14] p-4 shadow-[0_16px_40px_-8px_rgba(0,0,0,0.8),0_0_24px_-4px_rgba(255,95,31,0.15)]"
               >
                 {/* Header */}
-                <div className="flex items-center justify-between pb-3 border-b border-[var(--hair)]">
+                <div className="flex items-center justify-between pb-3 border-b border-white/[0.08]">
                   <div className="flex items-center gap-2">
-                    <span className="h-2 w-2 rounded-full bg-[var(--color-neon-orange)]" />
-                    <h4 className="text-xs font-bold uppercase tracking-wider text-[var(--ink)]">
+                    <span className="relative flex h-2 w-2">
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[var(--color-neon-orange)] opacity-75" />
+                      <span className="relative inline-flex rounded-full h-2 w-2 bg-[var(--color-neon-orange)]" />
+                    </span>
+                    <h4 className="text-xs font-bold uppercase tracking-wider text-white">
                       Notification Center
                     </h4>
                     {unreadCount > 0 && (
-                      <span className="rounded-full bg-[var(--color-neon-orange-soft)] border border-[var(--color-neon-orange)] px-2 py-0.5 text-[10px] font-extrabold text-[var(--color-neon-orange)]">
+                      <span className="rounded-full bg-[var(--color-neon-orange)]/15 border border-[var(--color-neon-orange)]/40 px-2 py-0.5 text-[10px] font-bold text-[var(--color-neon-orange)]">
                         {unreadCount} New
                       </span>
                     )}
@@ -375,14 +391,14 @@ export function TerminalNav({
                     {unreadCount > 0 && (
                       <button
                         onClick={markAllAsRead}
-                        className="text-[11px] text-[var(--ink-muted)] hover:text-[var(--color-neon-orange)] transition-colors"
+                        className="text-[11px] font-medium text-white/50 hover:text-[var(--color-neon-orange)] transition-colors cursor-pointer"
                       >
                         Mark read
                       </button>
                     )}
                     <button
                       onClick={() => setActiveDropdown(null)}
-                      className="text-[var(--ink-muted)] hover:text-[var(--color-neon-orange)] text-xs p-1"
+                      className="text-white/40 hover:text-white rounded-lg hover:bg-white/[0.08] p-1 transition-colors cursor-pointer"
                     >
                       <X className="h-3.5 w-3.5" />
                     </button>
@@ -390,16 +406,16 @@ export function TerminalNav({
                 </div>
 
                 {/* Claim tUSD Card at top of Notification Center */}
-                <div className="mt-3 rounded-xl border border-[var(--color-neon-orange)]/40 bg-[var(--color-neon-orange-soft)] p-3 flex items-center justify-between gap-3 shadow-[0_0_15px_rgba(255,95,31,0.15)]">
-                  <div className="flex items-center gap-2.5">
-                    <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[var(--color-neon-orange)] text-white shadow-sm flex-shrink-0">
+                <div className="mt-3 rounded-xl border border-[var(--color-neon-orange)]/30 bg-[#121622] p-3 flex items-center justify-between gap-3 shadow-[0_4px_16px_-4px_rgba(255,95,31,0.18)]">
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[var(--color-neon-orange)]/15 border border-[var(--color-neon-orange)]/40 text-[var(--color-neon-orange)] flex-shrink-0">
                       <Zap className="h-4 w-4" />
                     </div>
-                    <div>
-                      <div className="text-xs font-extrabold text-[var(--ink)]">
+                    <div className="min-w-0">
+                      <div className="text-xs font-bold text-white truncate">
                         Demo Faucet Claim
                       </div>
-                      <div className="text-[10px] text-[var(--ink-muted)]">
+                      <div className="text-[10px] text-white/50 truncate">
                         {canClaim && !claimBusy ? "Instant 100 tUSD replenishment" : `Cooldown: ${cooldownSec}s`}
                       </div>
                     </div>
@@ -409,66 +425,80 @@ export function TerminalNav({
                     onClick={onClaim}
                     disabled={!walletConnected || !canClaim || claimBusy}
                     type="button"
-                    className={`relative overflow-hidden rounded-lg px-3 py-1.5 text-xs font-extrabold tracking-wide transition-all border ${
-                      canClaim && !claimBusy
-                        ? "bg-[var(--color-neon-orange)] hover:bg-[var(--color-neon-orange-pressed)] text-white border-[var(--color-neon-orange)] active:scale-95 shadow-[0_0_10px_rgba(255,95,31,0.3)]"
-                        : "bg-[var(--card)] opacity-50 text-[var(--ink-muted)] cursor-not-allowed border-[var(--hair)]"
+                    className={`relative flex-shrink-0 overflow-hidden rounded-lg px-3 py-1.5 text-xs font-bold tracking-wide transition-all ${
+                      walletConnected && canClaim && !claimBusy
+                        ? "bg-[var(--color-neon-orange)] hover:brightness-110 text-white shadow-[0_0_12px_rgba(255,95,31,0.4)] active:scale-95 cursor-pointer"
+                        : "bg-white/[0.06] border border-white/10 text-white/50 cursor-not-allowed"
                     }`}
                   >
-                    {claimBusy ? "Claiming…" : claimLabel ?? (canClaim ? "+ Claim 100 tUSD" : `${cooldownSec}s`)}
+                    {!walletConnected
+                      ? "Connect Wallet"
+                      : claimBusy
+                      ? "Claiming…"
+                      : claimLabel ?? (canClaim ? "+ Claim 100 tUSD" : cooldownSec > 0 ? `Wait ${cooldownSec}s` : "+ Claim 100 tUSD")}
                   </button>
                 </div>
 
                 {/* Alerts List */}
                 <div className="mt-3 space-y-2 max-h-72 overflow-y-auto pr-1">
                   {alerts.length === 0 ? (
-                    <div className="py-8 text-center text-xs text-[var(--ink-muted)] font-mono">
+                    <div className="py-8 text-center text-xs text-white/40 font-mono">
                       No unread system alerts
                     </div>
                   ) : (
-                    alerts.map((item) => (
-                      <div
-                        key={item.id}
-                        className={`group relative rounded-lg border border-[var(--hair)] bg-[var(--card)] p-3 ${
-                          item.read ? "opacity-75" : "border-[var(--color-neon-orange)]"
-                        }`}
-                      >
-                        <div className="flex items-start justify-between gap-2">
-                          <div className="flex items-center gap-2">
-                            {item.icon === "ws" ? (
-                              <ShieldCheck className="h-3.5 w-3.5 text-[var(--color-neon-orange)] flex-shrink-0" />
-                            ) : item.icon === "speed" ? (
-                              <Zap className="h-3.5 w-3.5 text-[var(--color-neon-orange)] flex-shrink-0" />
-                            ) : (
-                              <Sparkles className="h-3.5 w-3.5 text-[var(--ink-secondary)] flex-shrink-0" />
-                            )}
-                            <span className="text-xs font-bold text-[var(--ink)]">
-                              {item.title}
+                    alerts.map((item) => {
+                      const isUnread = !item.read;
+                      return (
+                        <div
+                          key={item.id}
+                          className={`group relative rounded-xl border p-3 transition-all ${
+                            isUnread
+                              ? "border-[var(--color-neon-orange)]/35 bg-[#121622]/90 border-l-[3px] border-l-[var(--color-neon-orange)] shadow-[0_2px_12px_-2px_rgba(255,95,31,0.12)]"
+                              : "border-white/[0.06] bg-[#0e121a]/60 opacity-60 hover:opacity-90"
+                          }`}
+                        >
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="flex items-center gap-2 min-w-0">
+                              <div className="flex h-6 w-6 items-center justify-center rounded-md bg-white/[0.04] border border-white/[0.08] flex-shrink-0">
+                                {item.icon === "ws" ? (
+                                  <ShieldCheck className="h-3.5 w-3.5 text-[var(--color-neon-orange)]" />
+                                ) : item.icon === "speed" ? (
+                                  <Zap className="h-3.5 w-3.5 text-[var(--color-neon-orange)]" />
+                                ) : (
+                                  <Sparkles className="h-3.5 w-3.5 text-white/70" />
+                                )}
+                              </div>
+                              <span className="text-xs font-bold text-white truncate">
+                                {item.title}
+                              </span>
+                              {isUnread && (
+                                <span className="h-1.5 w-1.5 rounded-full bg-[var(--color-neon-orange)] flex-shrink-0" />
+                              )}
+                            </div>
+                            <span className="text-[10px] font-mono text-white/40 whitespace-nowrap">
+                              {item.time}
                             </span>
                           </div>
-                          <span className="text-[10px] font-mono text-[var(--ink-muted)] whitespace-nowrap">
-                            {item.time}
-                          </span>
+                          <p className="mt-1.5 text-white/60 text-[11px] leading-relaxed">
+                            {item.desc}
+                          </p>
+                          <button
+                            onClick={() => clearAlert(item.id)}
+                            className="absolute right-2 bottom-2 text-white/30 hover:text-[#ff3358] opacity-0 group-hover:opacity-100 transition-opacity p-1 cursor-pointer"
+                            title="Dismiss"
+                          >
+                            <Trash2 className="h-3 w-3" />
+                          </button>
                         </div>
-                        <p className="mt-1 text-[var(--ink-secondary)] text-[11px] leading-relaxed">
-                          {item.desc}
-                        </p>
-                        <button
-                          onClick={() => clearAlert(item.id)}
-                          className="absolute right-2 bottom-2 text-[var(--ink-muted)] hover:text-[var(--down)] opacity-0 group-hover:opacity-100 transition-opacity p-1"
-                          title="Dismiss"
-                        >
-                          <Trash2 className="h-3 w-3" />
-                        </button>
-                      </div>
-                    ))
+                      );
+                    })
                   )}
                 </div>
 
                 {/* Footer */}
-                <div className="mt-3 pt-2.5 border-t border-[var(--hair)] flex items-center justify-between text-[11px] font-mono text-[var(--ink-muted)]">
+                <div className="mt-3 pt-2.5 border-t border-white/[0.08] flex items-center justify-between text-[11px] font-mono text-white/40">
                   <span className="flex items-center gap-1.5 text-[var(--color-neon-orange)]">
-                    <Radio className="h-2.5 w-2.5" />
+                    <Radio className="h-3 w-3 animate-pulse" />
                     WS Stream: 22ms
                   </span>
                   <span>Hyperliquid L1</span>
@@ -607,24 +637,130 @@ export function TerminalNav({
           </AnimatePresence>
 
           {/* ========================================================================= */}
-          {/* Session Performance (P&L) Flyout Dropdown */}
+          {/* Session Performance (P&L) Flyout Dropdown & Popped-Out Draggable Window */}
           {/* ========================================================================= */}
           <AnimatePresence>
-            {activeDropdown === "pnl" && (
+            {activeDropdown === "pnl" && !pnlPoppedOut && (
               <motion.div
-                initial={{ opacity: 0, scale: 0.95, y: 4 }}
+                initial={{ opacity: 0, scale: 0.96, y: 6 }}
                 animate={{ opacity: 1, scale: 1, y: 0 }}
-                exit={{ opacity: 0, scale: 0.95, y: 4 }}
-                transition={{ duration: 0.15, ease: "easeOut" }}
-                className="absolute right-0 top-11 z-50 w-80 rounded-lg border border-[var(--hair)] nav-dropdown p-3"
+                exit={{ opacity: 0, scale: 0.96, y: 6 }}
+                transition={{ duration: 0.16, ease: "easeOut" }}
+                className="absolute right-0 top-11 z-50 w-84 sm:w-96 rounded-2xl border border-white/10 bg-[#0c0f17] p-3.5 shadow-[0_16px_40px_-8px_rgba(0,0,0,0.8),0_0_24px_-4px_rgba(255,95,31,0.2)] overflow-hidden"
               >
-                <SessionStats
-                  plays={plays}
-                  streak={streak}
-                  bestStreak={bestStreak}
-                  walletConnected={walletConnected}
-                  bare
-                />
+                {/* Masked Border Beam strictly on 1.5px border track */}
+                <div className="border-beam-ring rounded-2xl">
+                  <span className="rotating-glow-border" />
+                </div>
+
+                {/* Header with Pop Out and Close buttons */}
+                <div className="relative z-10 flex items-center justify-between pb-2.5 mb-2.5 border-b border-white/[0.08]">
+                  <div className="flex items-center gap-2">
+                    <div className="flex h-5 w-5 items-center justify-center rounded-full bg-[var(--color-neon-orange)] text-white">
+                      <User className="h-3 w-3" />
+                    </div>
+                    <span className="text-xs font-bold uppercase tracking-wider text-white">
+                      Session Performance
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <button
+                      onClick={() => {
+                        setPnlPoppedOut(true);
+                      }}
+                      className="flex items-center gap-1 rounded-md px-2 py-1 text-[10px] font-bold text-white/50 hover:text-[var(--color-neon-orange)] hover:bg-white/[0.06] transition-colors cursor-pointer"
+                      title="Pop out window to drag anywhere"
+                    >
+                      <Maximize2 className="h-3 w-3" />
+                      <span>Pop Out</span>
+                    </button>
+                    <button
+                      onClick={() => setActiveDropdown(null)}
+                      className="rounded-md p-1 text-white/40 hover:text-white hover:bg-white/[0.08] transition-colors cursor-pointer"
+                    >
+                      <X className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                </div>
+
+                <div className="relative z-10">
+                  <SessionStats
+                    plays={plays}
+                    streak={streak}
+                    bestStreak={bestStreak}
+                    walletConnected={walletConnected}
+                    bare
+                  />
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          {/* Popped-Out Floating Draggable Window (Place anywhere on screen) */}
+          <AnimatePresence>
+            {pnlPoppedOut && (
+              <motion.div
+                drag
+                dragMomentum={false}
+                initial={{ opacity: 0, scale: 0.94, y: 10 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.94, y: 10 }}
+                transition={{ duration: 0.18, ease: "easeOut" }}
+                className="fixed z-50 w-84 sm:w-96 rounded-2xl border border-white/10 bg-[#0c0f17] p-4 shadow-[0_24px_60px_-10px_rgba(0,0,0,0.85),0_0_30px_rgba(255,95,31,0.25)] overflow-hidden"
+                style={{ left: "calc(50% - 190px)", top: "110px" }}
+              >
+                {/* Masked Border Beam strictly on 1.5px border track */}
+                <div className="border-beam-ring rounded-2xl">
+                  <span className="rotating-glow-border" />
+                </div>
+
+                {/* Draggable Title Bar */}
+                <div className="relative z-10 flex items-center justify-between pb-2.5 mb-2.5 border-b border-white/[0.08] cursor-grab active:cursor-grabbing">
+                  <div className="flex items-center gap-2">
+                    <GripHorizontal className="h-4 w-4 text-white/40" />
+                    <div className="flex h-5 w-5 items-center justify-center rounded-full bg-[var(--color-neon-orange)] text-white">
+                      <User className="h-3 w-3" />
+                    </div>
+                    <div>
+                      <span className="text-xs font-bold uppercase tracking-wider text-white">
+                        Session Performance
+                      </span>
+                      <span className="hidden sm:inline-block text-[9px] text-white/40 ml-1.5 font-mono">
+                        (Drag anywhere)
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-1">
+                    <button
+                      onClick={() => setPnlPoppedOut(false)}
+                      className="flex items-center gap-1 rounded-md px-2 py-1 text-[10px] font-bold text-white/50 hover:text-[var(--color-neon-orange)] hover:bg-white/[0.06] transition-colors cursor-pointer"
+                      title="Dock back to navbar"
+                    >
+                      <Minimize2 className="h-3 w-3" />
+                      <span>Dock</span>
+                    </button>
+                    <button
+                      onClick={() => {
+                        setPnlPoppedOut(false);
+                        setActiveDropdown(null);
+                      }}
+                      className="rounded-md p-1 text-white/40 hover:text-white hover:bg-white/[0.08] transition-colors cursor-pointer"
+                    >
+                      <X className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                </div>
+
+                <div className="relative z-10">
+                  <SessionStats
+                    plays={plays}
+                    streak={streak}
+                    bestStreak={bestStreak}
+                    walletConnected={walletConnected}
+                    bare
+                  />
+                </div>
               </motion.div>
             )}
           </AnimatePresence>

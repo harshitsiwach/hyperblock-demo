@@ -42,27 +42,21 @@ const STORAGE_KEY_MODE = "hyperblock:theme:mode";
 const STORAGE_KEY_TINT = "hyperblock:theme:tint";
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const [mode, setModeState] = useState<ThemeMode>(() => {
-    if (typeof window !== "undefined") {
-      try {
-        const saved = localStorage.getItem(STORAGE_KEY_MODE) as ThemeMode | null;
-        if (saved === "dark" || saved === "light") return saved;
-      } catch {}
-    }
-    return "light";
-  });
-  const [tint, setTintState] = useState<ThemeTint>(() => {
-    if (typeof window !== "undefined") {
-      try {
-        const saved = localStorage.getItem(STORAGE_KEY_TINT);
-        if (saved === "orange") return "orange";
-      } catch {}
-    }
-    return "orange";
-  });
+  const [mode, setModeState] = useState<ThemeMode>("light");
+  const [tint, setTintState] = useState<ThemeTint>("orange");
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
+    try {
+      const savedMode = localStorage.getItem(STORAGE_KEY_MODE) as ThemeMode | null;
+      if (savedMode === "dark" || savedMode === "light") {
+        setModeState(savedMode);
+      }
+      const savedTint = localStorage.getItem(STORAGE_KEY_TINT) as ThemeTint | null;
+      if (savedTint === "orange") {
+        setTintState(savedTint);
+      }
+    } catch {}
     setMounted(true);
   }, []);
 
@@ -123,7 +117,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
 
   return (
     <ThemeContext.Provider value={value}>
-      <div className={mounted ? "" : "opacity-0"}>{children}</div>
+      <div className={mounted ? "" : "opacity-0"} suppressHydrationWarning>{children}</div>
     </ThemeContext.Provider>
   );
 }

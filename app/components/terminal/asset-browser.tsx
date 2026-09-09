@@ -75,12 +75,12 @@ export function AssetBrowser({
               placeholder="Search markets (GOLD, BTC, NVDA…)"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full rounded-lg border border-[var(--hair)] bg-[var(--card)] py-1.5 pl-8 pr-8 text-xs font-medium text-[var(--ink)] placeholder:text-[var(--ink-muted)] focus:border-[var(--color-neon-orange)] outline-none transition-colors"
+              className="w-full rounded-lg border border-[var(--hair)] bg-[var(--panel)] py-1.5 pl-8 pr-8 text-xs font-medium text-[var(--ink)] placeholder:text-[var(--ink-muted)] focus:border-[var(--color-neon-orange)] focus:bg-[var(--card)] outline-none transition-colors"
             />
             {searchQuery && (
               <button
                 onClick={() => setSearchQuery("")}
-                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[var(--ink-muted)] hover:text-[var(--ink)]"
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[var(--ink-muted)] hover:text-[var(--ink)] cursor-pointer"
               >
                 <X className="h-3.5 w-3.5" />
               </button>
@@ -96,10 +96,10 @@ export function AssetBrowser({
                   key={cat.id}
                   type="button"
                   onClick={() => setActiveCategory(cat.id)}
-                  className={`flex-shrink-0 rounded-md px-2.5 py-1 text-[11px] font-bold tracking-wide transition-all ${
+                  className={`flex-shrink-0 rounded-md px-2.5 py-1 text-[11px] font-bold tracking-wide transition-all cursor-pointer ${
                     isSelected
-                      ? "bg-[var(--color-neon-orange-soft)] text-[var(--color-neon-orange)] border border-[var(--color-neon-orange)] font-extrabold"
-                      : "border border-[var(--hair)] bg-[var(--card)] text-[var(--ink-muted)] hover:text-[var(--ink)] hover:border-[var(--color-neon-orange)]"
+                      ? "bg-[var(--color-neon-orange-soft)] text-[var(--color-neon-orange)] border border-[var(--color-neon-orange)] font-extrabold shadow-sm"
+                      : "border border-[var(--hair)] bg-[var(--panel)] text-[var(--ink-secondary)] hover:text-[var(--ink)] hover:border-[var(--color-neon-orange)]"
                   }`}
                 >
                   {cat.label}
@@ -110,8 +110,8 @@ export function AssetBrowser({
         </div>
       </div>
 
-      {/* Asset Cards Grid with responsive columns - fills remaining space */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-2 flex-1 min-h-0 overflow-y-auto pr-1">
+      {/* Asset Cards Grid with fixed height & scrolling - maintains exact alignment across all categories */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-2 max-h-[168px] overflow-y-auto pr-1">
         {visibleAssets.map((asset) => {
           const isSelected = asset.marketId === selectedMarketId;
           const hlPrice = prices.get(asset.symbol)?.price;

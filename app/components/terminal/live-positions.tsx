@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { AssetIcon } from "@/app/components/asset-icon";
 import { MARKETS as SUPPORTED_ASSETS } from "@/app/lib/markets";
-import { ArrowDown, ArrowUp, Compass, ExternalLink, RefreshCw } from "lucide-react";
+import { ArrowDown, ArrowUp, Compass, ExternalLink, RefreshCw, Receipt, X, Copy, Check } from "lucide-react";
 import type { Play } from "@/app/lib/domain";
 import { explorerTxUrl, type HistoryRecord, type OnchainBetRecord } from "@/app/lib/hyperblock-api/history";
 
@@ -59,6 +59,7 @@ export function LivePositions({
   settling = false,
 }: LivePositionsProps) {
   const [tab, setTab] = useState<"active" | "history">("active");
+  const [selectedSlip, setSelectedSlip] = useState<EnrichedBet | null>(null);
 
   // Auto-switch to active tab when an order is placed
   useEffect(() => {
@@ -150,15 +151,20 @@ export function LivePositions({
       <AnimatePresence>
         {settling && (
           <motion.div
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: "auto" }}
-            exit={{ opacity: 0, height: 0 }}
-            transition={{ duration: 0.2, ease: "easeOut" }}
+            initial={{ opacity: 0, height: 0, y: -4 }}
+            animate={{ opacity: 1, height: "auto", y: 0 }}
+            exit={{ opacity: 0, height: 0, y: -4 }}
+            transition={{ duration: 0.22, ease: "easeOut" }}
             className="overflow-hidden flex-shrink-0"
           >
-            <div className="rounded-lg border border-[var(--wait)] bg-[var(--wait-tint)] px-3 py-2 text-xs font-bold text-[var(--wait)] flex items-center gap-2 shadow-sm animate-pulse">
-              <span className="h-2 w-2 rounded-full bg-[var(--wait)] animate-ping flex-shrink-0" />
-              <span className="truncate">Settling onchain… waiting ~10s for exit price.</span>
+            <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-2.5 py-1.5 text-xs text-amber-300 flex items-center gap-2 backdrop-blur-md shadow-[0_2px_12px_-2px_rgba(245,158,11,0.15)]">
+              <span className="relative flex h-2 w-2 flex-shrink-0">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75" />
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-500" />
+              </span>
+              <span className="text-[11px] font-semibold tracking-wide truncate">
+                Settling onchain… waiting ~10s for exit price
+              </span>
             </div>
           </motion.div>
         )}
@@ -188,14 +194,14 @@ export function LivePositions({
                   animate={{ opacity: 1, y: 0, scale: 1 }}
                   exit={{ opacity: 0, scale: 0.95 }}
                   transition={{ type: "spring", stiffness: 420, damping: 30 }}
-                  className={`relative overflow-hidden rounded-lg border p-2.5 transition-colors ${
+                  className={`relative overflow-hidden rounded-xl border p-2.5 transition-all ${
                     isProfit
-                      ? "border-[#00f076]/30 bg-[#00f076]/[0.03]"
-                      : "border-[#ff3358]/30 bg-[#ff3358]/[0.03]"
+                      ? "border-[#00f076]/35 bg-[#00f076]/[0.04] shadow-[0_2px_16px_-4px_rgba(0,240,118,0.1)]"
+                      : "border-[#ff3358]/35 bg-[#ff3358]/[0.04] shadow-[0_2px_16px_-4px_rgba(255,51,88,0.1)]"
                   }`}
                 >
                   {/* Countdown Progress Bar */}
-                  <div className="absolute top-0 left-0 right-0 h-1 bg-white/[0.06]">
+                  <div className="absolute top-0 left-0 right-0 h-[2px] bg-white/[0.06]">
                     <div
                       className={`h-full transition-all duration-100 ${
                         isUrgent ? "bg-amber-400" : isProfit ? "bg-[#00f076]" : "bg-[#ff3358]"
@@ -218,10 +224,10 @@ export function LivePositions({
                             {asset?.symbol ?? "XAU"}
                           </span>
                           <span
-                            className={`flex items-center gap-0.5 rounded px-1.5 py-0.2 text-[10px] font-black uppercase ${
+                            className={`flex items-center gap-0.5 rounded px-1.5 py-0.5 text-[9.5px] font-black uppercase tracking-wider ${
                               isUp
-                                ? "bg-[#00f076]/20 text-[#00f076]"
-                                : "bg-[#ff3358]/20 text-[#ff3358]"
+                                ? "bg-[#00f076]/15 text-[#00f076] border border-[#00f076]/30"
+                                : "bg-[#ff3358]/15 text-[#ff3358] border border-[#ff3358]/30"
                             }`}
                           >
                             {isUp ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />}
@@ -245,7 +251,7 @@ export function LivePositions({
                         {formatUsd(livePnl)}
                       </div>
 
-                      <div className="flex items-center justify-end gap-1 mt-0.5">
+                      <div className="flex items-center justify-end gap-1.5 mt-0.5">
                         <span
                           className={`inline-block h-1.5 w-1.5 rounded-full ${
                             isSettling
@@ -269,9 +275,9 @@ export function LivePositions({
                   </div>
 
                   {/* Entry Price Footnote */}
-                  <div className="mt-2 flex items-center justify-between border-t border-[var(--hair)] pt-1.5 text-[10px] font-mono text-[var(--ink-muted)]">
+                  <div className="mt-2 flex items-center justify-between border-t border-[var(--hair)] pt-1.5 text-[10.5px] font-mono text-[var(--ink-muted)]">
                     <span>Entry: ${formatPrice(play.entryPrice)}</span>
-                    <span>10-sec settlement</span>
+                    <span className="text-[var(--ink-muted)]/80">10-sec settlement</span>
                   </div>
                 </motion.div>
               );
@@ -318,15 +324,23 @@ export function LivePositions({
                 return (
                   <div
                     key={b.stakeSignature}
-                    className={`rounded-lg border px-2.5 py-2 text-[11px] ${
+                    onClick={() => setSelectedSlip(b)}
+                    className={`group relative overflow-hidden rounded-xl border p-2.5 text-[11px] transition-all cursor-pointer hover:scale-[1.01] active:scale-[0.99] ${
                       isSettling
-                        ? "border-amber-400/25 bg-amber-400/[0.05]"
+                        ? "border-amber-400/30 bg-[#121620]"
                         : profit
-                          ? "border-[#00f076]/20 bg-[#00f076]/[0.03]"
-                          : "border-[#ff3358]/20 bg-[#ff3358]/[0.03]"
+                        ? "border-[#00f076]/45 bg-[#0a1210] shadow-[0_2px_12px_-2px_rgba(0,240,118,0.15)]"
+                        : "border-[#ff3358]/45 bg-[#140b10] shadow-[0_2px_12px_-2px_rgba(255,51,88,0.15)]"
                     }`}
                   >
-                    <div className="flex items-center justify-between gap-2">
+                    {/* Masked Border Beam strictly on 1.5px border track */}
+                    {!isSettling && (
+                      <div className="border-beam-ring rounded-xl">
+                        <span className={profit ? "rotating-glow-border-green" : "rotating-glow-border-red"} />
+                      </div>
+                    )}
+
+                    <div className="relative z-10 flex items-center justify-between gap-2">
                       <div className="flex items-center gap-1.5 min-w-0">
                         <span
                           className={`rounded px-1.5 py-px text-[9px] font-black uppercase ${
@@ -352,15 +366,20 @@ export function LivePositions({
                         {isSettling ? `−${b.stakeTokens} tUSD` : `${b.pnlTokens >= 0 ? "+" : "−"}${Math.abs(b.pnlTokens).toFixed(2)} tUSD`}
                       </span>
                     </div>
-                    <div className="mt-1 flex items-center justify-between gap-2 font-mono text-[10px] text-[var(--ink-muted)]">
+
+                    <div className="relative z-10 mt-1 flex items-center justify-between gap-2 font-mono text-[10px] text-[var(--ink-muted)]">
                       <span>
                         stake {b.stakeTokens} → payout {isSettling ? "…" : b.payoutTokens.toFixed(2)}
                       </span>
                       <span className="flex items-center gap-2">
+                        <span className="flex items-center gap-1 text-[var(--color-neon-orange)] group-hover:underline">
+                          <Receipt className="h-3 w-3" /> slip
+                        </span>
                         <a
                           href={explorerTxUrl(b.stakeSignature)}
                           target="_blank"
                           rel="noreferrer"
+                          onClick={(e) => e.stopPropagation()}
                           className="flex items-center gap-0.5 text-[var(--ink-muted)] hover:text-[var(--ink)]"
                           title="Stake transaction"
                         >
@@ -371,6 +390,7 @@ export function LivePositions({
                             href={explorerTxUrl(b.payoutSignature)}
                             target="_blank"
                             rel="noreferrer"
+                            onClick={(e) => e.stopPropagation()}
                             className="flex items-center gap-0.5 text-[var(--ink-muted)] hover:text-[var(--ink)]"
                             title="Payout transaction"
                           >
@@ -386,6 +406,140 @@ export function LivePositions({
           )}
         </div>
       )}
+
+      {/* Official Bet Slip Modal Popup */}
+      <AnimatePresence>
+        {selectedSlip && (
+          <div
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4"
+            onClick={() => setSelectedSlip(null)}
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.94, y: 14 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.94, y: 14 }}
+              transition={{ type: "spring", stiffness: 420, damping: 30 }}
+              onClick={(e) => e.stopPropagation()}
+              className={`relative w-full max-w-sm overflow-hidden rounded-2xl border p-5 shadow-2xl ${
+                selectedSlip.status === "settling"
+                  ? "border-amber-400/30 bg-[#0e121a]"
+                  : selectedSlip.pnlTokens >= 0
+                  ? "border-[#00f076]/45 bg-[#09110d] shadow-[0_0_30px_rgba(0,240,118,0.2)]"
+                  : "border-[#ff3358]/45 bg-[#12080d] shadow-[0_0_30px_rgba(255,51,88,0.2)]"
+              }`}
+            >
+              {/* Masked Border Beam strictly on 1.5px border track */}
+              {selectedSlip.status !== "settling" && (
+                <div className="border-beam-ring rounded-2xl">
+                  <span className={selectedSlip.pnlTokens >= 0 ? "rotating-glow-border-green" : "rotating-glow-border-red"} />
+                </div>
+              )}
+
+              {/* Header */}
+              <div className="flex items-center justify-between border-b border-white/10 pb-3 relative z-10">
+                <div className="flex items-center gap-2">
+                  <Receipt className="h-4 w-4 text-[var(--color-neon-orange)]" />
+                  <span className="font-mono text-xs font-bold uppercase tracking-wider text-white">
+                    Official Bet Slip
+                  </span>
+                </div>
+                <button
+                  onClick={() => setSelectedSlip(null)}
+                  className="rounded-lg p-1 text-white/40 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+
+              {/* Round Overview Badge & Hero P&L */}
+              <div className="py-4 text-center relative z-10">
+                <div
+                  className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-black uppercase mb-2 border"
+                  style={{
+                    borderColor: selectedSlip.pnlTokens >= 0 ? "rgba(0,240,118,0.4)" : "rgba(255,51,88,0.4)",
+                    backgroundColor: selectedSlip.pnlTokens >= 0 ? "rgba(0,240,118,0.12)" : "rgba(255,51,88,0.12)",
+                    color: selectedSlip.pnlTokens >= 0 ? "#00f076" : "#ff3358",
+                  }}
+                >
+                  {selectedSlip.direction === "up" ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />}
+                  {selectedSlip.direction?.toUpperCase() ?? "ROUND"} · {selectedSlip.symbol ?? "SOL"}
+                </div>
+
+                <div
+                  className={`font-mono text-3xl font-black tracking-tight ${
+                    selectedSlip.pnlTokens >= 0 ? "text-[#00f076]" : "text-[#ff3358]"
+                  }`}
+                >
+                  {selectedSlip.pnlTokens >= 0 ? "+" : "−"}${Math.abs(selectedSlip.pnlTokens).toFixed(2)}
+                </div>
+                <div className="text-xs font-mono font-bold text-white/50 mt-0.5">
+                  {selectedSlip.pnlTokens >= 0
+                    ? `+${((selectedSlip.pnlTokens / (selectedSlip.stakeTokens || 1)) * 100).toFixed(1)}% Return`
+                    : "Capital Deducted"}
+                </div>
+              </div>
+
+              {/* Breakdown details */}
+              <div className="space-y-2 rounded-xl bg-white/[0.04] border border-white/[0.08] p-3 text-xs font-mono relative z-10">
+                <div className="flex justify-between text-white/60">
+                  <span>Stake Amount:</span>
+                  <span className="font-bold text-white">${selectedSlip.stakeTokens.toFixed(2)} tUSD</span>
+                </div>
+                <div className="flex justify-between text-white/60">
+                  <span>Payout Total:</span>
+                  <span className="font-bold text-white">${selectedSlip.payoutTokens.toFixed(2)} tUSD</span>
+                </div>
+                {selectedSlip.entryPrice && (
+                  <div className="flex justify-between text-white/60">
+                    <span>Strike Entry:</span>
+                    <span className="font-bold text-white">${formatPrice(selectedSlip.entryPrice)}</span>
+                  </div>
+                )}
+                <div className="flex justify-between text-white/60">
+                  <span>Settlement:</span>
+                  <span className="text-[var(--color-neon-orange)] font-bold">10-Sec Fast Round</span>
+                </div>
+              </div>
+
+              {/* On-Chain Proof Links */}
+              <div className="mt-3 space-y-1.5 relative z-10">
+                <div className="text-[10px] font-bold uppercase tracking-wider text-white/40 mb-1">
+                  Verified On-Chain Signatures
+                </div>
+                <a
+                  href={explorerTxUrl(selectedSlip.stakeSignature)}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="flex items-center justify-between rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2 text-xs font-mono text-white/70 hover:text-white hover:border-[var(--color-neon-orange)] transition-colors"
+                >
+                  <span>Stake Tx: {selectedSlip.stakeSignature.slice(0, 8)}…{selectedSlip.stakeSignature.slice(-6)}</span>
+                  <ExternalLink className="h-3.5 w-3.5 text-[var(--color-neon-orange)]" />
+                </a>
+
+                {selectedSlip.payoutSignature && (
+                  <a
+                    href={explorerTxUrl(selectedSlip.payoutSignature)}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="flex items-center justify-between rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2 text-xs font-mono text-white/70 hover:text-white hover:border-[var(--color-neon-orange)] transition-colors"
+                  >
+                    <span>Payout Tx: {selectedSlip.payoutSignature.slice(0, 8)}…{selectedSlip.payoutSignature.slice(-6)}</span>
+                    <ExternalLink className="h-3.5 w-3.5 text-[#00f076]" />
+                  </a>
+                )}
+              </div>
+
+              {/* Close button */}
+              <button
+                onClick={() => setSelectedSlip(null)}
+                className="mt-4 w-full rounded-xl bg-white/10 py-2.5 text-center text-xs font-bold text-white hover:bg-white/20 transition-colors cursor-pointer relative z-10"
+              >
+                Close Slip
+              </button>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

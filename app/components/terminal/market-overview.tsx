@@ -139,8 +139,8 @@ export function MarketOverview({
         <div
           className={`flex items-center gap-1 text-xs font-extrabold font-mono px-2 py-1 rounded-lg border ${
             isPositive 
-              ? "text-emerald-400 bg-emerald-500/10 border-emerald-500/25" 
-              : "text-rose-400 bg-rose-500/10 border-rose-500/25"
+              ? "text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 border-emerald-500/30" 
+              : "text-rose-600 dark:text-rose-400 bg-rose-500/10 border-rose-500/30"
           }`}
         >
           {isPositive ? (
@@ -163,21 +163,21 @@ export function MarketOverview({
         const rangePct = Math.min(100, Math.max(0, ((curVal - low) / rangeSpan) * 100));
 
         return (
-          <div className="rounded-lg border border-[var(--hair)] bg-[var(--card)] px-2.5 py-1.5 space-y-1">
+          <div className="rounded-lg border border-[var(--hair)] bg-[var(--panel)] px-2.5 py-1.5 space-y-1">
             <div className="flex justify-between items-center text-[10px]">
               <div className="flex items-center gap-1">
-                <span className="text-[var(--ink-muted)]">24h Low</span>
+                <span className="text-[var(--ink-muted)] font-semibold">24h Low</span>
                 <span className="font-mono font-bold text-[var(--ink)]">${formatPrice(low)}</span>
               </div>
               <span className="font-mono text-[9px] text-[var(--ink-muted)]">{rangePct.toFixed(0)}% Track</span>
               <div className="flex items-center gap-1">
-                <span className="text-[var(--ink-muted)]">24h High</span>
+                <span className="text-[var(--ink-muted)] font-semibold">24h High</span>
                 <span className="font-mono font-bold text-[var(--ink)]">${formatPrice(high)}</span>
               </div>
             </div>
 
             {/* Range Track with Moving Notch */}
-            <div className="relative h-1.5 w-full rounded-full bg-[var(--card)] overflow-visible">
+            <div className="relative h-1.5 w-full rounded-full bg-slate-200 dark:bg-[var(--card)] overflow-visible">
               <div className="relative h-full w-full rounded-full overflow-hidden bg-gradient-to-r from-rose-500/70 via-amber-400/70 to-emerald-400/70 opacity-90" />
               <div
                 className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 z-10"
@@ -192,34 +192,34 @@ export function MarketOverview({
 
       {/* Squeezed 2x2 Market Stats Grid */}
       <div className="grid grid-cols-2 gap-2 text-[10px]">
-        <div className="rounded-lg border border-[var(--hair)] bg-[var(--card)] px-2 py-1.5">
+        <div className="rounded-lg border border-[var(--hair)] bg-[var(--panel)] px-2 py-1.5">
           <span className="font-bold uppercase tracking-wider text-[var(--ink-muted)]">
             24h Volume
           </span>
           <div className="font-mono text-[11px] font-bold text-[var(--ink)] mt-0.5">{volume24h}</div>
         </div>
 
-        <div className="rounded-lg border border-[var(--hair)] bg-[var(--card)] px-2 py-1.5">
+        <div className="rounded-lg border border-[var(--hair)] bg-[var(--panel)] px-2 py-1.5">
           <span className="font-bold uppercase tracking-wider text-[var(--ink-muted)]">
             Open Interest
           </span>
           <div className="font-mono text-[11px] font-bold text-[var(--ink)] mt-0.5">{openInterest}</div>
         </div>
 
-        <div className="rounded-lg border border-[var(--hair)] bg-[var(--card)] px-2 py-1.5">
+        <div className="rounded-lg border border-[var(--hair)] bg-[var(--panel)] px-2 py-1.5">
           <span className="font-bold uppercase tracking-wider text-[var(--ink-muted)]">
             Funding (1h)
           </span>
           <div
             className={`font-mono text-[11px] font-bold mt-0.5 ${
-              isPositive ? "text-emerald-400" : "text-rose-400"
+              isPositive ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400"
             }`}
           >
             {fundingRate}
           </div>
         </div>
 
-        <div className="rounded-lg border border-[var(--hair)] bg-[var(--card)] px-2 py-1.5">
+        <div className="rounded-lg border border-[var(--hair)] bg-[var(--panel)] px-2 py-1.5">
           <span className="font-bold uppercase tracking-wider text-[var(--ink-muted)]">
             Volatility
           </span>

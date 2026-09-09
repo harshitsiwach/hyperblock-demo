@@ -131,26 +131,34 @@ export function TradingTicket({
             </div>
           ) : (
             <div className="grid grid-cols-2 gap-2.5 pt-0.5">
-              {/* UP BUTTON */}
+              {/* UP BUTTON with rotating green edge glow on hover */}
               <button
                 type="button"
                 onClick={() => handleButtonClick("up")}
                 disabled={disabled || activeCount >= maxPositions}
-                className="trigger-btn-up group h-12 rounded-lg flex items-center justify-center gap-2 font-extrabold text-sm tracking-wide uppercase disabled:opacity-35 disabled:cursor-not-allowed cursor-pointer transition-all border border-[var(--hair)] hover:border-[var(--up)]"
+                className="trigger-btn-up group relative overflow-hidden h-12 rounded-xl flex items-center justify-center gap-2 font-extrabold text-sm tracking-wide uppercase disabled:opacity-35 disabled:cursor-not-allowed cursor-pointer transition-all border border-[#00f076]/30 bg-[#0d141e] hover:border-[#00f076] hover:shadow-[0_0_20px_rgba(0,240,118,0.35)] active:scale-95"
               >
-                <ArrowUp className="h-5 w-5 text-[var(--up)] group-hover:scale-110 transition-transform" />
-                <span className="tracking-wider text-[var(--up)] font-black">UP</span>
+                {/* Masked Border Beam strictly on border track - visible on hover */}
+                <div className="border-beam-ring rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                  <span className="rotating-glow-border-green" />
+                </div>
+                <ArrowUp className="h-5 w-5 text-[var(--up)] group-hover:scale-110 transition-transform relative z-10" />
+                <span className="tracking-wider text-[var(--up)] font-black relative z-10">UP</span>
               </button>
 
-              {/* DOWN BUTTON */}
+              {/* DOWN BUTTON with rotating red edge glow on hover */}
               <button
                 type="button"
                 onClick={() => handleButtonClick("down")}
                 disabled={disabled || activeCount >= maxPositions}
-                className="trigger-btn-down group h-12 rounded-lg flex items-center justify-center gap-2 font-extrabold text-sm tracking-wide uppercase disabled:opacity-35 disabled:cursor-not-allowed cursor-pointer transition-all border border-[var(--hair)] hover:border-[var(--down)]"
+                className="trigger-btn-down group relative overflow-hidden h-12 rounded-xl flex items-center justify-center gap-2 font-extrabold text-sm tracking-wide uppercase disabled:opacity-35 disabled:cursor-not-allowed cursor-pointer transition-all border border-[#ff3358]/30 bg-[#0d141e] hover:border-[#ff3358] hover:shadow-[0_0_20px_rgba(255,51,88,0.35)] active:scale-95"
               >
-                <ArrowDown className="h-5 w-5 text-[var(--down)] group-hover:scale-110 transition-transform" />
-                <span className="tracking-wider text-[var(--down)] font-black">DOWN</span>
+                {/* Masked Border Beam strictly on border track - visible on hover */}
+                <div className="border-beam-ring rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                  <span className="rotating-glow-border-red" />
+                </div>
+                <ArrowDown className="h-5 w-5 text-[var(--down)] group-hover:scale-110 transition-transform relative z-10" />
+                <span className="tracking-wider text-[var(--down)] font-black relative z-10">DOWN</span>
               </button>
             </div>
           )}
