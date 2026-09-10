@@ -25,10 +25,17 @@ import { WinCelebrationV2 } from "@/app/components/terminal/win-celebration-v2";
 import { MobileDock } from "@/app/components/terminal/mobile-dock";
 import { TerminalLeaderboard } from "@/app/components/terminal/terminal-leaderboard";
 import { TerminalNotification, type BetNotificationData } from "@/app/components/terminal/terminal-notification";
+import { AssetIcon } from "@/app/components/asset-icon";
 import type { MarketSnapshot, Play } from "@/app/lib/domain";
 
 function formatUsd(n: number) {
   return `$${n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+}
+
+function formatPrice(val: number): string {
+  if (val < 1) return val.toFixed(4);
+  if (val < 10) return val.toFixed(3);
+  return val.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
 export function MockArena({ initialView = "demo" }: { initialView?: "demo" | "leaderboard" } = {}) {
@@ -699,71 +706,154 @@ export function MockArena({ initialView = "demo" }: { initialView?: "demo" | "le
           <TerminalLeaderboard onBackToDemo={() => setArenaView("demo")} />
         ) : (
           <>
-            {/* Row 1: Chart (Left) + Order Ticket & Bets (Right) */}
-            <div className="grid grid-cols-1 gap-3.5 lg:grid-cols-12 lg:gap-4 items-start">
-          {/* Chart (Spans 8 cols on lg, 9 cols on xl) */}
-          <div className="lg:col-span-8 xl:col-span-9 flex flex-col lg:h-[585px]">
-            <TerminalChart
-              data={hlHistory}
-              currentPrice={mock.currentPrice}
-              activePlays={liveActivePlays}
-              symbol={selectedAsset.symbol}
-              height="100%"
-            />
-          </div>
+            {/* Desktop Layout: Exact 2-Row Wireframe (hidden on screens < lg) */}
+            <div className="hidden lg:flex lg:flex-col lg:gap-4">
+              {/* Row 1: Chart (Left) + Order Ticket & Bets (Right) */}
+              <div className="grid grid-cols-12 gap-4 items-start">
+                <div className="col-span-8 xl:col-span-9 flex flex-col h-[585px]">
+                  <TerminalChart
+                    data={hlHistory}
+                    currentPrice={mock.currentPrice}
+                    activePlays={liveActivePlays}
+                    symbol={selectedAsset.symbol}
+                    height="100%"
+                  />
+                </div>
+                <div className="col-span-4 xl:col-span-3 flex flex-col gap-3.5 h-[585px]">
+                  <TradingTicket
+                    asset={selectedAsset}
+                    amount={amount}
+                    onAmountChange={setAmount}
+                    onBet={(dir) => void handleBet(dir)}
+                    disabled={!mock.currentPrice || settling || account.placing}
+                    activeCount={liveActivePlays.length}
+                    maxPositions={8}
+                    betFlash={betFlash}
+                    needsApproval={needsApproval}
+                    onApprove={() => void account.approve().then(() => setToast("Approved · you can bet now")).catch((e) => setToast(e instanceof Error ? e.message : "Approval failed"))}
+                    approving={account.approving}
+                  />
+                  <LivePositions
+                    activePlays={liveActivePlays}
+                    historyPlays={mock.historyPlays as Play[]}
+                    now={mock.now}
+                    records={history.records}
+                    historyLoading={history.loading}
+                    walletConnected={!!account.address}
+                    onRefreshHistory={() => void history.refresh()}
+                    settling={settling}
+                  />
+                </div>
+              </div>
 
-          {/* Right Column: Order Ticket (Top) + Bets (Below) */}
-          <div className="lg:col-span-4 xl:col-span-3 flex flex-col gap-3.5 lg:h-[585px]">
-            {/* 10-Second Bet Ticket */}
-            <TradingTicket
-              asset={selectedAsset}
-              amount={amount}
-              onAmountChange={setAmount}
-              onBet={(dir) => void handleBet(dir)}
-              disabled={!mock.currentPrice || settling || account.placing}
-              activeCount={liveActivePlays.length}
-              maxPositions={8}
-              betFlash={betFlash}
-              needsApproval={needsApproval}
-              onApprove={() => void account.approve().then(() => setToast("Approved · you can bet now")).catch((e) => setToast(e instanceof Error ? e.message : "Approval failed"))}
-              approving={account.approving}
-            />
+              {/* Row 2: Coin (Market Overview) & Assets (Asset Browser) Side-by-Side */}
+              <div className="grid grid-cols-12 gap-4 items-stretch">
+                <div className="col-span-5 xl:col-span-4 flex flex-col">
+                  <MarketOverview
+                    asset={selectedAsset}
+                    currentPrice={mock.currentPrice}
+                    priceHistory={hlHistory}
+                    latencyMs={22}
+                  />
+                </div>
+                <div className="col-span-7 xl:col-span-8 flex flex-col">
+                  <AssetBrowser
+                    selectedMarketId={selectedMarketId}
+                    onSelect={(id) => setSelectedMarketId(id)}
+                    prices={mock.prices}
+                  />
+                </div>
+              </div>
+            </div>
 
-            {/* Active Orders & On-chain Record */}
-            <LivePositions
-              activePlays={liveActivePlays}
-              historyPlays={mock.historyPlays as Play[]}
-              now={mock.now}
-              records={history.records}
-              historyLoading={history.loading}
-              walletConnected={!!account.address}
-              onRefreshHistory={() => void history.refresh()}
-              settling={settling}
-            />
-          </div>
-        </div>
+            {/* Mobile Layout: Responsive Dedicated Tabs (hidden on lg and above) */}
+            <div className="flex flex-col gap-3.5 lg:hidden">
+              {mobileTab === "trade" && (
+                <>
+                  {/* Quick Asset Selector Header for Mobile */}
+                  <div className="flex items-center justify-between rounded-xl border border-[var(--hair)] bg-[var(--card)] p-2.5 shadow-sm">
+                    <div className="flex items-center gap-2">
+                      <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-[var(--panel)] border border-[var(--hair)]">
+                        <AssetIcon symbol={selectedAsset.symbol} category={selectedAsset.category} size={18} />
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-xs font-black text-[var(--ink)]">{selectedAsset.symbol}</span>
+                          <span className="text-[9px] font-bold text-[var(--ink-secondary)] uppercase bg-[var(--panel)] px-1 rounded border border-[var(--hair)]">
+                            {selectedAsset.category}
+                          </span>
+                        </div>
+                        <div className="font-mono text-[11px] font-extrabold text-[var(--color-neon-orange)]">
+                          ${mock.currentPrice ? formatPrice(mock.currentPrice) : "—"}
+                        </div>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => setShowAssetSheet(true)}
+                      type="button"
+                      className="rounded-lg border border-[var(--hair)] bg-[var(--panel)] px-2.5 py-1.5 text-[11px] font-bold text-[var(--ink)] hover:border-[var(--color-neon-orange)] hover:text-[var(--color-neon-orange)] active:scale-95 transition-all cursor-pointer"
+                    >
+                      Change Market ▾
+                    </button>
+                  </div>
 
-        {/* Row 2: Coin (Market Overview) & Assets (Asset Browser) Side-by-Side */}
-        <div className="grid grid-cols-1 gap-3.5 lg:grid-cols-12 lg:gap-4 items-stretch">
-          {/* Left: Coin (MarketOverview) */}
-          <div className="lg:col-span-5 xl:col-span-4 flex flex-col">
-            <MarketOverview
-              asset={selectedAsset}
-              currentPrice={mock.currentPrice}
-              priceHistory={hlHistory}
-              latencyMs={22}
-            />
-          </div>
+                  {/* Compact Mobile Chart */}
+                  <div className="flex flex-col min-h-[300px]">
+                    <TerminalChart
+                      data={hlHistory}
+                      currentPrice={mock.currentPrice}
+                      activePlays={liveActivePlays}
+                      symbol={selectedAsset.symbol}
+                      height={320}
+                    />
+                  </div>
 
-          {/* Right: Assets (Asset Browser) */}
-          <div className="lg:col-span-7 xl:col-span-8 flex flex-col">
-            <AssetBrowser
-              selectedMarketId={selectedMarketId}
-              onSelect={(id) => setSelectedMarketId(id)}
-              prices={mock.prices}
-            />
-          </div>
-        </div>
+                  {/* Order Ticket */}
+                  <TradingTicket
+                    asset={selectedAsset}
+                    amount={amount}
+                    onAmountChange={setAmount}
+                    onBet={(dir) => void handleBet(dir)}
+                    disabled={!mock.currentPrice || settling || account.placing}
+                    activeCount={liveActivePlays.length}
+                    maxPositions={8}
+                    betFlash={betFlash}
+                    needsApproval={needsApproval}
+                    onApprove={() => void account.approve().then(() => setToast("Approved · you can bet now")).catch((e) => setToast(e instanceof Error ? e.message : "Approval failed"))}
+                    approving={account.approving}
+                  />
+
+                  {/* Market Overview */}
+                  <MarketOverview
+                    asset={selectedAsset}
+                    currentPrice={mock.currentPrice}
+                    priceHistory={hlHistory}
+                    latencyMs={22}
+                  />
+                </>
+              )}
+
+              {mobileTab === "positions" && (
+                <div className="flex flex-col gap-3">
+                  <LivePositions
+                    activePlays={liveActivePlays}
+                    historyPlays={mock.historyPlays as Play[]}
+                    now={mock.now}
+                    records={history.records}
+                    historyLoading={history.loading}
+                    walletConnected={!!account.address}
+                    onRefreshHistory={() => void history.refresh()}
+                    settling={settling}
+                  />
+                </div>
+              )}
+
+              {mobileTab === "activity" && (
+                <div className="flex flex-col gap-3">
+                  <RecentActivity items={activityItems} inline />
+                </div>
+              )}
+            </div>
           </>
         )}
       </main>
@@ -811,12 +901,22 @@ export function MockArena({ initialView = "demo" }: { initialView?: "demo" | "le
 
       {/* Mobile Drawer Bottom Sheet for Asset Browser */}
       {showAssetSheet && (
-        <div className="fixed inset-0 z-50 flex flex-col justify-end bg-black/60 lg:hidden">
-          <div className="relative max-h-[80vh] w-full rounded-t-lg border-t border-[var(--hair)] bg-[var(--card)] p-4 overflow-y-auto">
-            <div className="mx-auto mb-3 h-1 w-10 rounded-full bg-[var(--hair)]" />
+        <div className="fixed inset-0 z-50 flex flex-col justify-end bg-black/70 backdrop-blur-sm lg:hidden">
+          <div
+            onClick={() => setShowAssetSheet(false)}
+            className="flex-1 w-full"
+            aria-hidden="true"
+          />
+          <div className="relative max-h-[85vh] w-full rounded-t-2xl border-t border-[var(--hair)] bg-[var(--card)] p-4 pb-8 overflow-y-auto shadow-2xl">
+            <div className="mx-auto mb-3 h-1.5 w-12 rounded-full bg-[var(--hair)]" />
             <div className="flex items-center justify-between pb-2 border-b border-[var(--hair)] mb-3">
               <h3 className="text-xs font-bold uppercase tracking-wider text-[var(--ink)]">Select Asset</h3>
-              <button onClick={() => setShowAssetSheet(false)} className="text-xs text-[var(--ink-muted)] hover:text-[var(--ink)] transition-colors">✕ Close</button>
+              <button
+                onClick={() => setShowAssetSheet(false)}
+                className="rounded-md px-2 py-1 text-xs font-bold text-[var(--ink-muted)] hover:text-[var(--ink)] bg-[var(--panel)] transition-colors cursor-pointer"
+              >
+                ✕ Close
+              </button>
             </div>
             <AssetBrowser
               selectedMarketId={selectedMarketId}
@@ -832,12 +932,22 @@ export function MockArena({ initialView = "demo" }: { initialView?: "demo" | "le
 
       {/* Mobile Drawer Bottom Sheet for Trading Ticket */}
       {showTradeSheet && (
-        <div className="fixed inset-0 z-50 flex flex-col justify-end bg-black/60 lg:hidden">
-          <div className="relative w-full rounded-t-lg border-t border-[var(--hair)] bg-[var(--card)] p-4">
-            <div className="mx-auto mb-3 h-1 w-10 rounded-full bg-[var(--hair)]" />
+        <div className="fixed inset-0 z-50 flex flex-col justify-end bg-black/70 backdrop-blur-sm lg:hidden">
+          <div
+            onClick={() => setShowTradeSheet(false)}
+            className="flex-1 w-full"
+            aria-hidden="true"
+          />
+          <div className="relative w-full rounded-t-2xl border-t border-[var(--hair)] bg-[var(--card)] p-4 pb-8 shadow-2xl">
+            <div className="mx-auto mb-3 h-1.5 w-12 rounded-full bg-[var(--hair)]" />
             <div className="flex items-center justify-between pb-2 border-b border-[var(--hair)] mb-3">
               <h3 className="text-xs font-bold uppercase tracking-wider text-[var(--ink)]">Place 10-Second Trade</h3>
-              <button onClick={() => setShowTradeSheet(false)} className="text-xs text-[var(--ink-muted)] hover:text-[var(--color-neon-orange)] transition-colors">✕ Close</button>
+              <button
+                onClick={() => setShowTradeSheet(false)}
+                className="rounded-md px-2 py-1 text-xs font-bold text-[var(--ink-muted)] hover:text-[var(--color-neon-orange)] bg-[var(--panel)] transition-colors cursor-pointer"
+              >
+                ✕ Close
+              </button>
             </div>
             <TradingTicket
               asset={selectedAsset}
@@ -851,6 +961,9 @@ export function MockArena({ initialView = "demo" }: { initialView?: "demo" | "le
               activeCount={liveActivePlays.length}
               maxPositions={8}
               betFlash={betFlash}
+              needsApproval={needsApproval}
+              onApprove={() => void account.approve().then(() => setToast("Approved · you can bet now")).catch((e) => setToast(e instanceof Error ? e.message : "Approval failed"))}
+              approving={account.approving}
             />
           </div>
         </div>

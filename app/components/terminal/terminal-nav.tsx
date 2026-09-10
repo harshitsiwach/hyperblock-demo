@@ -170,11 +170,11 @@ export function TerminalNav({
     <div className="fixed top-0 inset-x-0 mx-auto w-full max-w-[1680px] z-40 px-2 sm:px-4 pointer-events-none">
       <header className="pointer-events-auto w-full flex h-12 sm:h-13 items-center justify-between px-3.5 sm:px-4 lg:px-5 rounded-b-xl sm:rounded-b-2xl border-b border-x border-[var(--hair)] bg-[var(--card)]/95 backdrop-blur-xl shadow-md">
         {/* Left Section: Brand & Nav Tabs */}
-        <div className="flex items-center gap-6">
+        <div className="flex items-center gap-2 sm:gap-4 md:gap-6">
           <BrandMark />
 
           {/* Navigation Tabs (iOS Liquid Water Segmented Control with Rotating Glowing Border) */}
-          <nav className="hidden items-center p-0.5 rounded-xl bg-[var(--card)] border border-[var(--hair)] md:flex shadow-inner" aria-label="Main Navigation">
+          <nav className="flex items-center p-0.5 rounded-xl bg-[var(--card)] border border-[var(--hair)] shadow-inner" aria-label="Main Navigation">
             {NAV_TABS.map((tab) => {
               const isActive = (activeTab ?? "demo") === tab.id;
               return (
@@ -189,7 +189,7 @@ export function TerminalNav({
                   }}
                   type="button"
                   aria-current={isActive ? "page" : undefined}
-                  className="relative px-4 py-1.5 text-xs font-bold transition-colors select-none focus:outline-none flex items-center justify-center"
+                  className="relative px-2 sm:px-3.5 py-1 sm:py-1.5 text-[10.5px] sm:text-xs font-bold transition-colors select-none focus:outline-none flex items-center justify-center"
                 >
                   {isActive && (
                     <motion.div
@@ -232,13 +232,13 @@ export function TerminalNav({
         </div>
 
         {/* Right Section: Stats, Wallet, Notifications, Settings, Theme */}
-        <div ref={dropdownRef} className="relative flex items-center gap-2 sm:gap-2.5">
+        <div ref={dropdownRef} className="relative flex items-center gap-1 sm:gap-2">
           {/* P&L / Profile Button — opens full performance card, scales & glows on hover */}
           <button
             onClick={() =>
               setActiveDropdown((prev) => (prev === "pnl" ? null : "pnl"))
             }
-            className={`group flex items-center gap-1.5 rounded-xl border px-2.5 py-1 transition-all duration-200 hover:scale-105 hover:shadow-[0_0_12px_rgba(255,95,31,0.35)] hover:border-[var(--color-neon-orange)] ${
+            className={`group flex items-center gap-1 sm:gap-1.5 rounded-xl border px-1.5 sm:px-2.5 py-1 transition-all duration-200 hover:scale-105 hover:shadow-[0_0_12px_rgba(255,95,31,0.35)] hover:border-[var(--color-neon-orange)] ${
               activeDropdown === "pnl"
                 ? "bg-[var(--color-neon-orange-soft)] text-[var(--color-neon-orange)] border-[var(--color-neon-orange)] shadow-[0_0_10px_rgba(255,95,31,0.25)]"
                 : "border-[var(--hair)] bg-[var(--card)] text-[var(--ink)]"
@@ -314,12 +314,12 @@ export function TerminalNav({
             )}
           </button>
 
-          {/* Settings Trigger Button — rotates gear & glows on hover */}
+          {/* Settings Trigger Button — rotates gear & glows on hover (hidden on narrow screens) */}
           <button
             onClick={() =>
               setActiveDropdown((prev) => (prev === "settings" ? null : "settings"))
             }
-            className={`hover-gear-spin relative flex h-8 w-8 items-center justify-center rounded-lg border transition-all duration-200 hover:scale-105 hover:shadow-[0_0_12px_rgba(255,95,31,0.4)] hover:border-[var(--color-neon-orange)] ${
+            className={`hidden sm:flex hover-gear-spin relative h-8 w-8 items-center justify-center rounded-lg border transition-all duration-200 hover:scale-105 hover:shadow-[0_0_12px_rgba(255,95,31,0.4)] hover:border-[var(--color-neon-orange)] ${
               activeDropdown === "settings"
                 ? "bg-[var(--color-neon-orange-soft)] text-[var(--color-neon-orange)] border-[var(--color-neon-orange)] shadow-[0_0_10px_rgba(255,95,31,0.25)]"
                 : "border-[var(--hair)] bg-[var(--card)] text-[var(--ink-muted)] hover:text-[var(--color-neon-orange)]"
@@ -369,7 +369,7 @@ export function TerminalNav({
                 animate={{ opacity: 1, scale: 1, y: 0 }}
                 exit={{ opacity: 0, scale: 0.96, y: 6 }}
                 transition={{ duration: 0.16, ease: "easeOut" }}
-                className="absolute right-0 top-11 z-50 w-80 sm:w-96 rounded-2xl border border-[var(--hair)] bg-[var(--card)] p-4 shadow-[0_16px_40px_-8px_rgba(0,0,0,0.35),0_0_24px_-4px_rgba(255,95,31,0.15)] text-[var(--ink)]"
+                className="absolute right-0 top-11 z-50 w-[calc(100vw-20px)] max-w-sm sm:w-96 rounded-2xl border border-[var(--hair)] bg-[var(--card)] p-4 shadow-[0_16px_40px_-8px_rgba(0,0,0,0.35),0_0_24px_-4px_rgba(255,95,31,0.15)] text-[var(--ink)]"
               >
                 {/* Header */}
                 <div className="flex items-center justify-between pb-3 border-b border-[var(--hair)]">
@@ -517,7 +517,7 @@ export function TerminalNav({
                 animate={{ opacity: 1, scale: 1, y: 0 }}
                 exit={{ opacity: 0, scale: 0.95, y: 4 }}
                 transition={{ duration: 0.15, ease: "easeOut" }}
-                className="absolute right-0 top-11 z-50 w-80 rounded-lg border border-[var(--hair)] nav-dropdown p-4"
+                className="absolute right-0 top-11 z-50 w-[calc(100vw-20px)] max-w-sm sm:w-80 rounded-lg border border-[var(--hair)] nav-dropdown p-4"
               >
                 {/* Header */}
                 <div className="flex items-center justify-between pb-3 border-b border-[var(--hair)]">
@@ -646,7 +646,7 @@ export function TerminalNav({
                 animate={{ opacity: 1, scale: 1, y: 0 }}
                 exit={{ opacity: 0, scale: 0.96, y: 6 }}
                 transition={{ duration: 0.16, ease: "easeOut" }}
-                className="absolute right-0 top-11 z-50 w-84 sm:w-96 rounded-2xl border border-[var(--hair)] bg-[var(--card)] p-3.5 shadow-[0_16px_40px_-8px_rgba(0,0,0,0.35),0_0_24px_-4px_rgba(255,95,31,0.15)] overflow-hidden text-[var(--ink)]"
+                className="absolute right-0 top-11 z-50 w-[calc(100vw-20px)] max-w-sm sm:w-96 rounded-2xl border border-[var(--hair)] bg-[var(--card)] p-3.5 shadow-[0_16px_40px_-8px_rgba(0,0,0,0.35),0_0_24px_-4px_rgba(255,95,31,0.15)] overflow-hidden text-[var(--ink)]"
               >
                 {/* Masked Border Beam strictly on 1.5px border track */}
                 <div className="border-beam-ring rounded-2xl">

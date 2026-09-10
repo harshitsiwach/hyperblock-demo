@@ -323,6 +323,11 @@ button:focus-visible, input:focus-visible, a:focus-visible { outline: 2px solid 
   color: var(--ink);
   text-decoration: none;
 }
+@media (max-width: 640px) {
+  .brand-wordmark {
+    display: none !important;
+  }
+}
 .brand-mark:focus-visible {
   outline: 2px solid var(--ink);
   outline-offset: 4px;

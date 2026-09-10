@@ -880,7 +880,7 @@ export function TerminalChart({
       className={`terminal-card flex flex-col overflow-hidden relative w-full ${
         isFullscreen
           ? "fixed inset-0 z-50 rounded-none h-screen"
-          : "min-h-[460px] sm:min-h-[520px] lg:min-h-[590px]"
+          : "min-h-[290px] sm:min-h-[460px] lg:min-h-[585px]"
       }`}
       style={{
         height: isFullscreen ? "100vh" : typeof height === "number" ? `${height}px` : height,

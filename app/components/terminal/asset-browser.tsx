@@ -89,7 +89,7 @@ export function AssetBrowser({
 
           {/* Category Filter Segmented Control (identical styling to header Demo & Leaderboard tabs) */}
           <nav
-            className="flex items-center p-0.5 rounded-xl bg-[var(--card)] border border-[var(--hair)] shadow-inner flex-shrink-0"
+            className="flex items-center p-0.5 rounded-xl bg-[var(--card)] border border-[var(--hair)] shadow-inner flex-shrink-0 overflow-x-auto no-scrollbar"
             aria-label="Market Asset Categories"
           >
             {CATEGORIES.map((cat) => {
@@ -100,7 +100,7 @@ export function AssetBrowser({
                   type="button"
                   onClick={() => setActiveCategory(cat.id)}
                   aria-current={isSelected ? "page" : undefined}
-                  className="relative px-3 py-1 text-xs font-bold transition-colors select-none focus:outline-none flex items-center justify-center cursor-pointer"
+                  className="relative px-3 py-1 text-xs font-bold transition-colors select-none focus:outline-none flex items-center justify-center cursor-pointer flex-shrink-0"
                 >
                   {isSelected && (
                     <motion.div
@@ -144,7 +144,7 @@ export function AssetBrowser({
       </div>
 
       {/* Asset Cards Grid with fixed height & scrolling - maintains exact alignment across all categories */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-2 max-h-[168px] overflow-y-auto pr-1">
+      <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-2 max-h-[50vh] sm:max-h-[168px] overflow-y-auto pr-1">
         {visibleAssets.map((asset) => {
           const isSelected = asset.marketId === selectedMarketId;
           const hlPrice = prices.get(asset.symbol)?.price;

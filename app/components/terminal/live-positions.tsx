@@ -449,7 +449,7 @@ export function LivePositions({
               exit={{ opacity: 0, scale: 0.94, y: 14 }}
               transition={{ type: "spring", stiffness: 420, damping: 30 }}
               onClick={(e) => e.stopPropagation()}
-              className={`relative w-full max-w-sm overflow-hidden rounded-2xl p-5 shadow-2xl ${
+              className={`relative w-full max-w-sm max-h-[90vh] overflow-y-auto rounded-2xl p-5 shadow-2xl ${
                 selectedSlip.status === "settling"
                   ? "border border-amber-400/30 bg-[#0e121a]"
                   : selectedSlip.pnlTokens >= 0

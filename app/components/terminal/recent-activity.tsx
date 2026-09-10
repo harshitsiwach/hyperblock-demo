@@ -50,6 +50,8 @@ export interface ActivityItem {
 interface RecentActivityProps {
   items: ActivityItem[];
   defaultExpanded?: boolean;
+  inline?: boolean;
+  className?: string;
 }
 
 function formatTime(ts: number): string {
@@ -213,15 +215,147 @@ function BetDetailModal({ detail, onClose }: { detail: BetDetail; onClose: () =>
   );
 }
 
-export function RecentActivity({ items, defaultExpanded = false }: RecentActivityProps) {
+export function RecentActivity({ items, defaultExpanded = false, inline = false, className = "" }: RecentActivityProps) {
   const [openDetail, setOpenDetail] = useState<BetDetail | null>(null);
   const [isExpanded, setIsExpanded] = useState(defaultExpanded);
 
   // In rest mode (collapsed): show exactly 5 events. In expanded mode: show all available events with scrolling.
   const displayItems = isExpanded ? items : items.slice(0, 5);
 
+  if (inline) {
+    return (
+      <>
+        <div className={`w-full rounded-xl border border-[var(--hair)] bg-[var(--card)] flex flex-col overflow-hidden shadow-sm ${className}`}>
+          {/* Header */}
+          <div className="flex items-center justify-between border-b border-[var(--hair)] px-3.5 py-3 bg-[var(--card)]">
+            <div className="flex items-center gap-2">
+              <div className="flex h-6 w-6 items-center justify-center rounded bg-[var(--panel)] border border-[var(--hair)]">
+                <Terminal className="h-3.5 w-3.5 text-[var(--color-neon-orange)]" />
+              </div>
+              <h3 className="text-xs sm:text-sm font-black uppercase tracking-wider text-[var(--ink)] flex items-center gap-2">
+                <span>Terminal Activity Stream</span>
+                <span className="live-pulse-dot" />
+              </h3>
+            </div>
+            <span className="text-[11px] font-mono text-[var(--ink-muted)]">
+              {items.length} logged
+            </span>
+          </div>
+
+          {/* Activity Log Items Container */}
+          <div className="flex-1 space-y-2 p-3 overflow-y-auto max-h-[calc(100vh-230px)]">
+            <AnimatePresence initial={false}>
+              {items.map((item, index) => {
+                const isFresh = index === 0;
+                const d = item.detail;
+                const pct = d ? betPnlPct(d) : null;
+                const clickable = !!d;
+
+                return (
+                  <motion.div
+                    key={item.id}
+                    initial={{ opacity: 0, y: 10, scale: 0.98 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.98 }}
+                    className={`flex items-start sm:items-center gap-2.5 rounded-lg border p-2.5 sm:px-3 sm:py-2 text-xs transition-colors ${
+                      isFresh
+                        ? "border-[var(--hair)] bg-[var(--panel)] shadow-sm"
+                        : "border-[var(--hair)] bg-[var(--card)] hover:bg-[var(--panel)]"
+                    }`}
+                  >
+                    {/* Indicator dot */}
+                    <div className="flex-shrink-0 mt-1 sm:mt-0">
+                      <span
+                        className={`inline-block h-2 w-2 rounded-full ${
+                          item.highlight === "green"
+                            ? "bg-[#00f076] shadow-[0_0_6px_#00f076]"
+                            : item.highlight === "red"
+                            ? "bg-[#ff3358] shadow-[0_0_6px_#ff3358]"
+                            : "bg-[var(--ink-muted)]"
+                        }`}
+                      />
+                    </div>
+
+                    {/* Content */}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between gap-2">
+                        <span
+                          className={`font-bold text-xs truncate ${
+                            item.highlight === "green"
+                              ? "text-emerald-600 dark:text-[#00f076]"
+                              : item.highlight === "red"
+                              ? "text-rose-600 dark:text-[#ff3358]"
+                              : "text-[var(--ink)]"
+                          }`}
+                        >
+                          {item.title}
+                        </span>
+                        <span className="text-[10px] font-mono text-[var(--ink-muted)] flex-shrink-0">
+                          {formatTime(item.timestamp)}
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-[var(--ink-muted)] truncate mt-0.5">
+                        {item.subtitle}
+                      </p>
+                      {d && (
+                        <div className="mt-1 space-y-0.5 font-mono text-[10px] leading-relaxed">
+                          <div className="flex justify-between gap-2 text-[var(--ink-muted)]">
+                            <span>Bet <span className="text-[var(--ink)]">${formatPrice(d.entryPrice)}</span></span>
+                            <span>
+                              Close{" "}
+                              <span className="text-[var(--ink)]">
+                                {d.exitPrice !== undefined ? `$${formatPrice(d.exitPrice)}` : "…"}
+                              </span>
+                            </span>
+                          </div>
+                          {pct !== null && d.profitTokens !== undefined && (
+                            <div className={`flex justify-between gap-2 font-bold ${d.profitTokens >= 0 ? "text-[#00f076]" : "text-[#ff3358]"}`}>
+                              <span>P&L {d.profitTokens >= 0 ? "+" : "−"}${Math.abs(d.profitTokens).toFixed(2)}</span>
+                              <span>({pct >= 0 ? "+" : "−"}{Math.abs(pct).toFixed(1)}%)</span>
+                            </div>
+                          )}
+                          {d.status === "settling" && (
+                            <div className="text-amber-500 font-bold">Settling…</div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                    {clickable && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setOpenDetail(d!);
+                        }}
+                        className="mt-0.5 flex flex-shrink-0 items-center gap-1 rounded-md border border-[var(--hair)] bg-[var(--panel)] px-2 py-1 text-[10px] font-extrabold uppercase tracking-wide text-[var(--ink)] hover:border-[var(--color-neon-orange)] hover:text-[var(--color-neon-orange)] active:scale-95 cursor-pointer"
+                        title="Open bet slip"
+                      >
+                        <Receipt className="h-3 w-3" />
+                        Slip
+                      </button>
+                    )}
+                  </motion.div>
+                );
+              })}
+            </AnimatePresence>
+
+            {items.length === 0 && (
+              <div className="p-4 text-center text-xs text-[var(--ink-muted)]">
+                No activity logged yet.
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Bet detail popup */}
+        <AnimatePresence>
+          {openDetail && <BetDetailModal detail={openDetail} onClose={() => setOpenDetail(null)} />}
+        </AnimatePresence>
+      </>
+    );
+  }
+
   return (
-    <>
+    <div className={`hidden lg:block ${className}`}>
       {/* Backdrop overlay when expanded so user can click outside to collapse */}
       <AnimatePresence>
         {isExpanded && (
@@ -443,6 +577,6 @@ export function RecentActivity({ items, defaultExpanded = false }: RecentActivit
       <AnimatePresence>
         {openDetail && <BetDetailModal detail={openDetail} onClose={() => setOpenDetail(null)} />}
       </AnimatePresence>
-    </>
+    </div>
   );
 }
