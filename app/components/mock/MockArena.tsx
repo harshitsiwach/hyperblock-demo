@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { AnimatePresence, motion } from "motion/react";
 import { MARKETS as SUPPORTED_ASSETS, BASE_PRICES, type MarketInfo } from "@/app/lib/markets";
 import { useMockTrading } from "@/app/hooks/use-mock-trading";
 import { useHyperblockAccount } from "@/app/hooks/use-hyperblock-account";
@@ -26,6 +27,7 @@ import { MobileDock } from "@/app/components/terminal/mobile-dock";
 import { TerminalLeaderboard } from "@/app/components/terminal/terminal-leaderboard";
 import { TerminalNotification, type BetNotificationData } from "@/app/components/terminal/terminal-notification";
 import { AssetIcon } from "@/app/components/asset-icon";
+import { ChevronDown } from "lucide-react";
 import type { MarketSnapshot, Play } from "@/app/lib/domain";
 
 function formatUsd(n: number) {
@@ -86,6 +88,7 @@ export function MockArena({ initialView = "demo" }: { initialView?: "demo" | "le
 
   // Local interaction & visual state
   const [amount, setAmount] = useState(10);
+  const [orderTicketCollapsed, setOrderTicketCollapsed] = useState(false);
   const [claimPulse, setClaimPulse] = useState(false);
   const [betFlash, setBetFlash] = useState<"up" | "down" | null>(null);
   const [toast, setToast] = useState<string | null>(null);
@@ -767,69 +770,69 @@ export function MockArena({ initialView = "demo" }: { initialView?: "demo" | "le
             </div>
 
             {/* Mobile Layout: Responsive Dedicated Tabs (hidden on lg and above) */}
-            <div className="flex flex-col gap-3.5 lg:hidden">
+            <div className={`flex flex-col gap-3.5 lg:hidden ${mobileTab === "trade" ? (orderTicketCollapsed ? "pb-24" : "pb-80") : "pb-20"}`}>
               {mobileTab === "trade" && (
                 <>
-                  {/* Quick Asset Selector Header for Mobile */}
-                  <div className="flex items-center justify-between rounded-xl border border-[var(--hair)] bg-[var(--card)] p-2.5 shadow-sm">
-                    <div className="flex items-center gap-2">
-                      <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-[var(--panel)] border border-[var(--hair)]">
-                        <AssetIcon symbol={selectedAsset.symbol} category={selectedAsset.category} size={18} />
-                      </div>
-                      <div>
-                        <div className="flex items-center gap-1.5">
-                          <span className="text-xs font-black text-[var(--ink)]">{selectedAsset.symbol}</span>
-                          <span className="text-[9px] font-bold text-[var(--ink-secondary)] uppercase bg-[var(--panel)] px-1 rounded border border-[var(--hair)]">
-                            {selectedAsset.category}
-                          </span>
-                        </div>
-                        <div className="font-mono text-[11px] font-extrabold text-[var(--color-neon-orange)]">
-                          ${mock.currentPrice ? formatPrice(mock.currentPrice) : "—"}
-                        </div>
-                      </div>
-                    </div>
-                    <button
-                      onClick={() => setShowAssetSheet(true)}
-                      type="button"
-                      className="rounded-lg border border-[var(--hair)] bg-[var(--panel)] px-2.5 py-1.5 text-[11px] font-bold text-[var(--ink)] hover:border-[var(--color-neon-orange)] hover:text-[var(--color-neon-orange)] active:scale-95 transition-all cursor-pointer"
-                    >
-                      Change Market ▾
-                    </button>
-                  </div>
-
-                  {/* Compact Mobile Chart */}
+                  {/* 1. Mobile Terminal Graph (Interactive 1s Candlestick / Line) */}
                   <div className="flex flex-col min-h-[300px]">
                     <TerminalChart
                       data={hlHistory}
                       currentPrice={mock.currentPrice}
                       activePlays={liveActivePlays}
                       symbol={selectedAsset.symbol}
-                      height={320}
+                      height={300}
                     />
                   </div>
 
-                  {/* Order Ticket */}
-                  <TradingTicket
-                    asset={selectedAsset}
-                    amount={amount}
-                    onAmountChange={setAmount}
-                    onBet={(dir) => void handleBet(dir)}
-                    disabled={!mock.currentPrice || settling || account.placing}
-                    activeCount={liveActivePlays.length}
-                    maxPositions={8}
-                    betFlash={betFlash}
-                    needsApproval={needsApproval}
-                    onApprove={() => void account.approve().then(() => setToast("Approved · you can bet now")).catch((e) => setToast(e instanceof Error ? e.message : "Approval failed"))}
-                    approving={account.approving}
-                  />
-
-                  {/* Market Overview */}
+                  {/* 2. Asset Details & Market Overview */}
                   <MarketOverview
                     asset={selectedAsset}
                     currentPrice={mock.currentPrice}
                     priceHistory={hlHistory}
                     latencyMs={22}
                   />
+
+                  {/* 3. Select Asset Category (at last after the asset details) */}
+                  <div className="flex flex-col gap-2 rounded-xl border border-[var(--hair)] bg-[var(--card)] p-3 shadow-sm">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <span className="text-[10px] font-black uppercase tracking-wider text-[var(--ink-muted)]">
+                          Select Asset / Category
+                        </span>
+                        <div className="text-xs font-black text-[var(--ink)] mt-0.5">
+                          {selectedAsset.name} ({selectedAsset.symbol})
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => setShowAssetSheet(true)}
+                        type="button"
+                        className="flex items-center gap-1 rounded-lg border border-[var(--color-neon-orange)]/40 bg-[var(--color-neon-orange-soft)] px-3 py-1.5 text-xs font-black text-[var(--color-neon-orange)] hover:bg-[var(--color-neon-orange)] hover:text-white active:scale-95 transition-all cursor-pointer shadow-xs"
+                      >
+                        <span>Change Asset ▾</span>
+                      </button>
+                    </div>
+
+                    {/* Category tabs directly visible: Crypto, Stocks, Commodities, Forex */}
+                    <div className="grid grid-cols-4 gap-1.5 pt-1">
+                      {(["crypto", "stocks", "commodities", "forex"] as const).map((cat) => {
+                        const isCurrentCat = selectedAsset.category === cat;
+                        return (
+                          <button
+                            key={cat}
+                            type="button"
+                            onClick={() => setShowAssetSheet(true)}
+                            className={`flex items-center justify-center py-2 px-1 rounded-lg text-xs font-bold capitalize transition-all border cursor-pointer active:scale-95 ${
+                              isCurrentCat
+                                ? "border-[var(--color-neon-orange)] bg-[var(--color-neon-orange-soft)] text-[var(--color-neon-orange)] font-black shadow-[0_0_8px_rgba(255,95,31,0.2)]"
+                                : "border-[var(--hair)] bg-[var(--panel)] text-[var(--ink-muted)] hover:text-[var(--ink)]"
+                            }`}
+                          >
+                            {cat}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
                 </>
               )}
 
@@ -890,6 +893,61 @@ export function MockArena({ initialView = "demo" }: { initialView?: "demo" | "le
         </div>
       )}
 
+      {/* Mobile Sticky Order Ticket Notch (Sticky above footer dock on Trade tab, always expanded by default with collapse option) */}
+      {mobileTab === "trade" && (
+        <div className="fixed bottom-[calc(3.5rem+max(env(safe-area-inset-bottom),8px))] left-0 right-0 z-30 lg:hidden px-2 pb-0.5 pointer-events-auto">
+          <div className="mx-auto max-w-lg rounded-2xl border border-[var(--hair)] bg-[var(--card)]/98 backdrop-blur-2xl shadow-[0_-12px_40px_rgba(0,0,0,0.6),0_0_25px_rgba(255,95,31,0.18)] overflow-hidden">
+            {/* Notch Header Bar / Toggle Option */}
+            <button
+              onClick={() => setOrderTicketCollapsed((v) => !v)}
+              type="button"
+              className="w-full flex items-center justify-between px-3.5 py-2 bg-[var(--panel)] border-b border-[var(--hair)] cursor-pointer hover:bg-[var(--card)] transition-colors active:scale-[0.99]"
+            >
+              <div className="flex items-center gap-2">
+                <div className="h-2 w-2 rounded-full bg-[var(--up)] animate-pulse shadow-[0_0_6px_rgba(34,197,94,0.6)]" />
+                <span className="text-[10.5px] font-black uppercase tracking-wider text-[var(--ink)]">
+                  Order Ticket · {selectedAsset.symbol}
+                </span>
+                <span className="text-[10px] font-mono font-extrabold text-[var(--color-neon-orange)] bg-[var(--color-neon-orange-soft)] px-1.5 py-0.2 rounded border border-[var(--color-neon-orange)]/30">
+                  ${amount}
+                </span>
+              </div>
+              <div className="flex items-center gap-1 text-[10px] font-extrabold text-[var(--ink-muted)] hover:text-[var(--color-neon-orange)]">
+                <span>{orderTicketCollapsed ? "Expand Ticket" : "Collapse"}</span>
+                <ChevronDown className={`h-3.5 w-3.5 transition-transform duration-200 ${orderTicketCollapsed ? "rotate-180" : ""}`} />
+              </div>
+            </button>
+
+            {/* Collapsible Trading Ticket Body (Always expanded by default) */}
+            <AnimatePresence initial={false}>
+              {!orderTicketCollapsed && (
+                <motion.div
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: "auto", opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  transition={{ type: "spring", stiffness: 360, damping: 30 }}
+                  className="p-2 overflow-hidden"
+                >
+                  <TradingTicket
+                    asset={selectedAsset}
+                    amount={amount}
+                    onAmountChange={setAmount}
+                    onBet={(dir) => void handleBet(dir)}
+                    disabled={!mock.currentPrice || settling || account.placing}
+                    activeCount={liveActivePlays.length}
+                    maxPositions={8}
+                    betFlash={betFlash}
+                    needsApproval={needsApproval}
+                    onApprove={() => void account.approve().then(() => setToast("Approved · you can bet now")).catch((e) => setToast(e instanceof Error ? e.message : "Approval failed"))}
+                    approving={account.approving}
+                  />
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+        </div>
+      )}
+
       {/* Mobile Ergonomic Navigation Dock */}
       <MobileDock
         activeTab={mobileTab}
@@ -899,75 +957,106 @@ export function MockArena({ initialView = "demo" }: { initialView?: "demo" | "le
         activeCount={liveActivePlays.length}
       />
 
-      {/* Mobile Drawer Bottom Sheet for Asset Browser */}
-      {showAssetSheet && (
-        <div className="fixed inset-0 z-50 flex flex-col justify-end bg-black/70 backdrop-blur-sm lg:hidden">
-          <div
-            onClick={() => setShowAssetSheet(false)}
-            className="flex-1 w-full"
-            aria-hidden="true"
-          />
-          <div className="relative max-h-[85vh] w-full rounded-t-2xl border-t border-[var(--hair)] bg-[var(--card)] p-4 pb-8 overflow-y-auto shadow-2xl">
-            <div className="mx-auto mb-3 h-1.5 w-12 rounded-full bg-[var(--hair)]" />
-            <div className="flex items-center justify-between pb-2 border-b border-[var(--hair)] mb-3">
-              <h3 className="text-xs font-bold uppercase tracking-wider text-[var(--ink)]">Select Asset</h3>
-              <button
-                onClick={() => setShowAssetSheet(false)}
-                className="rounded-md px-2 py-1 text-xs font-bold text-[var(--ink-muted)] hover:text-[var(--ink)] bg-[var(--panel)] transition-colors cursor-pointer"
-              >
-                ✕ Close
-              </button>
-            </div>
-            <AssetBrowser
-              selectedMarketId={selectedMarketId}
-              onSelect={(id) => {
-                setSelectedMarketId(id);
-                setShowAssetSheet(false);
-              }}
-              prices={mock.prices}
+      {/* Mobile Drawer Bottom Sheet for Asset Browser (Smooth Spring Animation) */}
+      <AnimatePresence>
+        {showAssetSheet && (
+          <div className="fixed inset-0 z-50 flex flex-col justify-end lg:hidden">
+            {/* Backdrop with Fade */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              onClick={() => setShowAssetSheet(false)}
+              className="fixed inset-0 bg-black/75 backdrop-blur-md"
+              aria-hidden="true"
             />
+            {/* Slide up panel with Spring (Fixed height prevents category tab & card alignment jumping) */}
+            <motion.div
+              initial={{ opacity: 0, y: "100%" }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: "100%" }}
+              transition={{ type: "spring", stiffness: 350, damping: 30 }}
+              className="relative h-[85vh] max-h-[85vh] w-full rounded-t-3xl border-t border-[var(--hair)] bg-[var(--card)] p-4 pb-6 flex flex-col shadow-2xl z-10 overflow-hidden"
+            >
+              <div className="mx-auto mb-3 h-1.5 w-12 rounded-full bg-[var(--hair)]" />
+              <div className="flex items-center justify-between pb-2 border-b border-[var(--hair)] mb-3">
+                <div className="flex items-center gap-2">
+                  <h3 className="text-xs font-black uppercase tracking-wider text-[var(--ink)]">Select Asset</h3>
+                  <span className="text-[10px] font-bold text-[var(--color-neon-orange)] bg-[var(--color-neon-orange-soft)] px-1.5 py-0.2 rounded border border-[var(--color-neon-orange)]/30">
+                    All Markets
+                  </span>
+                </div>
+                <button
+                  onClick={() => setShowAssetSheet(false)}
+                  className="rounded-lg px-2.5 py-1 text-xs font-bold text-[var(--ink-muted)] hover:text-[var(--ink)] bg-[var(--panel)] border border-[var(--hair)] transition-colors cursor-pointer"
+                >
+                  ✕ Close
+                </button>
+              </div>
+              <AssetBrowser
+                selectedMarketId={selectedMarketId}
+                onSelect={(id) => {
+                  setSelectedMarketId(id);
+                  setShowAssetSheet(false);
+                }}
+                prices={mock.prices}
+              />
+            </motion.div>
           </div>
-        </div>
-      )}
+        )}
+      </AnimatePresence>
 
-      {/* Mobile Drawer Bottom Sheet for Trading Ticket */}
-      {showTradeSheet && (
-        <div className="fixed inset-0 z-50 flex flex-col justify-end bg-black/70 backdrop-blur-sm lg:hidden">
-          <div
-            onClick={() => setShowTradeSheet(false)}
-            className="flex-1 w-full"
-            aria-hidden="true"
-          />
-          <div className="relative w-full rounded-t-2xl border-t border-[var(--hair)] bg-[var(--card)] p-4 pb-8 shadow-2xl">
-            <div className="mx-auto mb-3 h-1.5 w-12 rounded-full bg-[var(--hair)]" />
-            <div className="flex items-center justify-between pb-2 border-b border-[var(--hair)] mb-3">
-              <h3 className="text-xs font-bold uppercase tracking-wider text-[var(--ink)]">Place 10-Second Trade</h3>
-              <button
-                onClick={() => setShowTradeSheet(false)}
-                className="rounded-md px-2 py-1 text-xs font-bold text-[var(--ink-muted)] hover:text-[var(--color-neon-orange)] bg-[var(--panel)] transition-colors cursor-pointer"
-              >
-                ✕ Close
-              </button>
-            </div>
-            <TradingTicket
-              asset={selectedAsset}
-              amount={amount}
-              onAmountChange={setAmount}
-              onBet={(dir) => {
-                void handleBet(dir);
-                setShowTradeSheet(false);
-              }}
-              disabled={!mock.currentPrice || settling || account.placing}
-              activeCount={liveActivePlays.length}
-              maxPositions={8}
-              betFlash={betFlash}
-              needsApproval={needsApproval}
-              onApprove={() => void account.approve().then(() => setToast("Approved · you can bet now")).catch((e) => setToast(e instanceof Error ? e.message : "Approval failed"))}
-              approving={account.approving}
+      {/* Mobile Drawer Bottom Sheet for Trading Ticket (Smooth Spring Animation) */}
+      <AnimatePresence>
+        {showTradeSheet && (
+          <div className="fixed inset-0 z-50 flex flex-col justify-end lg:hidden">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              onClick={() => setShowTradeSheet(false)}
+              className="fixed inset-0 bg-black/75 backdrop-blur-md"
+              aria-hidden="true"
             />
+            <motion.div
+              initial={{ opacity: 0, y: "100%" }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: "100%" }}
+              transition={{ type: "spring", stiffness: 350, damping: 30 }}
+              className="relative w-full rounded-t-3xl border-t border-[var(--hair)] bg-[var(--card)] p-4 pb-8 shadow-2xl z-10"
+            >
+              <div className="mx-auto mb-3 h-1.5 w-12 rounded-full bg-[var(--hair)]" />
+              <div className="flex items-center justify-between pb-2 border-b border-[var(--hair)] mb-3">
+                <h3 className="text-xs font-black uppercase tracking-wider text-[var(--ink)]">Place 10-Second Trade</h3>
+                <button
+                  onClick={() => setShowTradeSheet(false)}
+                  className="rounded-lg px-2.5 py-1 text-xs font-bold text-[var(--ink-muted)] hover:text-[var(--color-neon-orange)] bg-[var(--panel)] border border-[var(--hair)] transition-colors cursor-pointer"
+                >
+                  ✕ Close
+                </button>
+              </div>
+              <TradingTicket
+                asset={selectedAsset}
+                amount={amount}
+                onAmountChange={setAmount}
+                onBet={(dir) => {
+                  void handleBet(dir);
+                  setShowTradeSheet(false);
+                }}
+                disabled={!mock.currentPrice || settling || account.placing}
+                activeCount={liveActivePlays.length}
+                maxPositions={8}
+                betFlash={betFlash}
+                needsApproval={needsApproval}
+                onApprove={() => void account.approve().then(() => setToast("Approved · you can bet now")).catch((e) => setToast(e instanceof Error ? e.message : "Approval failed"))}
+                approving={account.approving}
+              />
+            </motion.div>
           </div>
-        </div>
-      )}
+        )}
+      </AnimatePresence>
     </div>
   );
 }

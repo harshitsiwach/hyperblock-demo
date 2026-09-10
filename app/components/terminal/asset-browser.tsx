@@ -87,9 +87,9 @@ export function AssetBrowser({
             )}
           </div>
 
-          {/* Category Filter Segmented Control (identical styling to header Demo & Leaderboard tabs) */}
+          {/* Category Filter Segmented Control (Fixed 4-column grid for 100% equal width and rock-solid alignment) */}
           <nav
-            className="flex items-center p-0.5 rounded-xl bg-[var(--card)] border border-[var(--hair)] shadow-inner flex-shrink-0 overflow-x-auto no-scrollbar"
+            className="grid grid-cols-4 p-0.5 rounded-xl bg-[var(--card)] border border-[var(--hair)] shadow-inner w-full"
             aria-label="Market Asset Categories"
           >
             {CATEGORIES.map((cat) => {
@@ -100,7 +100,7 @@ export function AssetBrowser({
                   type="button"
                   onClick={() => setActiveCategory(cat.id)}
                   aria-current={isSelected ? "page" : undefined}
-                  className="relative px-3 py-1 text-xs font-bold transition-colors select-none focus:outline-none flex items-center justify-center cursor-pointer flex-shrink-0"
+                  className="relative py-1.5 text-xs font-bold transition-colors select-none focus:outline-none flex items-center justify-center cursor-pointer w-full text-center"
                 >
                   {isSelected && (
                     <motion.div
@@ -143,8 +143,8 @@ export function AssetBrowser({
         </div>
       </div>
 
-      {/* Asset Cards Grid with fixed height & scrolling - maintains exact alignment across all categories */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-2 max-h-[50vh] sm:max-h-[168px] overflow-y-auto pr-1">
+      {/* Asset Cards Grid with persistent scroll gutter, top alignment, and fixed row sizing - maintains exact alignment across all categories */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-2 content-start auto-rows-max flex-1 min-h-[320px] sm:min-h-0 sm:max-h-[168px] overflow-y-scroll pr-1 [scrollbar-gutter:stable]">
         {visibleAssets.map((asset) => {
           const isSelected = asset.marketId === selectedMarketId;
           const hlPrice = prices.get(asset.symbol)?.price;

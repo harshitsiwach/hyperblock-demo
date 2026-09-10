@@ -18,6 +18,7 @@ import {
   Smartphone,
   Trash2,
   X,
+  Menu,
   Radio,
   Sliders,
   Sparkles,
@@ -28,10 +29,18 @@ import {
   Maximize2,
   Minimize2,
   GripHorizontal,
+  Copy,
+  Check,
+  LogOut,
+  ChevronDown,
+  ChevronUp,
 } from "lucide-react";
 import type { MarketSnapshot, Play } from "@/app/lib/domain";
 import { SessionStats } from "@/app/components/terminal/session-stats";
 import { useTheme } from "@/app/providers/theme-provider";
+import { useGameWallet } from "@/app/hooks/use-game-wallet";
+import { useWalletBalances } from "@/app/hooks/use-wallet-balances";
+import { useGameSession } from "@/app/hooks/use-game-session";
 
 interface TerminalNavProps {
   balance: number;
@@ -60,6 +69,329 @@ function formatUsd(n: number) {
   return `$${n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
 
+function compactAddress(address: string): string {
+  return address.length > 12 ? `${address.slice(0, 4)}…${address.slice(-4)}` : address;
+}
+
+function formatSol(n: number | null | undefined): string {
+  if (n === null || n === undefined || !Number.isFinite(n)) return "—";
+  return n.toFixed(3);
+}
+
+function formatUsdSafe(n: number | null | undefined): string {
+  if (n === null || n === undefined || !Number.isFinite(n)) return "—";
+  return `$${n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+}
+
+interface MobileAccountDrawerSectionProps {
+  snapshot?: MarketSnapshot;
+  plays: Play[];
+  canClaim: boolean;
+  claimBusy?: boolean;
+  cooldownSec: number;
+  claimLabel?: string;
+  onClaim: () => void;
+  mode: "dark" | "light";
+}
+
+function MobileAccountDrawerSection({
+  snapshot,
+  plays,
+  canClaim,
+  claimBusy,
+  cooldownSec,
+  claimLabel,
+  onClaim,
+  mode,
+}: MobileAccountDrawerSectionProps) {
+  const wallet = useGameWallet();
+  const balances = useWalletBalances(snapshot as any);
+  const session = useGameSession();
+  const [copied, setCopied] = useState(false);
+  const [expanded, setExpanded] = useState(true);
+
+  const wins = plays.filter((p) => p.status === "won").length;
+  const losses = plays.filter((p) => p.status === "lost").length;
+  const totalSettled = wins + losses;
+  const winRate = totalSettled > 0 ? Math.round((wins / totalSettled) * 100) : null;
+  const totalProfit = plays.reduce((acc, p) => acc + (p.liveProfitUsd ?? 0), 0);
+
+  const copyAddress = () => {
+    if (!wallet.address) return;
+    navigator.clipboard?.writeText(wallet.address);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1500);
+  };
+
+  if (!wallet.address) {
+    return (
+      <div
+        className="flex flex-col gap-2.5 p-3 rounded-2xl border"
+        style={{
+          backgroundColor: mode === "dark" ? "#141923" : "#f8fafc",
+          borderColor: mode === "dark" ? "#262c3d" : "#e2e8f0",
+        }}
+      >
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <div className="h-2.5 w-2.5 rounded-full bg-slate-500 animate-pulse" />
+            <span className={`text-xs font-bold ${mode === "dark" ? "text-slate-300" : "text-slate-700"}`}>
+              Solana Wallet Not Connected
+            </span>
+          </div>
+          <span className="text-[10px] font-bold text-[var(--color-neon-orange)] bg-[var(--color-neon-orange-soft)] px-1.5 py-0.5 rounded border border-[var(--color-neon-orange)]/30">
+            Devnet
+          </span>
+        </div>
+        <p className={`text-[11px] leading-relaxed ${mode === "dark" ? "text-slate-400" : "text-slate-500"}`}>
+          Connect Phantom, Solflare or Backpack to activate gasless devnet trading & wallet balances.
+        </p>
+        <button
+          onClick={() => void wallet.connect()}
+          type="button"
+          className="w-full py-2.5 rounded-xl bg-[var(--color-neon-orange)] text-white text-xs font-black shadow-[0_0_15px_rgba(255,95,31,0.35)] active:scale-98 transition-transform cursor-pointer"
+        >
+          Connect Solana Wallet
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div
+      className="flex flex-col rounded-2xl border overflow-hidden shadow-sm transition-all"
+      style={{
+        backgroundColor: mode === "dark" ? "#141923" : "#f8fafc",
+        borderColor: mode === "dark" ? "#262c3d" : "#e2e8f0",
+      }}
+    >
+      {/* Clickable Header Accordion Trigger */}
+      <button
+        onClick={() => setExpanded((v) => !v)}
+        type="button"
+        className="flex items-center justify-between p-3 cursor-pointer select-none transition-colors hover:brightness-105"
+        style={{
+          backgroundColor: mode === "dark" ? "#161b26" : "#f1f5f9",
+          borderBottom: expanded ? `1px solid ${mode === "dark" ? "#262c3d" : "#e2e8f0"}` : "none",
+        }}
+      >
+        <div className="flex items-center gap-2 min-w-0">
+          <div className="relative flex h-2.5 w-2.5">
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+            <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500" />
+          </div>
+          <span className="font-mono text-xs font-extrabold text-[var(--ink)] truncate">
+            {compactAddress(wallet.address)}
+          </span>
+          <span className="text-[9.5px] font-bold text-[var(--color-neon-orange)] bg-[var(--color-neon-orange-soft)] px-1.5 py-0.5 rounded border border-[var(--color-neon-orange)]/30">
+            Devnet
+          </span>
+        </div>
+
+        <div className="flex items-center gap-1.5 text-[11px] font-bold text-[var(--ink-muted)]">
+          <span>{expanded ? "Collapse" : "Options"}</span>
+          <ChevronDown className={`h-3.5 w-3.5 transition-transform duration-200 ${expanded ? "rotate-180" : ""}`} />
+        </div>
+      </button>
+
+      {/* Expanded Account Details & Options */}
+      <AnimatePresence initial={false}>
+        {expanded && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.22, ease: "easeInOut" }}
+            className="overflow-hidden"
+          >
+            <div className="p-3 flex flex-col gap-3">
+              {/* Address Bar with Action Buttons */}
+              <div
+                className="flex items-center justify-between gap-2 p-2 rounded-xl border"
+                style={{
+                  backgroundColor: mode === "dark" ? "#0c0f17" : "#ffffff",
+                  borderColor: mode === "dark" ? "#262c3d" : "#e2e8f0",
+                }}
+              >
+                <div className="min-w-0 flex-1">
+                  <div className="text-[9px] font-bold uppercase tracking-wider text-[var(--ink-muted)]">
+                    Public Key
+                  </div>
+                  <div className="font-mono text-[10.5px] text-[var(--ink)] truncate" title={wallet.address}>
+                    {wallet.address}
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-1 shrink-0">
+                  <button
+                    onClick={copyAddress}
+                    type="button"
+                    title="Copy Address"
+                    className="flex items-center gap-1 px-2 py-1 rounded-lg border text-[10px] font-bold transition-all cursor-pointer"
+                    style={{
+                      borderColor: copied ? "#22c55e" : mode === "dark" ? "#262c3d" : "#e2e8f0",
+                      backgroundColor: copied ? "rgba(34, 197, 94, 0.15)" : mode === "dark" ? "#161b26" : "#f1f5f9",
+                      color: copied ? "#22c55e" : mode === "dark" ? "#e2e8f0" : "#334155",
+                    }}
+                  >
+                    {copied ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
+                    <span>{copied ? "Copied" : "Copy"}</span>
+                  </button>
+
+                  <button
+                    onClick={() => void wallet.disconnect?.()}
+                    type="button"
+                    title="Disconnect Wallet"
+                    className="flex items-center gap-1 px-2 py-1 rounded-lg border border-red-500/30 bg-red-500/10 text-red-400 text-[10px] font-bold transition-all hover:bg-red-500/20 active:scale-95 cursor-pointer"
+                  >
+                    <LogOut className="h-3 w-3" />
+                    <span>Disconnect</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* 4-Grid Balances */}
+              <div className="grid grid-cols-2 gap-2">
+                {/* SOL Base */}
+                <div
+                  className="p-2 rounded-xl border flex flex-col justify-between"
+                  style={{
+                    backgroundColor: mode === "dark" ? "#0c0f17" : "#ffffff",
+                    borderColor: mode === "dark" ? "#262c3d" : "#e2e8f0",
+                  }}
+                >
+                  <span className="text-[9px] font-extrabold uppercase tracking-wider text-[var(--ink-muted)]">
+                    SOL · Base
+                  </span>
+                  <div className="font-mono text-xs font-black text-[var(--ink)] mt-0.5">
+                    {balances.loading ? "…" : formatSol(balances.sol)}
+                  </div>
+                  <span className="text-[8.5px] text-[var(--ink-muted)]">Tx Gas Fee</span>
+                </div>
+
+                {/* SOL ER */}
+                <div
+                  className="p-2 rounded-xl border flex flex-col justify-between"
+                  style={{
+                    backgroundColor: mode === "dark" ? "#0c0f17" : "#ffffff",
+                    borderColor: mode === "dark" ? "#262c3d" : "#e2e8f0",
+                  }}
+                >
+                  <span className="text-[9px] font-extrabold uppercase tracking-wider text-[var(--ink-muted)]">
+                    SOL · ER
+                  </span>
+                  <div className="font-mono text-xs font-black text-[var(--ink)] mt-0.5">
+                    {balances.loading ? "…" : formatSol(balances.erSol)}
+                  </div>
+                  <span className="text-[8.5px] text-[var(--ink-muted)]">Ephemeral · Gasless</span>
+                </div>
+
+                {/* USDC Base */}
+                <div
+                  className="p-2 rounded-xl border flex flex-col justify-between"
+                  style={{
+                    backgroundColor: mode === "dark" ? "#0c0f17" : "#ffffff",
+                    borderColor: mode === "dark" ? "#262c3d" : "#e2e8f0",
+                  }}
+                >
+                  <span className="text-[9px] font-extrabold uppercase tracking-wider text-[var(--ink-muted)]">
+                    USDC · Base
+                  </span>
+                  <div className="font-mono text-xs font-black text-[var(--ink)] mt-0.5">
+                    {balances.loading ? "…" : formatUsdSafe(balances.usdcBase)}
+                  </div>
+                  <span className="text-[8.5px] text-[var(--ink-muted)]">Collateral</span>
+                </div>
+
+                {/* Buying Power */}
+                <div
+                  className="p-2 rounded-xl border flex flex-col justify-between border-[var(--color-neon-orange)]/40 bg-[var(--color-neon-orange-soft)]/20"
+                >
+                  <span className="text-[9px] font-extrabold uppercase tracking-wider text-[var(--color-neon-orange)]">
+                    Buying Power
+                  </span>
+                  <div className="font-mono text-xs font-black text-[var(--color-neon-orange)] mt-0.5">
+                    {balances.loading && balances.buyingPower === null ? "…" : formatUsdSafe(balances.buyingPower)}
+                  </div>
+                  <span className="text-[8.5px] text-[var(--ink-muted)]">Arena Trading</span>
+                </div>
+              </div>
+
+              {/* Trading Session Performance */}
+              <div
+                className="p-2.5 rounded-xl border flex flex-col gap-2"
+                style={{
+                  backgroundColor: mode === "dark" ? "#0c0f17" : "#ffffff",
+                  borderColor: mode === "dark" ? "#262c3d" : "#e2e8f0",
+                }}
+              >
+                <div className="flex items-center justify-between">
+                  <span className="text-[9px] font-extrabold uppercase tracking-wider text-[var(--ink-muted)]">
+                    Session Performance
+                  </span>
+                  <span
+                    className={`font-mono text-xs font-black px-1.5 py-0.5 rounded border ${
+                      totalProfit >= 0
+                        ? "text-[var(--up)] bg-[var(--up-soft)] border-[var(--up)]/30"
+                        : "text-[var(--down)] bg-[var(--down-soft)] border-[var(--down)]/30"
+                    }`}
+                  >
+                    {totalProfit >= 0 ? "+" : ""}{formatUsdSafe(totalProfit)} {winRate !== null ? `(${winRate}% WR)` : ""}
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-3 gap-1.5 text-center">
+                  <div className="p-1 rounded-lg bg-[var(--panel)] border border-[var(--hair)]">
+                    <span className="text-[8.5px] font-bold text-[var(--ink-muted)] uppercase">Plays</span>
+                    <div className="font-mono text-xs font-bold text-[var(--ink)]">{plays.length}</div>
+                  </div>
+                  <div className="p-1 rounded-lg bg-[var(--up-soft)]/40 border border-[var(--up)]/30">
+                    <span className="text-[8.5px] font-bold text-[var(--up)] uppercase">Wins</span>
+                    <div className="font-mono text-xs font-bold text-[var(--up)]">{wins}</div>
+                  </div>
+                  <div className="p-1 rounded-lg bg-[var(--down-soft)]/40 border border-[var(--down)]/30">
+                    <span className="text-[8.5px] font-bold text-[var(--down)] uppercase">Losses</span>
+                    <div className="font-mono text-xs font-bold text-[var(--down)]">{losses}</div>
+                  </div>
+                </div>
+
+                {/* Session Gasless Allowance Status */}
+                <div className="flex items-center justify-between text-[10px] pt-1 border-t border-[var(--hair)]">
+                  <span className="text-[var(--ink-muted)] font-medium">Session Allowance:</span>
+                  <span className={`font-bold ${session.ready ? "text-[var(--up)]" : "text-[var(--wait)]"}`}>
+                    {session.ready ? "● Active · Gasless" : session.busy ? "Setting up…" : "Standard"}
+                  </span>
+                </div>
+              </div>
+
+              {/* Faucet Claim Button */}
+              <button
+                onClick={onClaim}
+                disabled={!canClaim || claimBusy}
+                type="button"
+                className={`flex items-center justify-center gap-2 w-full py-2.5 rounded-xl border text-xs font-black transition-all cursor-pointer ${
+                  canClaim
+                    ? "bg-[var(--color-neon-orange)] text-white border-[var(--color-neon-orange)] shadow-[0_0_15px_rgba(255,95,31,0.35)] active:scale-98"
+                    : "bg-[var(--panel)] text-[var(--ink-muted)] border-[var(--hair)] opacity-60 cursor-not-allowed"
+                }`}
+              >
+                <Sparkles className="h-3.5 w-3.5" />
+                <span>
+                  {claimBusy
+                    ? "Claiming..."
+                    : cooldownSec > 0
+                    ? `Cooldown: ${cooldownSec}s`
+                    : (claimLabel ?? "Claim Faucet (+100 tUSD)")}
+                </span>
+              </button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
 export function TerminalNav({
   balance,
   balanceBump,
@@ -86,6 +418,7 @@ export function TerminalNav({
 
   // Dropdown states (mutually exclusive)
   const [activeDropdown, setActiveDropdown] = useState<"notifications" | "settings" | "pnl" | null>(null);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   // Mounted flag for hydration-safe rendering
   const [mounted, setMounted] = useState(false);
@@ -167,14 +500,15 @@ export function TerminalNav({
   };
 
   return (
-    <div className="fixed top-0 inset-x-0 mx-auto w-full max-w-[1680px] z-40 px-2 sm:px-4 pointer-events-none">
+    <>
+      <div className="fixed top-0 inset-x-0 mx-auto w-full max-w-[1680px] z-40 px-2 sm:px-4 pointer-events-none">
       <header className="pointer-events-auto w-full flex h-12 sm:h-13 items-center justify-between px-3.5 sm:px-4 lg:px-5 rounded-b-xl sm:rounded-b-2xl border-b border-x border-[var(--hair)] bg-[var(--card)]/95 backdrop-blur-xl shadow-md">
         {/* Left Section: Brand & Nav Tabs */}
         <div className="flex items-center gap-2 sm:gap-4 md:gap-6">
           <BrandMark />
 
           {/* Navigation Tabs (iOS Liquid Water Segmented Control with Rotating Glowing Border) */}
-          <nav className="flex items-center p-0.5 rounded-xl bg-[var(--card)] border border-[var(--hair)] shadow-inner" aria-label="Main Navigation">
+          <nav className="hidden md:flex items-center p-0.5 rounded-xl bg-[var(--card)] border border-[var(--hair)] shadow-inner" aria-label="Main Navigation">
             {NAV_TABS.map((tab) => {
               const isActive = (activeTab ?? "demo") === tab.id;
               return (
@@ -233,7 +567,7 @@ export function TerminalNav({
 
         {/* Right Section: Stats, Wallet, Notifications, Settings, Theme */}
         <div ref={dropdownRef} className="relative flex items-center gap-1 sm:gap-2">
-          {/* P&L / Profile Button — opens full performance card, scales & glows on hover */}
+          {/* P&L / Profile Button — opens full performance card, scales & glows on hover (Always visible on mobile & desktop) */}
           <button
             onClick={() =>
               setActiveDropdown((prev) => (prev === "pnl" ? null : "pnl"))
@@ -256,7 +590,7 @@ export function TerminalNav({
             </span>
           </button>
 
-          {/* Balance Display with Anticlockwise Rotating Glow and Eye Hide Toggle */}
+          {/* Balance Display with Anticlockwise Rotating Glow (Always visible on mobile & desktop) */}
           {walletConnected ? (
             <div className="relative inline-flex items-center justify-center rounded-xl">
               {/* Masked Border Beam strictly on border ring — anticlockwise */}
@@ -289,75 +623,96 @@ export function TerminalNav({
             </div>
           ) : null}
 
-          {/* Solana Wallet Button (click address for info card) */}
-          <WalletButton showStats variant="compact" snapshot={snapshot} />
+          {/* Desktop-only Controls (Wallet, Notifications, Settings, Theme toggle) */}
+          <div className="hidden md:flex items-center gap-1 sm:gap-2">
+            {/* Solana Wallet Button */}
+            <WalletButton showStats variant="compact" snapshot={snapshot} />
 
-          {/* Notifications Trigger Button — shakes & glows on hover */}
+            {/* Notifications Trigger Button */}
+            <button
+              onClick={() =>
+                setActiveDropdown((prev) => (prev === "notifications" ? null : "notifications"))
+              }
+              className={`hover-bell-shake relative flex h-8 w-8 items-center justify-center rounded-lg border transition-all duration-200 hover:scale-105 hover:shadow-[0_0_12px_rgba(255,95,31,0.4)] hover:border-[var(--color-neon-orange)] ${
+                activeDropdown === "notifications"
+                  ? "bg-[var(--color-neon-orange-soft)] text-[var(--color-neon-orange)] border-[var(--color-neon-orange)] shadow-[0_0_10px_rgba(255,95,31,0.25)]"
+                  : "border-[var(--hair)] bg-[var(--card)] text-[var(--ink-muted)] hover:text-[var(--color-neon-orange)]"
+              }`}
+              aria-label="Notification Center"
+              title="Notification Center"
+              type="button"
+            >
+              <Bell className="h-3.5 w-3.5" />
+              {unreadCount > 0 && (
+                <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-[var(--color-neon-orange)] text-[9px] font-black text-white shadow-[0_0_8px_rgba(255,95,31,0.8)]">
+                  {unreadCount}
+                </span>
+              )}
+            </button>
+
+            {/* Settings Trigger Button */}
+            <button
+              onClick={() =>
+                setActiveDropdown((prev) => (prev === "settings" ? null : "settings"))
+              }
+              className={`hover-gear-spin relative h-8 w-8 items-center justify-center rounded-lg border transition-all duration-200 hover:scale-105 hover:shadow-[0_0_12px_rgba(255,95,31,0.4)] hover:border-[var(--color-neon-orange)] ${
+                activeDropdown === "settings"
+                  ? "bg-[var(--color-neon-orange-soft)] text-[var(--color-neon-orange)] border-[var(--color-neon-orange)] shadow-[0_0_10px_rgba(255,95,31,0.25)]"
+                  : "border-[var(--hair)] bg-[var(--card)] text-[var(--ink-muted)] hover:text-[var(--color-neon-orange)]"
+              }`}
+              aria-label="Terminal Settings"
+              title="Terminal Settings"
+              type="button"
+            >
+              <Settings className="h-3.5 w-3.5" />
+            </button>
+
+            {/* Light / Dark Mode Toggle */}
+            <button
+              onClick={() => setMode(mode === "dark" ? "light" : "dark")}
+              className="relative flex h-8 w-8 items-center justify-center rounded-lg border border-[var(--hair)] bg-[var(--card)] text-[var(--ink-muted)] transition-all duration-200 hover:scale-110 hover:border-[var(--color-neon-orange)] hover:text-[var(--color-neon-orange)] hover:shadow-[0_0_12px_rgba(255,95,31,0.4)] active:scale-90"
+              aria-label={mode === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+              title={mode === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+            >
+              {mounted ? (
+                <AnimatePresence mode="wait" initial={false}>
+                  <motion.div
+                    key={mode}
+                    initial={{ rotate: -90, scale: 0.3, opacity: 0 }}
+                    animate={{ rotate: 0, scale: 1, opacity: 1 }}
+                    exit={{ rotate: 90, scale: 0.3, opacity: 0 }}
+                    transition={{ duration: 0.22, ease: "easeOut" }}
+                    className="flex items-center justify-center"
+                  >
+                    {mode === "dark" ? (
+                      <Sun className="h-3.5 w-3.5 text-amber-400 drop-shadow-[0_0_6px_rgba(251,191,36,0.6)]" />
+                    ) : (
+                      <Moon className="h-3.5 w-3.5 text-cyan-600 drop-shadow-[0_0_6px_rgba(8,145,178,0.4)]" />
+                    )}
+                  </motion.div>
+                </AnimatePresence>
+              ) : (
+                <div className="h-3.5 w-3.5" />
+              )}
+            </button>
+          </div>
+
+          {/* Mobile Hamburger Menu Toggle Button (Visible strictly on mobile < md) */}
           <button
-            onClick={() =>
-              setActiveDropdown((prev) => (prev === "notifications" ? null : "notifications"))
-            }
-            className={`hover-bell-shake relative flex h-8 w-8 items-center justify-center rounded-lg border transition-all duration-200 hover:scale-105 hover:shadow-[0_0_12px_rgba(255,95,31,0.4)] hover:border-[var(--color-neon-orange)] ${
-              activeDropdown === "notifications"
-                ? "bg-[var(--color-neon-orange-soft)] text-[var(--color-neon-orange)] border-[var(--color-neon-orange)] shadow-[0_0_10px_rgba(255,95,31,0.25)]"
-                : "border-[var(--hair)] bg-[var(--card)] text-[var(--ink-muted)] hover:text-[var(--color-neon-orange)]"
-            }`}
-            aria-label="Notification Center"
-            title="Notification Center"
+            onClick={() => {
+              setActiveDropdown(null);
+              setMobileMenuOpen((v) => !v);
+            }}
             type="button"
-          >
-            <Bell className="h-3.5 w-3.5" />
-            {unreadCount > 0 && (
-              <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-[var(--color-neon-orange)] text-[9px] font-black text-white shadow-[0_0_8px_rgba(255,95,31,0.8)]">
-                {unreadCount}
-              </span>
-            )}
-          </button>
-
-          {/* Settings Trigger Button — rotates gear & glows on hover (hidden on narrow screens) */}
-          <button
-            onClick={() =>
-              setActiveDropdown((prev) => (prev === "settings" ? null : "settings"))
-            }
-            className={`hidden sm:flex hover-gear-spin relative h-8 w-8 items-center justify-center rounded-lg border transition-all duration-200 hover:scale-105 hover:shadow-[0_0_12px_rgba(255,95,31,0.4)] hover:border-[var(--color-neon-orange)] ${
-              activeDropdown === "settings"
+            className={`flex md:hidden h-8 w-8 items-center justify-center rounded-xl border transition-all duration-200 hover:scale-105 active:scale-95 cursor-pointer ${
+              mobileMenuOpen
                 ? "bg-[var(--color-neon-orange-soft)] text-[var(--color-neon-orange)] border-[var(--color-neon-orange)] shadow-[0_0_10px_rgba(255,95,31,0.25)]"
-                : "border-[var(--hair)] bg-[var(--card)] text-[var(--ink-muted)] hover:text-[var(--color-neon-orange)]"
+                : "border-[var(--hair)] bg-[var(--card)] text-[var(--ink)] hover:border-[var(--color-neon-orange)]"
             }`}
-            aria-label="Terminal Settings"
-            title="Terminal Settings"
-            type="button"
+            aria-label={mobileMenuOpen ? "Close menu" : "Open navigation menu"}
+            title="Menu"
           >
-            <Settings className="h-3.5 w-3.5" />
-          </button>
-
-          {/* Light / Dark Mode Toggle — rotates, scales and glows on hover & click animation */}
-          <button
-            onClick={() => setMode(mode === "dark" ? "light" : "dark")}
-            className="relative flex h-8 w-8 items-center justify-center rounded-lg border border-[var(--hair)] bg-[var(--card)] text-[var(--ink-muted)] transition-all duration-200 hover:scale-110 hover:border-[var(--color-neon-orange)] hover:text-[var(--color-neon-orange)] hover:shadow-[0_0_12px_rgba(255,95,31,0.4)] active:scale-90"
-            aria-label={mode === "dark" ? "Switch to light mode" : "Switch to dark mode"}
-            title={mode === "dark" ? "Switch to light mode" : "Switch to dark mode"}
-          >
-            {mounted ? (
-              <AnimatePresence mode="wait" initial={false}>
-                <motion.div
-                  key={mode}
-                  initial={{ rotate: -90, scale: 0.3, opacity: 0 }}
-                  animate={{ rotate: 0, scale: 1, opacity: 1 }}
-                  exit={{ rotate: 90, scale: 0.3, opacity: 0 }}
-                  transition={{ duration: 0.22, ease: "easeOut" }}
-                  className="flex items-center justify-center"
-                >
-                  {mode === "dark" ? (
-                    <Sun className="h-3.5 w-3.5 text-amber-400 drop-shadow-[0_0_6px_rgba(251,191,36,0.6)]" />
-                  ) : (
-                    <Moon className="h-3.5 w-3.5 text-cyan-600 drop-shadow-[0_0_6px_rgba(8,145,178,0.4)]" />
-                  )}
-                </motion.div>
-              </AnimatePresence>
-            ) : (
-              <div className="h-3.5 w-3.5" />
-            )}
+            {mobileMenuOpen ? <X className="h-4 w-4 text-[var(--color-neon-orange)]" /> : <Menu className="h-4 w-4" />}
           </button>
           {/* ========================================================================= */}
           {/* NOTIFICATION CENTER DROPDOWN PANEL */}
@@ -768,5 +1123,324 @@ export function TerminalNav({
         </div>
       </header>
     </div>
+
+    {/* Top-Level Full-Screen Mobile Drawer - at the VERY FRONT of the screen (z-[99999]) */}
+    <AnimatePresence>
+      {mobileMenuOpen && (
+        <div className="fixed inset-0 z-[99999] md:hidden pointer-events-auto">
+          {/* Backdrop Overlay */}
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.22 }}
+            onClick={() => setMobileMenuOpen(false)}
+            className="fixed inset-0 bg-black/85 backdrop-blur-md"
+          />
+
+          {/* Animated Left Side Drawer */}
+          <motion.div
+            initial={{ x: "-100%" }}
+            animate={{ x: 0 }}
+            exit={{ x: "-100%" }}
+            transition={{ type: "spring", stiffness: 350, damping: 32 }}
+            className="fixed inset-y-0 left-0 w-[86%] max-w-[340px] h-full z-10 border-r border-[var(--hair)] p-4 pt-5 pb-8 shadow-[24px_0_60px_rgba(0,0,0,0.95),0_0_35px_rgba(255,95,31,0.2)] overflow-y-auto"
+            style={{
+              backgroundColor: mode === "dark" ? "#0b0e14" : "#ffffff",
+              color: mode === "dark" ? "#ffffff" : "#0f172a",
+            }}
+          >
+            {/* Rotating Glow Border Beam */}
+            <div className="border-beam-ring rounded-2xl">
+              <span className="rotating-glow-border" />
+            </div>
+
+            <div className="relative z-10 flex flex-col gap-4">
+              {/* Header Row of Drawer */}
+              <div className="flex items-center justify-between pb-2.5 border-b border-[var(--hair)]">
+                <div className="flex items-center gap-2">
+                  <BrandMark />
+                  <span className="text-[10px] font-black uppercase tracking-wider text-[var(--color-neon-orange)] bg-[var(--color-neon-orange-soft)] px-1.5 py-0.5 rounded border border-[var(--color-neon-orange)]/30">
+                    Mobile Hub
+                  </span>
+                </div>
+                <button
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="rounded-lg p-1.5 text-[var(--ink-muted)] hover:text-[var(--ink)] hover:bg-[var(--panel)] transition-colors cursor-pointer"
+                  aria-label="Close mobile menu"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+
+              {/* Navigation Tabs: Demo & Leaderboard (Liquid Water Pill) */}
+              <div className="flex flex-col gap-1.5">
+                <span className={`text-[10px] font-black uppercase tracking-wider ${mode === "dark" ? "text-slate-400" : "text-slate-500"}`}>
+                  Terminal View
+                </span>
+                <div
+                  className="flex items-center p-1 rounded-xl border shadow-inner"
+                  style={{
+                    backgroundColor: mode === "dark" ? "#161b26" : "#f1f5f9",
+                    borderColor: mode === "dark" ? "#262c3d" : "#e2e8f0",
+                  }}
+                >
+                  {NAV_TABS.map((tab) => {
+                    const isActive = (activeTab ?? "demo") === tab.id;
+                    return (
+                      <button
+                        key={tab.id}
+                        onClick={() => {
+                          if (onTabChange) {
+                            onTabChange(tab.id);
+                          } else if (tab.href) {
+                            router.push(tab.href);
+                          }
+                          setMobileMenuOpen(false);
+                        }}
+                        type="button"
+                        className="relative flex-1 py-2 text-xs font-black transition-colors select-none flex items-center justify-center rounded-lg"
+                      >
+                        {isActive && (
+                          <motion.div
+                            layoutId="active-mobile-drawer-tab"
+                            className="absolute inset-0 rounded-lg pointer-events-none"
+                            transition={{
+                              type: "spring",
+                              stiffness: 380,
+                              damping: 28,
+                              mass: 0.6,
+                            }}
+                          >
+                            <div className="border-beam-ring rounded-lg">
+                              <span className="rotating-glow-border" />
+                            </div>
+                            <span
+                              className="absolute inset-0 rounded-lg border border-[var(--color-neon-orange)]/40 -z-10 shadow-[0_0_12px_rgba(255,95,31,0.25)]"
+                              style={{ backgroundColor: mode === "dark" ? "#0c0f17" : "#ffffff" }}
+                            />
+                          </motion.div>
+                        )}
+                        <span
+                          className={`relative z-10 ${
+                            isActive
+                              ? mode === "dark"
+                                ? "text-white font-black"
+                                : "text-[var(--color-neon-orange)] font-black"
+                              : mode === "dark"
+                              ? "text-slate-400 hover:text-white font-semibold"
+                              : "text-slate-500 hover:text-slate-900 font-semibold"
+                          }`}
+                        >
+                          {tab.label}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Solana Account Section (Full Interactive Account with Balances, PnL, Copy & Disconnect) */}
+              <div className="flex flex-col gap-1.5 pt-2 border-t border-[var(--hair)]">
+                <MobileAccountDrawerSection
+                  snapshot={snapshot}
+                  plays={plays}
+                  canClaim={canClaim}
+                  claimBusy={claimBusy}
+                  cooldownSec={cooldownSec}
+                  claimLabel={claimLabel}
+                  onClaim={onClaim}
+                  mode={mode}
+                />
+              </div>
+
+              {/* Theme Switcher */}
+              <div className="flex flex-col gap-2 pt-2 border-t border-[var(--hair)]">
+                <span className={`text-[10px] font-black uppercase tracking-wider ${mode === "dark" ? "text-slate-400" : "text-slate-500"}`}>
+                  Theme Mode
+                </span>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    onClick={() => setMode("dark")}
+                    type="button"
+                    className={`flex items-center justify-center gap-2 p-2.5 rounded-xl border text-xs font-bold transition-all cursor-pointer ${
+                      mode === "dark"
+                        ? "border-[var(--color-neon-orange)] bg-[var(--color-neon-orange-soft)] text-white shadow-[0_0_10px_rgba(255,95,31,0.2)] font-black"
+                        : "border-[var(--hair)] bg-[var(--panel)] text-[var(--ink-muted)]"
+                    }`}
+                  >
+                    <Moon className="h-3.5 w-3.5 text-cyan-400" />
+                    <span>Dark Mode</span>
+                  </button>
+                  <button
+                    onClick={() => setMode("light")}
+                    type="button"
+                    className={`flex items-center justify-center gap-2 p-2.5 rounded-xl border text-xs font-bold transition-all cursor-pointer ${
+                      mode === "light"
+                        ? "border-[var(--color-neon-orange)] bg-[var(--color-neon-orange-soft)] text-slate-900 shadow-[0_0_10px_rgba(255,95,31,0.2)] font-black"
+                        : "border-[var(--hair)] bg-[var(--panel)] text-[var(--ink-muted)]"
+                    }`}
+                  >
+                    <Sun className="h-3.5 w-3.5 text-amber-500" />
+                    <span>Light Mode</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Sound & Haptics Toggles */}
+              <div className="flex flex-col gap-2 pt-2 border-t border-[var(--hair)]">
+                <span className={`text-[10px] font-black uppercase tracking-wider ${mode === "dark" ? "text-slate-400" : "text-slate-500"}`}>
+                  Terminal Audio & Haptics
+                </span>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    onClick={() => setSoundEnabled((v) => !v)}
+                    type="button"
+                    className="flex items-center justify-between px-3 py-2 rounded-xl border text-xs font-bold cursor-pointer"
+                    style={{
+                      backgroundColor: mode === "dark" ? "#161b26" : "#f1f5f9",
+                      borderColor: mode === "dark" ? "#262c3d" : "#e2e8f0",
+                      color: mode === "dark" ? "#ffffff" : "#0f172a",
+                    }}
+                  >
+                    <span className="flex items-center gap-1.5">
+                      {soundEnabled ? <Volume2 className="h-3.5 w-3.5 text-[var(--color-neon-orange)]" /> : <VolumeX className="h-3.5 w-3.5 text-slate-500" />}
+                      Sound FX
+                    </span>
+                    <span className={`text-[10px] font-black ${soundEnabled ? "text-[var(--up)]" : "text-slate-500"}`}>
+                      {soundEnabled ? "ON" : "OFF"}
+                    </span>
+                  </button>
+
+                  <button
+                    onClick={() => setHapticsEnabled((v) => !v)}
+                    type="button"
+                    className="flex items-center justify-between px-3 py-2 rounded-xl border text-xs font-bold cursor-pointer"
+                    style={{
+                      backgroundColor: mode === "dark" ? "#161b26" : "#f1f5f9",
+                      borderColor: mode === "dark" ? "#262c3d" : "#e2e8f0",
+                      color: mode === "dark" ? "#ffffff" : "#0f172a",
+                    }}
+                  >
+                    <span className="flex items-center gap-1.5">
+                      <Smartphone className="h-3.5 w-3.5 text-[var(--color-neon-orange)]" />
+                      Haptics
+                    </span>
+                    <span className={`text-[10px] font-black ${hapticsEnabled ? "text-[var(--up)]" : "text-slate-500"}`}>
+                      {hapticsEnabled ? "ON" : "OFF"}
+                    </span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Alerts & Real-time Stream Section */}
+              <div className="flex flex-col gap-2.5 pt-2 border-t border-[var(--hair)]">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-1.5">
+                    <div className="relative flex h-2 w-2">
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[var(--color-neon-orange)] opacity-75" />
+                      <span className="relative inline-flex rounded-full h-2 w-2 bg-[var(--color-neon-orange)]" />
+                    </div>
+                    <span className={`text-[10px] font-black uppercase tracking-wider ${mode === "dark" ? "text-slate-400" : "text-slate-500"}`}>
+                      Alerts & Stream
+                    </span>
+                    {unreadCount > 0 && (
+                      <span className="rounded-full bg-[var(--color-neon-orange)] px-1.5 py-0.2 text-[9px] font-black text-white">
+                        {unreadCount}
+                      </span>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-[9px] font-extrabold text-emerald-400 bg-emerald-500/10 px-1.5 py-0.5 rounded border border-emerald-500/20">
+                      ● Live 1s Feed
+                    </span>
+                    {unreadCount > 0 && (
+                      <button
+                        onClick={markAllAsRead}
+                        type="button"
+                        className="text-[10px] font-bold text-[var(--color-neon-orange)] hover:underline cursor-pointer"
+                      >
+                        Mark read
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                {/* Alerts List - No chopped cards, full readable descriptions, icons, clear button */}
+                <div className="flex flex-col gap-2">
+                  {alerts.length === 0 ? (
+                    <div className="py-4 text-center text-xs text-[var(--ink-muted)] font-mono rounded-xl border border-dashed border-[var(--hair)]">
+                      All systems nominal · No new alerts
+                    </div>
+                  ) : (
+                    alerts.map((item) => {
+                      const isUnread = !item.read;
+                      return (
+                        <div
+                          key={item.id}
+                          className="relative flex items-start gap-2.5 p-2.5 rounded-xl border transition-all"
+                          style={{
+                            backgroundColor: mode === "dark" ? "#141923" : "#f8fafc",
+                            borderColor: isUnread
+                              ? "rgba(255, 95, 31, 0.4)"
+                              : mode === "dark" ? "#262c3d" : "#e2e8f0",
+                            borderLeft: isUnread ? "3px solid var(--color-neon-orange)" : undefined,
+                          }}
+                        >
+                          <div
+                            className="flex h-7 w-7 items-center justify-center rounded-lg shrink-0 mt-0.5"
+                            style={{
+                              backgroundColor: mode === "dark" ? "#0c0f17" : "#ffffff",
+                              border: `1px solid ${mode === "dark" ? "#262c3d" : "#e2e8f0"}`,
+                            }}
+                          >
+                            {item.icon === "ws" ? (
+                              <ShieldCheck className="h-3.5 w-3.5 text-[var(--color-neon-orange)]" />
+                            ) : item.icon === "speed" ? (
+                              <Zap className="h-3.5 w-3.5 text-[var(--color-neon-orange)]" />
+                            ) : (
+                              <Sparkles className="h-3.5 w-3.5 text-[var(--ink-secondary)]" />
+                            )}
+                          </div>
+
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center justify-between gap-1">
+                              <div className="flex items-center gap-1.5 min-w-0">
+                                <span className={`text-xs font-bold truncate ${mode === "dark" ? "text-white" : "text-slate-900"}`}>
+                                  {item.title}
+                                </span>
+                                {isUnread && (
+                                  <span className="h-1.5 w-1.5 rounded-full bg-[var(--color-neon-orange)] shrink-0" />
+                                )}
+                              </div>
+                              <span className={`text-[9px] font-mono shrink-0 ${mode === "dark" ? "text-slate-500" : "text-slate-400"}`}>
+                                {item.time}
+                              </span>
+                            </div>
+                            <p className={`mt-1 text-[11px] leading-snug ${mode === "dark" ? "text-slate-300" : "text-slate-600"}`}>
+                              {item.desc}
+                            </p>
+                          </div>
+
+                          <button
+                            onClick={() => clearAlert(item.id)}
+                            type="button"
+                            className="text-[var(--ink-muted)] hover:text-red-400 p-0.5 transition-colors cursor-pointer shrink-0"
+                            title="Dismiss alert"
+                          >
+                            <Trash2 className="h-3 w-3" />
+                          </button>
+                        </div>
+                      );
+                    })
+                  )}
+                </div>
+              </div>
+            </div>
+          </motion.div>
+        </div>
+      )}
+    </AnimatePresence>
+  </>
   );
 }
