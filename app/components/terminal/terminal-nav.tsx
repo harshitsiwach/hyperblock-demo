@@ -369,16 +369,16 @@ export function TerminalNav({
                 animate={{ opacity: 1, scale: 1, y: 0 }}
                 exit={{ opacity: 0, scale: 0.96, y: 6 }}
                 transition={{ duration: 0.16, ease: "easeOut" }}
-                className="absolute right-0 top-11 z-50 w-80 sm:w-96 rounded-2xl border border-white/10 bg-[#0b0e14] p-4 shadow-[0_16px_40px_-8px_rgba(0,0,0,0.8),0_0_24px_-4px_rgba(255,95,31,0.15)]"
+                className="absolute right-0 top-11 z-50 w-80 sm:w-96 rounded-2xl border border-[var(--hair)] bg-[var(--card)] p-4 shadow-[0_16px_40px_-8px_rgba(0,0,0,0.35),0_0_24px_-4px_rgba(255,95,31,0.15)] text-[var(--ink)]"
               >
                 {/* Header */}
-                <div className="flex items-center justify-between pb-3 border-b border-white/[0.08]">
+                <div className="flex items-center justify-between pb-3 border-b border-[var(--hair)]">
                   <div className="flex items-center gap-2">
                     <span className="relative flex h-2 w-2">
                       <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[var(--color-neon-orange)] opacity-75" />
                       <span className="relative inline-flex rounded-full h-2 w-2 bg-[var(--color-neon-orange)]" />
                     </span>
-                    <h4 className="text-xs font-bold uppercase tracking-wider text-white">
+                    <h4 className="text-xs font-bold uppercase tracking-wider text-[var(--ink)]">
                       Notification Center
                     </h4>
                     {unreadCount > 0 && (
@@ -391,14 +391,14 @@ export function TerminalNav({
                     {unreadCount > 0 && (
                       <button
                         onClick={markAllAsRead}
-                        className="text-[11px] font-medium text-white/50 hover:text-[var(--color-neon-orange)] transition-colors cursor-pointer"
+                        className="text-[11px] font-medium text-[var(--ink-muted)] hover:text-[var(--color-neon-orange)] transition-colors cursor-pointer"
                       >
                         Mark read
                       </button>
                     )}
                     <button
                       onClick={() => setActiveDropdown(null)}
-                      className="text-white/40 hover:text-white rounded-lg hover:bg-white/[0.08] p-1 transition-colors cursor-pointer"
+                      className="text-[var(--ink-muted)] hover:text-[var(--ink)] rounded-lg hover:bg-[var(--hair)] p-1 transition-colors cursor-pointer"
                     >
                       <X className="h-3.5 w-3.5" />
                     </button>
@@ -406,16 +406,16 @@ export function TerminalNav({
                 </div>
 
                 {/* Claim tUSD Card at top of Notification Center */}
-                <div className="mt-3 rounded-xl border border-[var(--color-neon-orange)]/30 bg-[#121622] p-3 flex items-center justify-between gap-3 shadow-[0_4px_16px_-4px_rgba(255,95,31,0.18)]">
+                <div className="mt-3 rounded-xl border border-[var(--color-neon-orange)]/30 bg-[var(--panel)] p-3 flex items-center justify-between gap-3 shadow-[0_4px_16px_-4px_rgba(255,95,31,0.18)]">
                   <div className="flex items-center gap-2.5 min-w-0">
                     <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[var(--color-neon-orange)]/15 border border-[var(--color-neon-orange)]/40 text-[var(--color-neon-orange)] flex-shrink-0">
                       <Zap className="h-4 w-4" />
                     </div>
                     <div className="min-w-0">
-                      <div className="text-xs font-bold text-white truncate">
+                      <div className="text-xs font-bold text-[var(--ink)] truncate">
                         Demo Faucet Claim
                       </div>
-                      <div className="text-[10px] text-white/50 truncate">
+                      <div className="text-[10px] text-[var(--ink-muted)] truncate">
                         {canClaim && !claimBusy ? "Instant 100 tUSD replenishment" : `Cooldown: ${cooldownSec}s`}
                       </div>
                     </div>
@@ -428,7 +428,7 @@ export function TerminalNav({
                     className={`relative flex-shrink-0 overflow-hidden rounded-lg px-3 py-1.5 text-xs font-bold tracking-wide transition-all ${
                       walletConnected && canClaim && !claimBusy
                         ? "bg-[var(--color-neon-orange)] hover:brightness-110 text-white shadow-[0_0_12px_rgba(255,95,31,0.4)] active:scale-95 cursor-pointer"
-                        : "bg-white/[0.06] border border-white/10 text-white/50 cursor-not-allowed"
+                        : "bg-[var(--hair)] border border-[var(--hair-hover)] text-[var(--ink-muted)] cursor-not-allowed"
                     }`}
                   >
                     {!walletConnected
@@ -442,7 +442,7 @@ export function TerminalNav({
                 {/* Alerts List */}
                 <div className="mt-3 space-y-2 max-h-72 overflow-y-auto pr-1">
                   {alerts.length === 0 ? (
-                    <div className="py-8 text-center text-xs text-white/40 font-mono">
+                    <div className="py-8 text-center text-xs text-[var(--ink-muted)] font-mono">
                       No unread system alerts
                     </div>
                   ) : (
@@ -453,38 +453,38 @@ export function TerminalNav({
                           key={item.id}
                           className={`group relative rounded-xl border p-3 transition-all ${
                             isUnread
-                              ? "border-[var(--color-neon-orange)]/35 bg-[#121622]/90 border-l-[3px] border-l-[var(--color-neon-orange)] shadow-[0_2px_12px_-2px_rgba(255,95,31,0.12)]"
-                              : "border-white/[0.06] bg-[#0e121a]/60 opacity-60 hover:opacity-90"
+                              ? "border-[var(--color-neon-orange)]/35 bg-[var(--panel)] border-l-[3px] border-l-[var(--color-neon-orange)] shadow-[0_2px_12px_-2px_rgba(255,95,31,0.12)]"
+                              : "border-[var(--hair)] bg-[var(--panel)]/50 opacity-60 hover:opacity-90"
                           }`}
                         >
                           <div className="flex items-start justify-between gap-2">
                             <div className="flex items-center gap-2 min-w-0">
-                              <div className="flex h-6 w-6 items-center justify-center rounded-md bg-white/[0.04] border border-white/[0.08] flex-shrink-0">
+                              <div className="flex h-6 w-6 items-center justify-center rounded-md bg-[var(--card)] border border-[var(--hair)] flex-shrink-0">
                                 {item.icon === "ws" ? (
                                   <ShieldCheck className="h-3.5 w-3.5 text-[var(--color-neon-orange)]" />
                                 ) : item.icon === "speed" ? (
                                   <Zap className="h-3.5 w-3.5 text-[var(--color-neon-orange)]" />
                                 ) : (
-                                  <Sparkles className="h-3.5 w-3.5 text-white/70" />
+                                  <Sparkles className="h-3.5 w-3.5 text-[var(--ink-secondary)]" />
                                 )}
                               </div>
-                              <span className="text-xs font-bold text-white truncate">
+                              <span className="text-xs font-bold text-[var(--ink)] truncate">
                                 {item.title}
                               </span>
                               {isUnread && (
                                 <span className="h-1.5 w-1.5 rounded-full bg-[var(--color-neon-orange)] flex-shrink-0" />
                               )}
                             </div>
-                            <span className="text-[10px] font-mono text-white/40 whitespace-nowrap">
+                            <span className="text-[10px] font-mono text-[var(--ink-muted)] whitespace-nowrap">
                               {item.time}
                             </span>
                           </div>
-                          <p className="mt-1.5 text-white/60 text-[11px] leading-relaxed">
+                          <p className="mt-1.5 text-[var(--ink-secondary)] text-[11px] leading-relaxed">
                             {item.desc}
                           </p>
                           <button
                             onClick={() => clearAlert(item.id)}
-                            className="absolute right-2 bottom-2 text-white/30 hover:text-[#ff3358] opacity-0 group-hover:opacity-100 transition-opacity p-1 cursor-pointer"
+                            className="absolute right-2 bottom-2 text-[var(--ink-muted)] hover:text-[#ff3358] opacity-0 group-hover:opacity-100 transition-opacity p-1 cursor-pointer"
                             title="Dismiss"
                           >
                             <Trash2 className="h-3 w-3" />
@@ -495,12 +495,12 @@ export function TerminalNav({
                   )}
                 </div>
 
-                {/* Footer */}
-                <div className="mt-3 pt-2.5 border-t border-white/[0.08] flex items-center justify-between text-[11px] font-mono text-white/40">
-                  <span className="flex items-center gap-1.5 text-[var(--color-neon-orange)]">
-                    <Radio className="h-3 w-3 animate-pulse" />
-                    WS Stream: 22ms
-                  </span>
+                {/* Footer status link */}
+                <div className="mt-3 pt-2.5 border-t border-[var(--hair)] flex items-center justify-between text-[10px] font-mono text-[var(--ink-muted)]">
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-[var(--color-neon-orange)]">((•))</span>
+                    <span className="text-[var(--color-neon-orange)] font-bold">WS Stream: 22ms</span>
+                  </div>
                   <span>Hyperliquid L1</span>
                 </div>
               </motion.div>
@@ -646,7 +646,7 @@ export function TerminalNav({
                 animate={{ opacity: 1, scale: 1, y: 0 }}
                 exit={{ opacity: 0, scale: 0.96, y: 6 }}
                 transition={{ duration: 0.16, ease: "easeOut" }}
-                className="absolute right-0 top-11 z-50 w-84 sm:w-96 rounded-2xl border border-white/10 bg-[#0c0f17] p-3.5 shadow-[0_16px_40px_-8px_rgba(0,0,0,0.8),0_0_24px_-4px_rgba(255,95,31,0.2)] overflow-hidden"
+                className="absolute right-0 top-11 z-50 w-84 sm:w-96 rounded-2xl border border-[var(--hair)] bg-[var(--card)] p-3.5 shadow-[0_16px_40px_-8px_rgba(0,0,0,0.35),0_0_24px_-4px_rgba(255,95,31,0.15)] overflow-hidden text-[var(--ink)]"
               >
                 {/* Masked Border Beam strictly on 1.5px border track */}
                 <div className="border-beam-ring rounded-2xl">
@@ -654,12 +654,12 @@ export function TerminalNav({
                 </div>
 
                 {/* Header with Pop Out and Close buttons */}
-                <div className="relative z-10 flex items-center justify-between pb-2.5 mb-2.5 border-b border-white/[0.08]">
+                <div className="relative z-10 flex items-center justify-between pb-2.5 mb-2.5 border-b border-[var(--hair)]">
                   <div className="flex items-center gap-2">
                     <div className="flex h-5 w-5 items-center justify-center rounded-full bg-[var(--color-neon-orange)] text-white">
                       <User className="h-3 w-3" />
                     </div>
-                    <span className="text-xs font-bold uppercase tracking-wider text-white">
+                    <span className="text-xs font-bold uppercase tracking-wider text-[var(--ink)]">
                       Session Performance
                     </span>
                   </div>
@@ -668,7 +668,7 @@ export function TerminalNav({
                       onClick={() => {
                         setPnlPoppedOut(true);
                       }}
-                      className="flex items-center gap-1 rounded-md px-2 py-1 text-[10px] font-bold text-white/50 hover:text-[var(--color-neon-orange)] hover:bg-white/[0.06] transition-colors cursor-pointer"
+                      className="flex items-center gap-1 rounded-md px-2 py-1 text-[10px] font-bold text-[var(--ink-muted)] hover:text-[var(--color-neon-orange)] hover:bg-[var(--hair)] transition-colors cursor-pointer"
                       title="Pop out window to drag anywhere"
                     >
                       <Maximize2 className="h-3 w-3" />
@@ -676,7 +676,7 @@ export function TerminalNav({
                     </button>
                     <button
                       onClick={() => setActiveDropdown(null)}
-                      className="rounded-md p-1 text-white/40 hover:text-white hover:bg-white/[0.08] transition-colors cursor-pointer"
+                      className="rounded-md p-1 text-[var(--ink-muted)] hover:text-[var(--ink)] hover:bg-[var(--hair)] transition-colors cursor-pointer"
                     >
                       <X className="h-3.5 w-3.5" />
                     </button>
@@ -706,7 +706,7 @@ export function TerminalNav({
                 animate={{ opacity: 1, scale: 1, y: 0 }}
                 exit={{ opacity: 0, scale: 0.94, y: 10 }}
                 transition={{ duration: 0.18, ease: "easeOut" }}
-                className="fixed z-50 w-84 sm:w-96 rounded-2xl border border-white/10 bg-[#0c0f17] p-4 shadow-[0_24px_60px_-10px_rgba(0,0,0,0.85),0_0_30px_rgba(255,95,31,0.25)] overflow-hidden"
+                className="fixed z-50 w-84 sm:w-96 rounded-2xl border border-[var(--hair)] bg-[var(--card)] p-4 shadow-[0_24px_60px_-10px_rgba(0,0,0,0.4),0_0_30px_rgba(255,95,31,0.2)] overflow-hidden text-[var(--ink)]"
                 style={{ left: "calc(50% - 190px)", top: "110px" }}
               >
                 {/* Masked Border Beam strictly on 1.5px border track */}
@@ -715,17 +715,17 @@ export function TerminalNav({
                 </div>
 
                 {/* Draggable Title Bar */}
-                <div className="relative z-10 flex items-center justify-between pb-2.5 mb-2.5 border-b border-white/[0.08] cursor-grab active:cursor-grabbing">
+                <div className="relative z-10 flex items-center justify-between pb-2.5 mb-2.5 border-b border-[var(--hair)] cursor-grab active:cursor-grabbing">
                   <div className="flex items-center gap-2">
-                    <GripHorizontal className="h-4 w-4 text-white/40" />
+                    <GripHorizontal className="h-4 w-4 text-[var(--ink-muted)]" />
                     <div className="flex h-5 w-5 items-center justify-center rounded-full bg-[var(--color-neon-orange)] text-white">
                       <User className="h-3 w-3" />
                     </div>
                     <div>
-                      <span className="text-xs font-bold uppercase tracking-wider text-white">
+                      <span className="text-xs font-bold uppercase tracking-wider text-[var(--ink)]">
                         Session Performance
                       </span>
-                      <span className="hidden sm:inline-block text-[9px] text-white/40 ml-1.5 font-mono">
+                      <span className="hidden sm:inline-block text-[9px] text-[var(--ink-muted)] ml-1.5 font-mono">
                         (Drag anywhere)
                       </span>
                     </div>
@@ -734,7 +734,7 @@ export function TerminalNav({
                   <div className="flex items-center gap-1">
                     <button
                       onClick={() => setPnlPoppedOut(false)}
-                      className="flex items-center gap-1 rounded-md px-2 py-1 text-[10px] font-bold text-white/50 hover:text-[var(--color-neon-orange)] hover:bg-white/[0.06] transition-colors cursor-pointer"
+                      className="flex items-center gap-1 rounded-md px-2 py-1 text-[10px] font-bold text-[var(--ink-muted)] hover:text-[var(--color-neon-orange)] hover:bg-[var(--hair)] transition-colors cursor-pointer"
                       title="Dock back to navbar"
                     >
                       <Minimize2 className="h-3 w-3" />
@@ -745,7 +745,7 @@ export function TerminalNav({
                         setPnlPoppedOut(false);
                         setActiveDropdown(null);
                       }}
-                      className="rounded-md p-1 text-white/40 hover:text-white hover:bg-white/[0.08] transition-colors cursor-pointer"
+                      className="rounded-md p-1 text-[var(--ink-muted)] hover:text-[var(--ink)] hover:bg-[var(--hair)] transition-colors cursor-pointer"
                     >
                       <X className="h-3.5 w-3.5" />
                     </button>

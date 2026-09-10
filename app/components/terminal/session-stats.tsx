@@ -37,7 +37,7 @@ export function SessionStats({ plays, streak, bestStreak, walletConnected = true
   return (
     <div className={bare ? "flex flex-col justify-between" : "terminal-card flex flex-col justify-between p-4 lg:p-5 h-full"}>
       {/* Header */}
-      <div className="flex items-start justify-between border-b border-[var(--glass-panel-border-subtle)] pb-3">
+      <div className="flex items-start justify-between border-b border-[var(--hair)] pb-3">
         <div>
           <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--ink-muted)]">
             Session Performance
@@ -69,22 +69,22 @@ export function SessionStats({ plays, streak, bestStreak, walletConnected = true
       </div>
 
       {/* Scorecard: Wins / Losses / Win Rate */}
-      <div className="grid grid-cols-3 gap-2 pt-2 border-t border-[var(--glass-panel-border-subtle)]">
-        <div className="rounded-xl bg-[var(--glass-card-bg)] border border-[var(--glass-card-border)] p-2 text-center">
+      <div className="grid grid-cols-3 gap-2 pt-2 border-t border-[var(--hair)]">
+        <div className="rounded-xl bg-[var(--panel)] border border-[var(--hair)] p-2 text-center">
           <span className="text-[10px] font-bold text-[var(--ink-muted)] uppercase">Wins</span>
           <div className="mt-0.5">
-            <TypewriterNumber value={wins} decimals={0} className="text-base font-extrabold text-emerald-400 font-mono" />
+            <TypewriterNumber value={wins} decimals={0} className="text-base font-extrabold text-emerald-500 dark:text-emerald-400 font-mono" />
           </div>
         </div>
 
-        <div className="rounded-xl bg-[var(--glass-card-bg)] border border-[var(--glass-card-border)] p-2 text-center">
+        <div className="rounded-xl bg-[var(--panel)] border border-[var(--hair)] p-2 text-center">
           <span className="text-[10px] font-bold text-[var(--ink-muted)] uppercase">Losses</span>
           <div className="mt-0.5">
-            <TypewriterNumber value={losses} decimals={0} className="text-base font-extrabold text-rose-400 font-mono" />
+            <TypewriterNumber value={losses} decimals={0} className="text-base font-extrabold text-rose-500 dark:text-rose-400 font-mono" />
           </div>
         </div>
 
-        <div className="rounded-xl bg-[var(--glass-card-bg)] border border-[var(--glass-card-border)] p-2 text-center">
+        <div className="rounded-xl bg-[var(--panel)] border border-[var(--hair)] p-2 text-center">
           <span className="text-[10px] font-bold text-[var(--ink-muted)] uppercase">Win Rate</span>
           <div className="font-mono text-base font-extrabold text-[var(--ink)] mt-0.5">
             {totalSettled > 0 ? `${winRate}%` : "—"}

@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { motion } from "motion/react";
 import { AssetIcon } from "@/app/components/asset-icon";
 import { MARKETS as SUPPORTED_ASSETS, type AssetCategory, type MarketInfo } from "@/app/lib/markets";
 import type { HyperliquidPrice } from "@/app/hooks/use-hyperliquid-prices";
@@ -31,32 +32,31 @@ export function AssetBrowser({
   onSelect,
   prices,
 }: AssetBrowserProps) {
-  const { activeTintConfig } = useTheme();
+  const { mode } = useTheme();
   const [activeCategory, setActiveCategory] = useState<AssetCategory>("crypto");
   const [searchQuery, setSearchQuery] = useState("");
 
   const visibleAssets = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
     return SUPPORTED_ASSETS.filter((asset) => {
-      if (asset.category !== activeCategory) return false;
-      if (!q) return true;
-      return (
+      const matchesCategory = asset.category === activeCategory;
+      const matchesSearch =
+        q === "" ||
         asset.symbol.toLowerCase().includes(q) ||
-        asset.name.toLowerCase().includes(q) ||
-        asset.label.toLowerCase().includes(q)
-      );
+        asset.name.toLowerCase().includes(q);
+      return matchesCategory && matchesSearch;
     });
   }, [activeCategory, searchQuery]);
 
   return (
-    <div className="terminal-card flex flex-col p-3.5 gap-2.5 h-full flex-1">
+    <div className="terminal-card flex flex-col p-3.5 space-y-3 flex-1 min-h-0 overflow-hidden">
       {/* Header & Controls */}
-      <div className="flex flex-col gap-2.5 flex-shrink-0">
-        <div className="flex items-center justify-between border-b border-[var(--hair)] pb-2">
+      <div className="flex flex-col gap-2.5">
+        <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <h3 className="text-sm font-extrabold tracking-tight text-[var(--ink)]">
-              MARKET ASSET BROWSER
-            </h3>
+            <span className="text-xs font-black uppercase tracking-wider text-[var(--ink)]">
+              Market Asset Browser
+            </span>
             <span className="rounded bg-[var(--card)] px-1.5 py-0.5 text-[9px] font-bold text-[var(--ink-secondary)] border border-[var(--hair)]">
               EXPLORE
             </span>
@@ -66,7 +66,7 @@ export function AssetBrowser({
           </span>
         </div>
 
-        {/* Search Input & Category Filter Pills */}
+        {/* Search Input & Category Filter Segmented Control */}
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-[var(--ink-muted)]" />
@@ -87,8 +87,11 @@ export function AssetBrowser({
             )}
           </div>
 
-          {/* Category Filter Pills */}
-          <div className="flex gap-1.5 overflow-x-auto pb-0.5 flex-shrink-0">
+          {/* Category Filter Segmented Control (identical styling to header Demo & Leaderboard tabs) */}
+          <nav
+            className="flex items-center p-0.5 rounded-xl bg-[var(--card)] border border-[var(--hair)] shadow-inner flex-shrink-0"
+            aria-label="Market Asset Categories"
+          >
             {CATEGORIES.map((cat) => {
               const isSelected = activeCategory === cat.id;
               return (
@@ -96,17 +99,47 @@ export function AssetBrowser({
                   key={cat.id}
                   type="button"
                   onClick={() => setActiveCategory(cat.id)}
-                  className={`flex-shrink-0 rounded-md px-2.5 py-1 text-[11px] font-bold tracking-wide transition-all cursor-pointer ${
-                    isSelected
-                      ? "bg-[var(--color-neon-orange-soft)] text-[var(--color-neon-orange)] border border-[var(--color-neon-orange)] font-extrabold shadow-sm"
-                      : "border border-[var(--hair)] bg-[var(--panel)] text-[var(--ink-secondary)] hover:text-[var(--ink)] hover:border-[var(--color-neon-orange)]"
-                  }`}
+                  aria-current={isSelected ? "page" : undefined}
+                  className="relative px-3 py-1 text-xs font-bold transition-colors select-none focus:outline-none flex items-center justify-center cursor-pointer"
                 >
-                  {cat.label}
+                  {isSelected && (
+                    <motion.div
+                      layoutId="active-asset-category-pill"
+                      className="absolute inset-0 rounded-[9px] pointer-events-none"
+                      transition={{
+                        type: "spring",
+                        stiffness: 380,
+                        damping: 28,
+                        mass: 0.6,
+                      }}
+                    >
+                      {/* Masked Border Beam strictly on 1.5px border track */}
+                      <div className="border-beam-ring rounded-[9px]">
+                        <span className="rotating-glow-border" />
+                      </div>
+
+                      {/* Solid inner background */}
+                      <span
+                        className="absolute inset-0 rounded-[9px] border border-[var(--color-neon-orange)]/40 -z-10 shadow-[0_0_12px_rgba(255,95,31,0.25)]"
+                        style={{ backgroundColor: mode === "dark" ? "#0c0f17" : "#ffffff" }}
+                      />
+                    </motion.div>
+                  )}
+                  <span
+                    className={`relative z-10 transition-colors duration-200 ${
+                      isSelected
+                        ? mode === "dark"
+                          ? "text-white font-black"
+                          : "text-[var(--color-neon-orange)] font-black"
+                        : "text-[var(--ink-muted)] hover:text-[var(--ink)] font-semibold"
+                    }`}
+                  >
+                    {cat.label}
+                  </span>
                 </button>
               );
             })}
-          </div>
+          </nav>
         </div>
       </div>
 

@@ -47,16 +47,27 @@ export function useWalletBalances(snapshot?: { walletBalanceUsd: number | null; 
       try {
         setBalances((b) => ({ ...b, loading: true, error: null }));
         const config = readClientLiveConfig();
-        const erEndpoint = snapshot?.erEndpoint ?? (config as any).erEndpoint ?? (config as any).ephemeralRpcEndpoint ?? "https://devnet-as.magicblock.app";
-        const erConnection = new Connection(erEndpoint, "confirmed");
+        let rawEr = snapshot?.erEndpoint ?? (config as any).erEndpoint ?? (config as any).ephemeralRpcEndpoint ?? "https://devnet-as.magicblock.app";
+        if (rawEr && !rawEr.startsWith("http://") && !rawEr.startsWith("https://")) {
+          rawEr = `https://${rawEr.includes(".") ? rawEr : `${rawEr}.magicblock.app`}`;
+        }
+        const erEndpoint = rawEr;
+
+        let erConnection: Connection | null = null;
+        try {
+          erConnection = new Connection(erEndpoint, "confirmed");
+        } catch (connErr) {
+          console.warn("Could not create ER Connection:", connErr);
+        }
+
         const collateralMintStr = snapshot?.collateralMint;
         const collateralMint = collateralMintStr ? new PublicKey(collateralMintStr) : null;
 
         const [baseLamports, erLamports, baseToken, erToken] = await Promise.all([
           baseConnection.getBalance(publicKey, "confirmed").catch(() => null),
-          erConnection.getBalance(publicKey, "confirmed").catch(() => null),
+          erConnection ? erConnection.getBalance(publicKey, "confirmed").catch(() => null) : Promise.resolve(null),
           collateralMint ? baseConnection.getTokenAccountBalance(getAssociatedTokenAddressSync(collateralMint, publicKey), "confirmed").catch(() => null) : Promise.resolve(null),
-          collateralMint ? erConnection.getTokenAccountBalance(getAssociatedTokenAddressSync(collateralMint, publicKey), "confirmed").catch(() => null) : Promise.resolve(null),
+          collateralMint && erConnection ? erConnection.getTokenAccountBalance(getAssociatedTokenAddressSync(collateralMint, publicKey), "confirmed").catch(() => null) : Promise.resolve(null),
         ]);
 
         if (cancelled) return;

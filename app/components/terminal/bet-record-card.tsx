@@ -6,6 +6,7 @@ import { ExternalLink, RefreshCw, Receipt, ArrowUp, ArrowDown, X } from "lucide-
 import { MARKETS as SUPPORTED_ASSETS } from "@/app/lib/markets";
 import type { Play } from "@/app/lib/domain";
 import { explorerTxUrl, type HistoryRecord, type OnchainBetRecord } from "@/app/lib/hyperblock-api/history";
+import { getRandomCelebratingPepe, getWaitingPepe } from "@/app/lib/pepe-emotes";
 
 interface BetRecordCardProps {
   records?: HistoryRecord[];
@@ -47,6 +48,13 @@ export function BetRecordCard({
   onRefreshHistory,
 }: BetRecordCardProps) {
   const [selectedSlip, setSelectedSlip] = useState<EnrichedBet | null>(null);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  const handleRefresh = () => {
+    setIsRefreshing(true);
+    setTimeout(() => setIsRefreshing(false), 750);
+    onRefreshHistory?.();
+  };
 
   // Attach direction/symbol/entry from local mirrored plays (matched by stake + time).
   const enriched = useMemo<EnrichedBet[]>(() => {
@@ -78,13 +86,13 @@ export function BetRecordCard({
         </div>
         {onRefreshHistory && (
           <button
-            onClick={onRefreshHistory}
+            onClick={handleRefresh}
             disabled={historyLoading || !walletConnected}
-            className="flex items-center gap-1 rounded-md border border-[var(--hair)] bg-[var(--card)] px-2 py-1 text-[10px] font-bold text-[var(--ink-secondary)] hover:border-[var(--color-neon-orange)] hover:text-[var(--color-neon-orange)] disabled:opacity-40 cursor-pointer"
+            className="group flex items-center gap-1.5 rounded-md border border-[var(--hair)] bg-[var(--card)] px-2.5 py-1 text-[10px] font-bold text-[var(--ink-secondary)] hover:border-[var(--color-neon-orange)] hover:text-[var(--color-neon-orange)] hover:shadow-[0_0_10px_rgba(255,95,31,0.25)] active:scale-95 disabled:opacity-40 transition-all cursor-pointer"
             title="Reload bet record from devnet"
           >
-            <RefreshCw className={`h-3 w-3 ${historyLoading ? "animate-spin" : ""}`} />
-            {historyLoading ? "Loading…" : "Refresh"}
+            <RefreshCw className={`h-3 w-3 transition-transform duration-500 ${historyLoading || isRefreshing ? "animate-refresh-spin text-[var(--color-neon-orange)]" : "group-hover:rotate-180"}`} />
+            {historyLoading || isRefreshing ? "Loading…" : "Refresh"}
           </button>
         )}
       </div>
@@ -112,19 +120,19 @@ export function BetRecordCard({
               <div
                 key={b.stakeSignature}
                 onClick={() => setSelectedSlip(b)}
-                className={`group relative overflow-hidden rounded-xl border p-2.5 text-[11px] transition-all cursor-pointer hover:scale-[1.01] active:scale-[0.99] ${
+                className={`group relative overflow-hidden rounded-xl p-2.5 text-[11px] transition-all cursor-pointer hover:scale-[1.01] active:scale-[0.99] ${
                   isSettling
-                    ? "border-amber-400/30 bg-[#121620]"
+                    ? "border border-amber-400/30 bg-amber-500/10 text-amber-500 dark:text-amber-300"
                     : profit
-                    ? "border-[#00f076]/45 bg-[#0a1210] shadow-[0_2px_12px_-2px_rgba(0,240,118,0.15)]"
-                    : "border-[#ff3358]/45 bg-[#140b10] shadow-[0_2px_12px_-2px_rgba(255,51,88,0.15)]"
+                    ? "glass-card-win"
+                    : "glass-card-lose"
                 }`}
               >
-                {/* Masked Border Beam strictly on 1.5px border track */}
                 {!isSettling && (
-                  <div className="border-beam-ring rounded-xl">
-                    <span className={profit ? "rotating-glow-border-green" : "rotating-glow-border-red"} />
-                  </div>
+                  <>
+                    <div className="glass-reflection-overlay" />
+                    <div className="glass-shine-beam" />
+                  </>
                 )}
 
                 <div className="relative z-10 flex items-center justify-between gap-2">
@@ -205,39 +213,59 @@ export function BetRecordCard({
               exit={{ opacity: 0, scale: 0.94, y: 14 }}
               transition={{ type: "spring", stiffness: 420, damping: 30 }}
               onClick={(e) => e.stopPropagation()}
-              className={`relative w-full max-w-sm overflow-hidden rounded-2xl border p-5 shadow-2xl ${
+              className={`relative w-full max-w-sm overflow-hidden rounded-2xl p-5 shadow-2xl ${
                 selectedSlip.status === "settling"
-                  ? "border-amber-400/30 bg-[#0e121a]"
+                  ? "border border-amber-400/30 bg-[#0e121a]"
                   : selectedSlip.pnlTokens >= 0
-                  ? "border-[#00f076]/45 bg-[#09110d] shadow-[0_0_30px_rgba(0,240,118,0.2)]"
-                  : "border-[#ff3358]/45 bg-[#12080d] shadow-[0_0_30px_rgba(255,51,88,0.2)]"
+                  ? "glass-card-win"
+                  : "glass-card-lose"
               }`}
             >
-              {/* Masked Border Beam strictly on 1.5px border track */}
+              {/* Glass Shining Effect Overlays */}
               {selectedSlip.status !== "settling" && (
-                <div className="border-beam-ring rounded-2xl">
-                  <span className={selectedSlip.pnlTokens >= 0 ? "rotating-glow-border-green" : "rotating-glow-border-red"} />
-                </div>
+                <>
+                  <div className="glass-reflection-overlay" />
+                  <div className="glass-shine-beam" />
+                </>
               )}
 
               {/* Header */}
-              <div className="flex items-center justify-between border-b border-white/10 pb-3 relative z-10">
+              <div className="flex items-center justify-between border-b border-[var(--hair)] pb-3 relative z-10">
                 <div className="flex items-center gap-2">
                   <Receipt className="h-4 w-4 text-[var(--color-neon-orange)]" />
-                  <span className="font-mono text-xs font-bold uppercase tracking-wider text-white">
+                  <span className="font-mono text-xs font-bold uppercase tracking-wider text-[var(--ink)]">
                     Official Bet Slip
                   </span>
                 </div>
                 <button
                   onClick={() => setSelectedSlip(null)}
-                  className="rounded-lg p-1 text-white/40 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
+                  className="rounded-lg p-1 text-[var(--ink-muted)] hover:text-[var(--ink)] hover:bg-[var(--hair)] transition-colors cursor-pointer"
                 >
                   <X className="h-4 w-4" />
                 </button>
               </div>
 
-              {/* Round Overview Badge & Hero P&L */}
+              {/* Round Overview Badge, Random Pepe Emote & Hero P&L */}
               <div className="py-4 text-center relative z-10">
+                {(() => {
+                  const slipPepe =
+                    selectedSlip.pnlTokens >= 0
+                      ? getRandomCelebratingPepe(selectedSlip.stakeSignature || String(selectedSlip.stakeTime))
+                      : getWaitingPepe(selectedSlip.stakeSignature || String(selectedSlip.stakeTime));
+
+                  return (
+                    <div className="flex justify-center mb-2.5">
+                      <img
+                        src={slipPepe.src}
+                        alt={slipPepe.name}
+                        width={52}
+                        height={52}
+                        className="h-13 w-13 object-contain drop-shadow-[0_4px_14px_rgba(0,0,0,0.6)] select-none"
+                      />
+                    </div>
+                  );
+                })()}
+
                 <div
                   className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-black uppercase mb-2 border"
                   style={{
@@ -257,7 +285,7 @@ export function BetRecordCard({
                 >
                   {selectedSlip.pnlTokens >= 0 ? "+" : "−"}${Math.abs(selectedSlip.pnlTokens).toFixed(2)}
                 </div>
-                <div className="text-xs font-mono font-bold text-white/50 mt-0.5">
+                <div className="text-xs font-mono font-bold text-[var(--ink-muted)] mt-0.5">
                   {selectedSlip.pnlTokens >= 0
                     ? `+${((selectedSlip.pnlTokens / (selectedSlip.stakeTokens || 1)) * 100).toFixed(1)}% Return`
                     : "Capital Deducted"}
@@ -265,22 +293,22 @@ export function BetRecordCard({
               </div>
 
               {/* Breakdown details */}
-              <div className="space-y-2 rounded-xl bg-white/[0.04] border border-white/[0.08] p-3 text-xs font-mono relative z-10">
-                <div className="flex justify-between text-white/60">
+              <div className="space-y-2 rounded-xl bg-[var(--panel)] border border-[var(--hair)] p-3 text-xs font-mono relative z-10">
+                <div className="flex justify-between text-[var(--ink-muted)]">
                   <span>Stake Amount:</span>
-                  <span className="font-bold text-white">${selectedSlip.stakeTokens.toFixed(2)} tUSD</span>
+                  <span className="font-bold text-[var(--ink)]">${selectedSlip.stakeTokens.toFixed(2)} tUSD</span>
                 </div>
-                <div className="flex justify-between text-white/60">
+                <div className="flex justify-between text-[var(--ink-muted)]">
                   <span>Payout Total:</span>
-                  <span className="font-bold text-white">${selectedSlip.payoutTokens.toFixed(2)} tUSD</span>
+                  <span className="font-bold text-[var(--ink)]">${selectedSlip.payoutTokens.toFixed(2)} tUSD</span>
                 </div>
                 {selectedSlip.entryPrice && (
-                  <div className="flex justify-between text-white/60">
+                  <div className="flex justify-between text-[var(--ink-muted)]">
                     <span>Strike Entry:</span>
-                    <span className="font-bold text-white">${formatPrice(selectedSlip.entryPrice)}</span>
+                    <span className="font-bold text-[var(--ink)]">${formatPrice(selectedSlip.entryPrice)}</span>
                   </div>
                 )}
-                <div className="flex justify-between text-white/60">
+                <div className="flex justify-between text-[var(--ink-muted)]">
                   <span>Settlement:</span>
                   <span className="text-[var(--color-neon-orange)] font-bold">10-Sec Fast Round</span>
                 </div>
@@ -288,14 +316,14 @@ export function BetRecordCard({
 
               {/* On-Chain Proof Links */}
               <div className="mt-3 space-y-1.5 relative z-10">
-                <div className="text-[10px] font-bold uppercase tracking-wider text-white/40 mb-1">
+                <div className="text-[10px] font-bold uppercase tracking-wider text-[var(--ink-muted)] mb-1">
                   Verified On-Chain Signatures
                 </div>
                 <a
                   href={explorerTxUrl(selectedSlip.stakeSignature)}
                   target="_blank"
                   rel="noreferrer"
-                  className="flex items-center justify-between rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2 text-xs font-mono text-white/70 hover:text-white hover:border-[var(--color-neon-orange)] transition-colors"
+                  className="flex items-center justify-between rounded-lg border border-[var(--hair)] bg-[var(--card)] px-3 py-2 text-xs font-mono text-[var(--ink-secondary)] hover:text-[var(--ink)] hover:border-[var(--color-neon-orange)] transition-colors"
                 >
                   <span>Stake Tx: {selectedSlip.stakeSignature.slice(0, 8)}…{selectedSlip.stakeSignature.slice(-6)}</span>
                   <ExternalLink className="h-3.5 w-3.5 text-[var(--color-neon-orange)]" />
@@ -306,21 +334,13 @@ export function BetRecordCard({
                     href={explorerTxUrl(selectedSlip.payoutSignature)}
                     target="_blank"
                     rel="noreferrer"
-                    className="flex items-center justify-between rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2 text-xs font-mono text-white/70 hover:text-white hover:border-[var(--color-neon-orange)] transition-colors"
+                    className="flex items-center justify-between rounded-lg border border-[var(--hair)] bg-[var(--card)] px-3 py-2 text-xs font-mono text-[var(--ink-secondary)] hover:text-[var(--ink)] hover:border-[var(--color-neon-orange)] transition-colors"
                   >
                     <span>Payout Tx: {selectedSlip.payoutSignature.slice(0, 8)}…{selectedSlip.payoutSignature.slice(-6)}</span>
                     <ExternalLink className="h-3.5 w-3.5 text-[#00f076]" />
                   </a>
                 )}
               </div>
-
-              {/* Close button */}
-              <button
-                onClick={() => setSelectedSlip(null)}
-                className="mt-4 w-full rounded-xl bg-white/10 py-2.5 text-center text-xs font-bold text-white hover:bg-white/20 transition-colors cursor-pointer relative z-10"
-              >
-                Close Slip
-              </button>
             </motion.div>
           </div>
         )}

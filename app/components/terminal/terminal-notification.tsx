@@ -123,7 +123,7 @@ export function TerminalNotification({ notification, onDismiss }: TerminalNotifi
               borderColor,
               boxShadow: glowShadow,
             }}
-            className="pointer-events-auto relative w-full overflow-hidden rounded-xl border bg-[#0b0e14]/94 backdrop-blur-2xl p-3 sm:p-3.5 text-[var(--ink)] transition-all"
+            className="pointer-events-auto relative w-full overflow-hidden rounded-xl border bg-[var(--card)]/95 backdrop-blur-2xl p-3 sm:p-3.5 text-[var(--ink)] shadow-2xl transition-all"
           >
           {/* Subtle top accent highlight line */}
           <div
@@ -187,9 +187,9 @@ export function TerminalNotification({ notification, onDismiss }: TerminalNotifi
                   </span>
 
                   {notification.symbol && (
-                    <div className="flex items-center gap-1 bg-white/[0.04] px-1.5 py-0.5 rounded border border-white/[0.08]">
+                    <div className="flex items-center gap-1 bg-[var(--panel)] px-1.5 py-0.5 rounded border border-[var(--hair)]">
                       <AssetIcon symbol={notification.symbol} size={12} />
-                      <span className="font-mono text-[10.5px] font-bold text-white/90">
+                      <span className="font-mono text-[10.5px] font-bold text-[var(--ink)]">
                         {notification.symbol}
                       </span>
                     </div>
@@ -199,7 +199,7 @@ export function TerminalNotification({ notification, onDismiss }: TerminalNotifi
                 <button
                   onClick={onDismiss}
                   aria-label="Dismiss notification"
-                  className="rounded-md p-1 text-white/40 hover:text-white hover:bg-white/[0.08] transition-colors cursor-pointer"
+                  className="rounded-md p-1 text-[var(--ink-muted)] hover:text-[var(--ink)] hover:bg-[var(--panel)] transition-colors cursor-pointer"
                 >
                   <X className="h-3.5 w-3.5" />
                 </button>
@@ -225,7 +225,7 @@ export function TerminalNotification({ notification, onDismiss }: TerminalNotifi
                     <span className="font-mono text-lg sm:text-xl font-black text-[#ff3358] tracking-tight">
                       -${(notification.stake ?? 0).toFixed(2)}
                     </span>
-                    <span className="text-[11px] font-medium text-white/50">
+                    <span className="text-[11px] font-medium text-[var(--ink-muted)]">
                       Capital deducted
                     </span>
                   </div>
@@ -233,32 +233,32 @@ export function TerminalNotification({ notification, onDismiss }: TerminalNotifi
 
                 {isPlaced && (
                   <div className="flex items-baseline gap-2">
-                    <span className="font-mono text-base font-black text-white">
+                    <span className="font-mono text-base font-black text-[var(--ink)]">
                       ${notification.stake?.toFixed(2)} Stake
                     </span>
-                    <span className="text-[11px] font-mono font-bold text-white/50">
+                    <span className="text-[11px] font-mono font-bold text-[var(--ink-muted)]">
                       @ ${formatPrice(notification.entryPrice)}
                     </span>
                   </div>
                 )}
 
                 {isSettling && (
-                  <div className="text-xs font-bold text-amber-300 flex items-center gap-1.5">
+                  <div className="text-xs font-bold text-amber-500 flex items-center gap-1.5">
                     <span>Awaiting Hyperliquid exit price…</span>
                   </div>
                 )}
 
                 {notification.message && !isWon && !isLost && !isPlaced && !isSettling && (
-                  <p className="text-xs text-white/90 font-semibold">{notification.message}</p>
+                  <p className="text-xs text-[var(--ink)] font-semibold">{notification.message}</p>
                 )}
               </div>
 
               {/* Footnote Details / Price Movement */}
-              <div className="mt-0.5 text-[10.5px] font-mono text-white/50 flex items-center justify-between gap-2">
+              <div className="mt-0.5 text-[10.5px] font-mono text-[var(--ink-muted)] flex items-center justify-between gap-2">
                 {isPlaced && (
                   <>
                     <span>1000x Sensitivity · 10s Round</span>
-                    <span className="text-white/40 flex items-center gap-1">
+                    <span className="text-[var(--ink-muted)] flex items-center gap-1">
                       <Clock className="h-3 w-3" /> auto-dismiss
                     </span>
                   </>
@@ -282,7 +282,7 @@ export function TerminalNotification({ notification, onDismiss }: TerminalNotifi
           </div>
 
           {/* Animated Progress Drain Bar matching auto-dismiss duration */}
-          <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-white/[0.06] overflow-hidden">
+          <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-[var(--hair)] overflow-hidden">
             <motion.div
               key={notification.id + notification.type}
               initial={{ width: "100%" }}

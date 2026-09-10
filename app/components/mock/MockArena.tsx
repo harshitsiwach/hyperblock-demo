@@ -86,7 +86,18 @@ export function MockArena({ initialView = "demo" }: { initialView?: "demo" | "le
   const handleDismissNotification = useCallback(() => {
     setBetNotification(null);
   }, []);
-  const [celebrate, setCelebrate] = useState<{ profit: number; id: string; streak?: number; isMega?: boolean } | null>(null);
+  const [celebrate, setCelebrate] = useState<{
+    profit: number;
+    id: string;
+    streak?: number;
+    isMega?: boolean;
+    symbol?: string;
+    direction?: "up" | "down";
+    stake?: number;
+    entryPrice?: number;
+    exitPrice?: number;
+    pnlPct?: number;
+  } | null>(null);
   const [mounted, setMounted] = useState(false);
   const [displayBalance, setDisplayBalance] = useState(0);
   const [balanceBump, setBalanceBump] = useState(false);
@@ -436,7 +447,18 @@ export function MockArena({ initialView = "demo" }: { initialView?: "demo" | "le
         const streakInfo = updateStreak(true);
         play.streak = streakInfo.streak;
         const isMega = profit >= amount * 5 * 0.9 - 1e-9;
-        setCelebrate({ profit, id: play.id, streak: play.streak, isMega });
+        setCelebrate({
+          profit,
+          id: play.id,
+          streak: play.streak,
+          isMega,
+          symbol: selectedAsset.symbol,
+          direction: dir,
+          stake: amount,
+          entryPrice,
+          exitPrice: settled.exitPrice ?? undefined,
+          pnlPct,
+        });
 
         // 2. Animated Victory Result Notification
         setBetNotification({
@@ -755,6 +777,13 @@ export function MockArena({ initialView = "demo" }: { initialView?: "demo" | "le
         show={!!celebrate}
         streak={celebrate?.streak}
         isMega={celebrate?.isMega}
+        symbol={celebrate?.symbol}
+        direction={celebrate?.direction}
+        stake={celebrate?.stake}
+        entryPrice={celebrate?.entryPrice}
+        exitPrice={celebrate?.exitPrice}
+        pnlPct={celebrate?.pnlPct}
+        seed={celebrate?.id}
         onDone={() => setCelebrate(null)}
       />
 

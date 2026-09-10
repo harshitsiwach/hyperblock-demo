@@ -7,6 +7,7 @@ import { MARKETS as SUPPORTED_ASSETS } from "@/app/lib/markets";
 import { ArrowDown, ArrowUp, Compass, ExternalLink, RefreshCw, Receipt, X, Copy, Check } from "lucide-react";
 import type { Play } from "@/app/lib/domain";
 import { explorerTxUrl, type HistoryRecord, type OnchainBetRecord } from "@/app/lib/hyperblock-api/history";
+import { getWaitingPepe, getRandomCelebratingPepe } from "@/app/lib/pepe-emotes";
 
 interface LivePositionsProps {
   activePlays: Play[];
@@ -60,6 +61,13 @@ export function LivePositions({
 }: LivePositionsProps) {
   const [tab, setTab] = useState<"active" | "history">("active");
   const [selectedSlip, setSelectedSlip] = useState<EnrichedBet | null>(null);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  const handleRefresh = () => {
+    setIsRefreshing(true);
+    setTimeout(() => setIsRefreshing(false), 750);
+    onRefreshHistory?.();
+  };
 
   // Auto-switch to active tab when an order is placed
   useEffect(() => {
@@ -76,7 +84,7 @@ export function LivePositions({
     [records],
   );
 
-  // Attach direction/symbol/entry from local mirrored plays (matched by stake + time)
+  // Enriched bets from on-chain history
   const enriched = useMemo<EnrichedBet[]>(() => {
     const bets = records.filter((r): r is OnchainBetRecord => r.kind === "bet");
     return bets.map((b) => {
@@ -132,13 +140,13 @@ export function LivePositions({
 
         {tab === "history" && onRefreshHistory ? (
           <button
-            onClick={onRefreshHistory}
+            onClick={handleRefresh}
             disabled={historyLoading || !walletConnected}
-            className="flex items-center gap-1 rounded-md border border-[var(--hair)] bg-[var(--card)] px-2 py-0.5 text-[10px] font-bold text-[var(--ink-secondary)] hover:border-[var(--color-neon-orange)] hover:text-[var(--color-neon-orange)] disabled:opacity-40 transition-colors"
+            className="group flex items-center gap-1.5 rounded-md border border-[var(--hair)] bg-[var(--card)] px-2.5 py-1 text-[10px] font-bold text-[var(--ink-secondary)] hover:border-[var(--color-neon-orange)] hover:text-[var(--color-neon-orange)] hover:shadow-[0_0_10px_rgba(255,95,31,0.25)] active:scale-95 disabled:opacity-40 transition-all cursor-pointer"
             title="Reload bet record from devnet"
           >
-            <RefreshCw className={`h-3 w-3 ${historyLoading ? "animate-spin" : ""}`} />
-            <span>{historyLoading ? "Loading…" : "Refresh"}</span>
+            <RefreshCw className={`h-3 w-3 transition-transform duration-500 ${historyLoading || isRefreshing ? "animate-refresh-spin text-[var(--color-neon-orange)]" : "group-hover:rotate-180"}`} />
+            <span>{historyLoading || isRefreshing ? "Refreshing…" : "Refresh"}</span>
           </button>
         ) : (
           <span className="text-[10px] font-mono text-[var(--ink-muted)]">
@@ -186,6 +194,7 @@ export function LivePositions({
               const progress = Math.min(1, Math.max(0, (now - play.openedAt) / totalDuration));
               const isUrgent = remainingMs <= 3000 && remainingMs > 0;
               const isSettling = remainingMs === 0;
+              const waitingPepe = getWaitingPepe(play.id);
 
               return (
                 <motion.div
@@ -194,90 +203,110 @@ export function LivePositions({
                   animate={{ opacity: 1, y: 0, scale: 1 }}
                   exit={{ opacity: 0, scale: 0.95 }}
                   transition={{ type: "spring", stiffness: 420, damping: 30 }}
-                  className={`relative overflow-hidden rounded-xl border p-2.5 transition-all ${
-                    isProfit
-                      ? "border-[#00f076]/35 bg-[#00f076]/[0.04] shadow-[0_2px_16px_-4px_rgba(0,240,118,0.1)]"
-                      : "border-[#ff3358]/35 bg-[#ff3358]/[0.04] shadow-[0_2px_16px_-4px_rgba(255,51,88,0.1)]"
-                  }`}
+                  className="relative pt-3"
                 >
-                  {/* Countdown Progress Bar */}
-                  <div className="absolute top-0 left-0 right-0 h-[2px] bg-white/[0.06]">
-                    <div
-                      className={`h-full transition-all duration-100 ${
-                        isUrgent ? "bg-amber-400" : isProfit ? "bg-[#00f076]" : "bg-[#ff3358]"
-                      }`}
-                      style={{ width: `${(1 - progress) * 100}%` }}
+                  {/* Random Pepe Waiting / Praying animation perched above top right of card */}
+                  <div
+                    className="absolute top-0 right-3 z-30 flex items-center pointer-events-none select-none"
+                    title={waitingPepe.label}
+                  >
+                    <img
+                      src={waitingPepe.src}
+                      alt={waitingPepe.name}
+                      width={30}
+                      height={30}
+                      className="h-7 w-7 object-contain drop-shadow-[0_2px_6px_rgba(0,0,0,0.7)]"
                     />
                   </div>
 
-                  <div className="flex items-start justify-between mt-1">
-                    {/* Left: Asset, Direction & Stake */}
-                    <div className="flex items-center gap-2.5">
-                      {asset && (
-                        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[var(--card)] border border-[var(--hair)]">
-                          <AssetIcon symbol={asset.symbol} category={asset.category} size={20} />
-                        </div>
-                      )}
-                      <div>
-                        <div className="flex items-center gap-1.5">
-                          <span className="text-xs font-extrabold text-[var(--ink)]">
-                            {asset?.symbol ?? "XAU"}
-                          </span>
-                          <span
-                            className={`flex items-center gap-0.5 rounded px-1.5 py-0.5 text-[9.5px] font-black uppercase tracking-wider ${
-                              isUp
-                                ? "bg-[#00f076]/15 text-[#00f076] border border-[#00f076]/30"
-                                : "bg-[#ff3358]/15 text-[#ff3358] border border-[#ff3358]/30"
-                            }`}
-                          >
-                            {isUp ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />}
-                            {play.direction.toUpperCase()}
-                          </span>
-                        </div>
-                        <span className="text-[11px] font-mono text-[var(--ink-muted)]">
-                          Stake: ${play.collateralUsd} · 1000x
-                        </span>
-                      </div>
+                  <div
+                    className={`group relative overflow-hidden rounded-xl p-2.5 transition-all ${
+                      isProfit ? "glass-card-win" : "glass-card-lose"
+                    }`}
+                  >
+                    {/* Glass Shining Effect Overlays */}
+                    <div className="glass-reflection-overlay" />
+                    <div className="glass-shine-beam" />
+
+                    {/* Countdown Progress Bar */}
+                    <div className="absolute top-0 left-0 right-0 h-[2px] bg-white/[0.06] z-10">
+                      <div
+                        className={`h-full transition-all duration-100 ${
+                          isUrgent ? "bg-amber-400" : isProfit ? "bg-[#00f076]" : "bg-[#ff3358]"
+                        }`}
+                        style={{ width: `${(1 - progress) * 100}%` }}
+                      />
                     </div>
 
-                    {/* Right: Live P&L and Timer */}
-                    <div className="text-right">
-                      <div
-                        className={`font-mono text-sm font-extrabold tracking-tight transition-colors duration-200 ${
-                          isProfit ? "text-[#00f076]" : "text-[#ff3358]"
-                        }`}
-                      >
-                        {isProfit ? "+" : "-"}
-                        {formatUsd(livePnl)}
+                    <div className="relative z-10 flex items-start justify-between mt-1">
+                      {/* Left: Asset, Direction & Stake */}
+                      <div className="flex items-center gap-2.5">
+                        {asset && (
+                          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[var(--card)] border border-[var(--hair)]">
+                            <AssetIcon symbol={asset.symbol} category={asset.category} size={20} />
+                          </div>
+                        )}
+                        <div>
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-xs font-extrabold text-[var(--ink)]">
+                              {asset?.symbol ?? "XAU"}
+                            </span>
+                            <span
+                              className={`flex items-center gap-0.5 rounded px-1.5 py-0.5 text-[9.5px] font-black uppercase tracking-wider ${
+                                isUp
+                                  ? "bg-[#00f076]/15 text-[#00f076] border border-[#00f076]/30"
+                                  : "bg-[#ff3358]/15 text-[#ff3358] border border-[#ff3358]/30"
+                              }`}
+                            >
+                              {isUp ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />}
+                              {play.direction.toUpperCase()}
+                            </span>
+                          </div>
+                          <span className="text-[11px] font-mono text-[var(--ink-muted)]">
+                            Stake: ${play.collateralUsd} · 1000x
+                          </span>
+                        </div>
                       </div>
 
-                      <div className="flex items-center justify-end gap-1.5 mt-0.5">
-                        <span
-                          className={`inline-block h-1.5 w-1.5 rounded-full ${
-                            isSettling
-                              ? "bg-amber-400 animate-ping"
-                              : "bg-[#00f076] shadow-[0_0_6px_#00f076]"
-                          }`}
-                        />
-                        <span
-                          className={`font-mono text-[11px] font-bold ${
-                            isSettling
-                              ? "text-amber-400"
-                              : isUrgent
-                              ? "text-amber-300 font-extrabold animate-pulse"
-                              : "text-[var(--ink-secondary)]"
+                      {/* Right: Live P&L and Timer */}
+                      <div className="text-right">
+                        <div
+                          className={`font-mono text-sm font-extrabold tracking-tight transition-colors duration-200 ${
+                            isProfit ? "text-[#00f076]" : "text-[#ff3358]"
                           }`}
                         >
-                          {isSettling ? "SETTLING…" : `${remainingSec}s`}
-                        </span>
+                          {isProfit ? "+" : "-"}
+                          {formatUsd(livePnl)}
+                        </div>
+
+                        <div className="flex items-center justify-end gap-1.5 mt-0.5">
+                          <span
+                            className={`inline-block h-1.5 w-1.5 rounded-full ${
+                              isSettling
+                                ? "bg-amber-400 animate-ping"
+                                : "bg-[#00f076] shadow-[0_0_6px_#00f076]"
+                            }`}
+                          />
+                          <span
+                            className={`font-mono text-[11px] font-bold ${
+                              isSettling
+                                ? "text-amber-400"
+                                : isUrgent
+                                ? "text-amber-300 font-extrabold animate-pulse"
+                                : "text-[var(--ink-secondary)]"
+                            }`}
+                          >
+                            {isSettling ? "SETTLING…" : `${remainingSec}s`}
+                          </span>
+                        </div>
                       </div>
                     </div>
-                  </div>
 
-                  {/* Entry Price Footnote */}
-                  <div className="mt-2 flex items-center justify-between border-t border-[var(--hair)] pt-1.5 text-[10.5px] font-mono text-[var(--ink-muted)]">
-                    <span>Entry: ${formatPrice(play.entryPrice)}</span>
-                    <span className="text-[var(--ink-muted)]/80">10-sec settlement</span>
+                    {/* Entry Price Footnote */}
+                    <div className="relative z-10 mt-2 flex items-center justify-between border-t border-[var(--hair)] pt-1.5 text-[10.5px] font-mono text-[var(--ink-muted)]">
+                      <span>Entry: ${formatPrice(play.entryPrice)}</span>
+                      <span className="text-[var(--ink-muted)]/80">10-sec settlement</span>
+                    </div>
                   </div>
                 </motion.div>
               );
@@ -325,19 +354,19 @@ export function LivePositions({
                   <div
                     key={b.stakeSignature}
                     onClick={() => setSelectedSlip(b)}
-                    className={`group relative overflow-hidden rounded-xl border p-2.5 text-[11px] transition-all cursor-pointer hover:scale-[1.01] active:scale-[0.99] ${
+                    className={`group relative overflow-hidden rounded-xl p-2.5 text-[11px] transition-all cursor-pointer hover:scale-[1.01] active:scale-[0.99] ${
                       isSettling
-                        ? "border-amber-400/30 bg-[#121620]"
+                        ? "border border-amber-400/30 bg-amber-500/10 text-amber-500 dark:text-amber-300"
                         : profit
-                        ? "border-[#00f076]/45 bg-[#0a1210] shadow-[0_2px_12px_-2px_rgba(0,240,118,0.15)]"
-                        : "border-[#ff3358]/45 bg-[#140b10] shadow-[0_2px_12px_-2px_rgba(255,51,88,0.15)]"
+                        ? "glass-card-win"
+                        : "glass-card-lose"
                     }`}
                   >
-                    {/* Masked Border Beam strictly on 1.5px border track */}
                     {!isSettling && (
-                      <div className="border-beam-ring rounded-xl">
-                        <span className={profit ? "rotating-glow-border-green" : "rotating-glow-border-red"} />
-                      </div>
+                      <>
+                        <div className="glass-reflection-overlay" />
+                        <div className="glass-shine-beam" />
+                      </>
                     )}
 
                     <div className="relative z-10 flex items-center justify-between gap-2">
@@ -420,39 +449,59 @@ export function LivePositions({
               exit={{ opacity: 0, scale: 0.94, y: 14 }}
               transition={{ type: "spring", stiffness: 420, damping: 30 }}
               onClick={(e) => e.stopPropagation()}
-              className={`relative w-full max-w-sm overflow-hidden rounded-2xl border p-5 shadow-2xl ${
+              className={`relative w-full max-w-sm overflow-hidden rounded-2xl p-5 shadow-2xl ${
                 selectedSlip.status === "settling"
-                  ? "border-amber-400/30 bg-[#0e121a]"
+                  ? "border border-amber-400/30 bg-[#0e121a]"
                   : selectedSlip.pnlTokens >= 0
-                  ? "border-[#00f076]/45 bg-[#09110d] shadow-[0_0_30px_rgba(0,240,118,0.2)]"
-                  : "border-[#ff3358]/45 bg-[#12080d] shadow-[0_0_30px_rgba(255,51,88,0.2)]"
+                  ? "glass-card-win"
+                  : "glass-card-lose"
               }`}
             >
-              {/* Masked Border Beam strictly on 1.5px border track */}
+              {/* Glass Shining Effect Overlays */}
               {selectedSlip.status !== "settling" && (
-                <div className="border-beam-ring rounded-2xl">
-                  <span className={selectedSlip.pnlTokens >= 0 ? "rotating-glow-border-green" : "rotating-glow-border-red"} />
-                </div>
+                <>
+                  <div className="glass-reflection-overlay" />
+                  <div className="glass-shine-beam" />
+                </>
               )}
 
               {/* Header */}
-              <div className="flex items-center justify-between border-b border-white/10 pb-3 relative z-10">
+              <div className="flex items-center justify-between border-b border-[var(--hair)] pb-3 relative z-10">
                 <div className="flex items-center gap-2">
                   <Receipt className="h-4 w-4 text-[var(--color-neon-orange)]" />
-                  <span className="font-mono text-xs font-bold uppercase tracking-wider text-white">
+                  <span className="font-mono text-xs font-bold uppercase tracking-wider text-[var(--ink)]">
                     Official Bet Slip
                   </span>
                 </div>
                 <button
                   onClick={() => setSelectedSlip(null)}
-                  className="rounded-lg p-1 text-white/40 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
+                  className="rounded-lg p-1 text-[var(--ink-muted)] hover:text-[var(--ink)] hover:bg-[var(--hair)] transition-colors cursor-pointer"
                 >
                   <X className="h-4 w-4" />
                 </button>
               </div>
 
-              {/* Round Overview Badge & Hero P&L */}
+              {/* Round Overview Badge, Random Pepe Emote & Hero P&L */}
               <div className="py-4 text-center relative z-10">
+                {(() => {
+                  const slipPepe =
+                    selectedSlip.pnlTokens >= 0
+                      ? getRandomCelebratingPepe(selectedSlip.stakeSignature || String(selectedSlip.stakeTime))
+                      : getWaitingPepe(selectedSlip.stakeSignature || String(selectedSlip.stakeTime));
+
+                  return (
+                    <div className="flex justify-center mb-2.5">
+                      <img
+                        src={slipPepe.src}
+                        alt={slipPepe.name}
+                        width={52}
+                        height={52}
+                        className="h-13 w-13 object-contain drop-shadow-[0_4px_14px_rgba(0,0,0,0.6)] select-none"
+                      />
+                    </div>
+                  );
+                })()}
+
                 <div
                   className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-black uppercase mb-2 border"
                   style={{
@@ -472,7 +521,7 @@ export function LivePositions({
                 >
                   {selectedSlip.pnlTokens >= 0 ? "+" : "−"}${Math.abs(selectedSlip.pnlTokens).toFixed(2)}
                 </div>
-                <div className="text-xs font-mono font-bold text-white/50 mt-0.5">
+                <div className="text-xs font-mono font-bold text-[var(--ink-muted)] mt-0.5">
                   {selectedSlip.pnlTokens >= 0
                     ? `+${((selectedSlip.pnlTokens / (selectedSlip.stakeTokens || 1)) * 100).toFixed(1)}% Return`
                     : "Capital Deducted"}
@@ -480,22 +529,22 @@ export function LivePositions({
               </div>
 
               {/* Breakdown details */}
-              <div className="space-y-2 rounded-xl bg-white/[0.04] border border-white/[0.08] p-3 text-xs font-mono relative z-10">
-                <div className="flex justify-between text-white/60">
+              <div className="space-y-2 rounded-xl bg-[var(--panel)] border border-[var(--hair)] p-3 text-xs font-mono relative z-10">
+                <div className="flex justify-between text-[var(--ink-muted)]">
                   <span>Stake Amount:</span>
-                  <span className="font-bold text-white">${selectedSlip.stakeTokens.toFixed(2)} tUSD</span>
+                  <span className="font-bold text-[var(--ink)]">${selectedSlip.stakeTokens.toFixed(2)} tUSD</span>
                 </div>
-                <div className="flex justify-between text-white/60">
+                <div className="flex justify-between text-[var(--ink-muted)]">
                   <span>Payout Total:</span>
-                  <span className="font-bold text-white">${selectedSlip.payoutTokens.toFixed(2)} tUSD</span>
+                  <span className="font-bold text-[var(--ink)]">${selectedSlip.payoutTokens.toFixed(2)} tUSD</span>
                 </div>
                 {selectedSlip.entryPrice && (
-                  <div className="flex justify-between text-white/60">
+                  <div className="flex justify-between text-[var(--ink-muted)]">
                     <span>Strike Entry:</span>
-                    <span className="font-bold text-white">${formatPrice(selectedSlip.entryPrice)}</span>
+                    <span className="font-bold text-[var(--ink)]">${formatPrice(selectedSlip.entryPrice)}</span>
                   </div>
                 )}
-                <div className="flex justify-between text-white/60">
+                <div className="flex justify-between text-[var(--ink-muted)]">
                   <span>Settlement:</span>
                   <span className="text-[var(--color-neon-orange)] font-bold">10-Sec Fast Round</span>
                 </div>
@@ -503,14 +552,14 @@ export function LivePositions({
 
               {/* On-Chain Proof Links */}
               <div className="mt-3 space-y-1.5 relative z-10">
-                <div className="text-[10px] font-bold uppercase tracking-wider text-white/40 mb-1">
+                <div className="text-[10px] font-bold uppercase tracking-wider text-[var(--ink-muted)] mb-1">
                   Verified On-Chain Signatures
                 </div>
                 <a
                   href={explorerTxUrl(selectedSlip.stakeSignature)}
                   target="_blank"
                   rel="noreferrer"
-                  className="flex items-center justify-between rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2 text-xs font-mono text-white/70 hover:text-white hover:border-[var(--color-neon-orange)] transition-colors"
+                  className="flex items-center justify-between rounded-lg border border-[var(--hair)] bg-[var(--card)] px-3 py-2 text-xs font-mono text-[var(--ink-secondary)] hover:text-[var(--ink)] hover:border-[var(--color-neon-orange)] transition-colors"
                 >
                   <span>Stake Tx: {selectedSlip.stakeSignature.slice(0, 8)}…{selectedSlip.stakeSignature.slice(-6)}</span>
                   <ExternalLink className="h-3.5 w-3.5 text-[var(--color-neon-orange)]" />
@@ -521,21 +570,13 @@ export function LivePositions({
                     href={explorerTxUrl(selectedSlip.payoutSignature)}
                     target="_blank"
                     rel="noreferrer"
-                    className="flex items-center justify-between rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2 text-xs font-mono text-white/70 hover:text-white hover:border-[var(--color-neon-orange)] transition-colors"
+                    className="flex items-center justify-between rounded-lg border border-[var(--hair)] bg-[var(--card)] px-3 py-2 text-xs font-mono text-[var(--ink-secondary)] hover:text-[var(--ink)] hover:border-[var(--color-neon-orange)] transition-colors"
                   >
                     <span>Payout Tx: {selectedSlip.payoutSignature.slice(0, 8)}…{selectedSlip.payoutSignature.slice(-6)}</span>
                     <ExternalLink className="h-3.5 w-3.5 text-[#00f076]" />
                   </a>
                 )}
               </div>
-
-              {/* Close button */}
-              <button
-                onClick={() => setSelectedSlip(null)}
-                className="mt-4 w-full rounded-xl bg-white/10 py-2.5 text-center text-xs font-bold text-white hover:bg-white/20 transition-colors cursor-pointer relative z-10"
-              >
-                Close Slip
-              </button>
             </motion.div>
           </div>
         )}
